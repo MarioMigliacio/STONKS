@@ -1,8 +1,8 @@
 # STONKS 🚀
 
-STONKS is a personal stock scanner and paper trading companion project focused on learning:
-
 Author: Mario Migliacio, 2026
+
+STONKS is a personal stock scanner and paper trading companion project focused on learning:
 
 - Python development
 - market scanners
