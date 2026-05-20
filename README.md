@@ -58,11 +58,29 @@ This project is inspired by momentum day trading strategies and is intended for:
 
 ---
 
+# How To Get started
+
+```
+- on a terminal, create and cd into a directory to house the repo.
+- run git clone https://github.com/MarioMigliacio/STONKS.git
+- cd into STONKS/
+- run ".\script\init.ps1"
+- run ".\venv\Scripts\activate"
+- run pip install requests pandas python-dotenv
+
+- visit https://www.alphavantage.co/support/# 'Claim your API key' and update .env file as described in init.ps1
+- run project with python -m stonks ( outside src/ )
+- . . .
+- profit
+```
+
+---
+
 # Project Structure
 
 ```text
 STONKS/
-│
+├── scripts/
 ├── src/
 │   └── stonks/
 │       ├── api/
@@ -71,5 +89,8 @@ STONKS/
 |       └── scanner/
 |
 ├── README.md
+├── .env (secret)
 └── venv/
 ```
+
+---
