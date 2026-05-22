@@ -1,3 +1,8 @@
+# =============================================================================
+# File: run.ps1
+# Purpose: Initialize the STONKS environment and show next steps.
+# =============================================================================
+
 Write-Host "Initializing STONKS..."
 
 if (!(Test-Path ".env")) {
