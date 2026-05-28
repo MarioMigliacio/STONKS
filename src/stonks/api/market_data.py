@@ -9,6 +9,22 @@ from stonks.config.settings import API_KEY
 
 BASE_URL = "https://www.alphavantage.co/query"
 
+""" NOTE:  Alpha Vantage GLOBAL_QUOTE function returns json format: 
+    {
+        "Global Quote": {
+            "01. symbol": "AAPL",
+            "02. open": "296.9700",
+            "03. high": "300.5100",
+            "04. low": "296.3500",
+            "05. price": "298.9700",
+            "06. volume": "42243561",
+            "07. latest trading day": "2026-05-19",
+            "08. previous close": "297.8400",
+            "09. change": "1.1300",
+            "10. change percent": "0.3794%"
+    }
+}"""
+
 
 def get_quote(symbol):
     """Fetch the latest quote data for a stock symbol."""
