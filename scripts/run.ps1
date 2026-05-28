@@ -12,14 +12,20 @@ Write-Host ""
 # Resolve project root from script location.
 $root = Split-Path -Parent $PSScriptRoot
 
-# Move to project root.
-Set-Location $root
+# Preserve caller directory.
+Push-Location $root
 
-# Activate Python virtual environment.
-& ".\venv\Scripts\Activate.ps1"
+try {
+    # Activate Python virtual environment.
+    & ".\venv\Scripts\Activate.ps1"
 
-# Configure Python package root.
-$env:PYTHONPATH = "src"
+    # Configure Python package root.
+    $env:PYTHONPATH = "src"
 
-# Run the application.
-python -m stonks
+    # Run the application.
+    python -m stonks
+}
+finally {
+    # Restore original caller directory.
+    Pop-Location
+}
