@@ -12,7 +12,7 @@ BASE_URL = "https://www.alphavantage.co/query"
 
 def get_quote(symbol):
     """Fetch the latest quote data for a stock symbol."""
-    
+
     params = {
         "function": "GLOBAL_QUOTE",
         "symbol": symbol,

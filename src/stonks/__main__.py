@@ -8,7 +8,7 @@ from stonks.scanner.filters import scan_stocks
 
 def main():
     """Run the STONKS scanner."""
-    
+
     print("=== STONKS Scanner ===")
 
     results = scan_stocks()
