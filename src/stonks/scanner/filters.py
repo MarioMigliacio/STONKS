@@ -7,12 +7,13 @@ import time
 
 from stonks.api.market_data import get_quote
 from stonks.models.stock import Stock
+from stonks.models.quote_data import QuoteData
 from stonks.config.settings import WATCHLIST
 from stonks.config.settings import MIN_VOLUME
 
 def parse_latest(data):
     """Parse the latest quote price and volume from API response data."""
-    
+
     if not data:
         return None
 
@@ -24,11 +25,19 @@ def parse_latest(data):
     price = float(quote["05. price"])
     volume = int(quote["06. volume"])
 
-    return price, volume
+    change_percent_text = quote["10. change percent"]
+    change_percent = float(change_percent_text.replace("%", ""))
+
+    return QuoteData(
+    symbol=quote["01. symbol"],
+    price=price,
+    volume=volume,
+    change_percent=change_percent
+)
 
 def scan_stocks():
     """Scan the watchlist and return stocks matching configured filters."""
-    
+
     results = []
 
     for ticker in WATCHLIST:
@@ -44,11 +53,17 @@ def scan_stocks():
         if not parsed:
             continue
 
-        price, volume = parsed
-        print(f"{ticker} | Price={price:.2f} | Volume={volume:,}")
+        quote_data = parsed
 
-        if volume >= MIN_VOLUME:
-            stock = Stock(ticker, price, volume)
+        print(
+            f"{ticker} | "
+            f"Price={quote_data.price} | "
+            f"Volume={quote_data.volume:,} | "
+            f"Change={quote_data.change_percent}%"
+        )
+
+        if quote_data.volume >= MIN_VOLUME:
+            stock = Stock(ticker, quote_data.price, quote_data.volume, quote_data.change_percent)
             results.append(stock)
 
     return results
