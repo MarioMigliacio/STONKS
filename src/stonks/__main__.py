@@ -19,8 +19,8 @@ def main():
         print("No matching stocks found.")
         return
 
-    for stock in results:
-        print(stock)
+    for quote in results:
+        print(quote)
 
 
 if __name__ == "__main__":

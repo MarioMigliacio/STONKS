@@ -6,7 +6,6 @@
 import time
 
 from stonks.api.market_data import get_quote
-from stonks.models.stock import Stock
 from stonks.models.quote_data import QuoteData
 from stonks.config.settings import WATCHLIST
 from stonks.config.settings import MIN_VOLUME
@@ -22,17 +21,21 @@ def parse_latest(data):
     if not quote:
         return None
 
+    open_price = float(quote["02. open"])
     price = float(quote["05. price"])
     volume = int(quote["06. volume"])
+    previous_close = float(quote["08. previous close"])
 
     change_percent_text = quote["10. change percent"]
     change_percent = float(change_percent_text.replace("%", ""))
+    gap_percent = ((open_price - previous_close) / previous_close) * 100
 
     return QuoteData(
     symbol=quote["01. symbol"],
     price=price,
     volume=volume,
-    change_percent=change_percent
+    change_percent=change_percent,
+    gap_percent=gap_percent
 )
 
 def scan_stocks():
@@ -45,8 +48,8 @@ def scan_stocks():
 
         data = get_quote(ticker)
 
-        # Please be gentle to the API throttling. 12 sec / min to 5 requests max per min as API limits on free tier. 25 total per DAY.
-        time.sleep(12)
+        # Please be gentle to the API throttling. 25 total per DAY on free account.
+        time.sleep(2)
 
         parsed = parse_latest(data)
 
@@ -59,11 +62,11 @@ def scan_stocks():
             f"{ticker} | "
             f"Price={quote_data.price} | "
             f"Volume={quote_data.volume:,} | "
-            f"Change={quote_data.change_percent}%"
+            f"Change={quote_data.change_percent}% | "
+            f"Gap={quote_data.gap_percent}%"
         )
 
         if quote_data.volume >= MIN_VOLUME:
-            stock = Stock(ticker, quote_data.price, quote_data.volume, quote_data.change_percent)
-            results.append(stock)
+            results.append(quote_data)
 
     return results

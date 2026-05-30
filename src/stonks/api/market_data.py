@@ -22,9 +22,9 @@ BASE_URL = "https://www.alphavantage.co/query"
             "08. previous close": "297.8400",
             "09. change": "1.1300",
             "10. change percent": "0.3794%"
+        }
     }
-}"""
-
+"""
 
 def get_quote(symbol):
     """Fetch the latest quote data for a stock symbol."""
