@@ -25,4 +25,4 @@ WATCHLIST = [
 ]
 
 # Minimum daily volume required for a stock to appear in results.
-MIN_VOLUME = 1
+MIN_VOLUME = 1000

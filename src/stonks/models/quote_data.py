@@ -27,9 +27,22 @@ class QuoteData:
 
         change_percent:
             Percentage change from previous close.
+
+        gap_percent:
+            Percentage difference between today's open and previous close.
     """
 
     symbol: str
     price: float
     volume: int
     change_percent: float
+    gap_percent: float
+
+    def __repr__(self):
+        return (
+            f"{self.symbol} | "
+            f"Price: ${self.price:.2f} | "
+            f"Volume: {self.volume:,} | "
+            f"Change: {self.change_percent:+.2f}% | "
+            f"Gap: {self.gap_percent:+.2f}%"
+        )
