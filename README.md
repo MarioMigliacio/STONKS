@@ -47,6 +47,31 @@ This project is inspired by momentum day trading strategies and is intended for:
 - GUI dashboard
 - Watchlists and alerts
 - Data journal for real record analysis and insights
+- _Note_ Real data is kept in data/journal, but the template files are committed to project. Assumes you maintain your own personal files:
+    - account_snapshots.csv
+    - orders.csv
+
+---
+
+# Journal Subsystem
+
+- data/journal/orders.csv
+    - Stores individual trade orders.
+
+- data/journal/account_snapshots.csv
+    - Stores account value snapshots.
+
+- journal_storage.py
+    - Responsible for persistence.
+
+- journal_analyzer.py
+    - Responsible for statistics and reporting.
+
+- trade_order.py
+    - A TradeOrder represents one filled buy or sell order.
+
+- account_snapshot.py
+    - Account snapshots represent portfolio/account state at a point in time.
 
 ---
 
@@ -89,6 +114,7 @@ STONKS/
 │   └── stonks/
 │       ├── api/
 |       ├── config/
+│       ├── journal/
 |       ├── models/
 |       └── scanner/
 |
