@@ -1,0 +1,4 @@
+order_id,position_id,trade_date,ticker,order_type,fill_price,shares,order_total,time_issued,notes
+1,1,2026-06-03,AAPL,BUY,100.50,5,502.50,06:42,First entry
+2,1,2026-06-03,AAPL,SELL,105.00,3,315.00,07:10,Scaled out
+3,1,2026-06-03,AAPL,SELL,106.00,2,212.00,07:18,Closed position

@@ -46,6 +46,7 @@ This project is inspired by momentum day trading strategies and is intended for:
 - Async API requests
 - GUI dashboard
 - Watchlists and alerts
+- Data journal for real record analysis and insights
 
 ---
 
@@ -80,6 +81,9 @@ This project is inspired by momentum day trading strategies and is intended for:
 
 ```text
 STONKS/
+├── data
+│   └── journal
+│       └── templates
 ├── scripts/
 ├── src/
 │   └── stonks/
