@@ -1,2 +1,2 @@
-date,account_value_start,account_value_end,notes
+snapshot_date,account_value_before,account_value_after,notes
 2026-06-03,1000.00,1042.50,Good discipline
