@@ -25,6 +25,7 @@ This project is inspired by momentum day trading strategies and is intended for:
 - Integrate market/news APIs
 - Track relative volume, gaps, float, and momentum
 - Eventually create a lightweight GUI dashboard
+- Backup business intelligence and data
 
 ---
 
@@ -34,6 +35,8 @@ This project is inspired by momentum day trading strategies and is intended for:
 - Intraday stock data retrieval
 - Volume filtering
 - Modular Python package structure
+- CSV writing through journal subsystem
+- Persistent data keeping through ZIP file extraction
 
 ---
 
@@ -46,6 +49,16 @@ This project is inspired by momentum day trading strategies and is intended for:
 - Async API requests
 - GUI dashboard
 - Watchlists and alerts
+- Data journal for real record analysis and insights
+- _Note_ Real data is kept in data/journal, but the template files are committed to project. Assumes you maintain your own personal files:
+    - account_snapshots.csv
+    - orders.csv
+
+---
+
+# Journal Subsystem
+
+See: [Journal Subsystem](docs/journal.md)
 
 ---
 
@@ -80,11 +93,17 @@ This project is inspired by momentum day trading strategies and is intended for:
 
 ```text
 STONKS/
+├── backups/
+├── data/
+│   └── journal/
+│       └── templates/
+├── docs/
 ├── scripts/
 ├── src/
 │   └── stonks/
 │       ├── api/
 |       ├── config/
+│       ├── journal/
 |       ├── models/
 |       └── scanner/
 |

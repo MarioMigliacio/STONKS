@@ -7,3 +7,5 @@ __pycache__/
 .DS_Store
 Thumbs.db
 *.log
+data/journal/*.csv
+backups/*.zip
