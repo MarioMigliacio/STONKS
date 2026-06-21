@@ -18,8 +18,8 @@ if not API_KEY:
 
 # Initial hardcoded watchlist used by the scanner.
 WATCHLIST = [
-    "AAPL",
-    "TSLA",
+    "SPCX",
+    "MSFT",
     "AMD",
     "NVDA"
 ]
