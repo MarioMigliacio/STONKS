@@ -2,99 +2,53 @@
 
 Author: Mario Migliacio, 2026
 
-STONKS is a personal stock scanner and paper trading companion project focused on learning:
+STONKS is a Python-based stock scanner and trading journal built as both a learning project and a practical trading tool.
 
-- Python development
-- market scanners
-- momentum trading concepts
-- API integration
-- financial data analysis
+The project focuses on:
 
-This project is inspired by momentum day trading strategies and is intended for:
-
-- educational purposes
-- simulation trading
-- personal experimentation
+- Market data collection
+- Stock scanner development
+- Trade journaling
+- Performance analytics
+- Historical data caching
+- Trading discipline through data-driven decision making
 
 ---
 
-# Goals
+## Current Features
 
-- Build a custom stock scanner
-- Learn Python through practical development
-- Integrate market/news APIs
-- Track relative volume, gaps, float, and momentum
-- Eventually create a lightweight GUI dashboard
-- Backup business intelligence and data
+### Scanner
 
----
+- Live quote retrieval
+- Change % scanner
+- Gap % scanner
+- Historical data cache subsystem
 
-# Current Features
+### Journal
 
-- Alpha Vantage API integration
-- Intraday stock data retrieval
-- Volume filtering
-- Modular Python package structure
-- CSV writing through journal subsystem
-- Persistent data keeping through ZIP file extraction
+- Trade order tracking
+- Account snapshot tracking
+- CSV-based persistence
+- Journal backup utility
 
----
+### Infrastructure
 
-# Planned Features
-
-- Relative volume scanner
-- Gap percentage scanner
-- Float tracking
-- News catalyst integration
-- Async API requests
-- GUI dashboard
-- Watchlists and alerts
-- Data journal for real record analysis and insights
-- _Note_ Real data is kept in data/journal, but the template files are committed to project. Assumes you maintain your own personal files:
-    - account_snapshots.csv
-    - orders.csv
+- Alpha Vantage integration
+- Local historical data cache
+- API usage safeguards
+- PowerShell utility scripts
 
 ---
 
-# Journal Subsystem
-
-See: [Journal Subsystem](docs/journal.md)
-
----
-
-# Tech Stack
-
-- Python
-- requests
-- pandas
-- Alpha Vantage API
-
----
-
-# How To Get started
-
-```
-- on a terminal, create and cd into a directory to house the repo.
-- run git clone https://github.com/MarioMigliacio/STONKS.git
-- cd into STONKS/
-- run ".\script\init.ps1"
-- run ".\venv\Scripts\activate"
-- run pip install requests pandas python-dotenv
-
-- visit https://www.alphavantage.co/support/# 'Claim your API key' and update .env file as described in init.ps1
-- run project with python -m stonks ( outside src/ )
-- . . .
-- profit
-```
-
----
-
-# Project Structure
+## Project Structure
 
 ```text
 STONKS/
 ├── backups/
 ├── data/
+|   ├── cache/
+|   |   ├── historical/
+|   |   └── quotes/
 │   └── journal/
 │       └── templates/
 ├── docs/
@@ -102,14 +56,121 @@ STONKS/
 ├── src/
 │   └── stonks/
 │       ├── api/
+|       ├── cache/
 |       ├── config/
 │       ├── journal/
 |       ├── models/
 |       └── scanner/
-|
-├── README.md
+├── venv/
 ├── .env (secret)
-└── venv/
+└── README.md
+
 ```
 
 ---
+
+## How To Get started
+
+```
+- on a terminal, create and cd into a directory to house the repo.
+- run git clone https://github.com/MarioMigliacio/STONKS.git
+- cd into STONKS/
+- run ".\scripts\init.ps1"
+- run ".\venv\Scripts\activate.ps1"
+- run pip install requests pandas python-dotenv
+- visit https://www.alphavantage.co/support/# 'Claim your API key' and update .env file as described in init.ps1
+- . . .
+- profit
+```
+
+---
+
+## Usage
+
+### Run Scanner
+
+```powershell
+.\scripts\run.ps1
+```
+
+### Journal CLI
+
+```powershell
+.\scripts\journal.ps1
+```
+
+### Historical Cache CLI
+
+```powershell
+.\scripts\cache.ps1
+```
+
+### Backup Journal Data
+
+```powershell
+.\scripts\backup_journal.ps1
+```
+
+---
+
+## Documentation
+
+### Subsystems
+
+- [Journal Subsystem](docs/journal.md)
+- [Historical Cache](docs/cache.md)
+
+### Planned Documentation
+
+- Scanner Architecture
+- Analytics & Reporting
+- Data Abstraction Layer
+- GUI Layer
+
+---
+
+## Roadmap
+
+### Completed
+
+- Change % Scanner
+- Gap % Scanner
+- Trade Journal
+- Account Snapshots
+- Journal Backups
+- Historical Cache Infrastructure
+
+### In Progress
+
+- Relative Volume Scanner
+
+### Planned
+
+- Breaking News Scanner
+- Analytics & Reporting
+- GUI Layer
+- Data Abstraction Layer
+- Advanced Scanner Filters
+
+---
+
+## Development Philosophy
+
+STONKS is intentionally developed in small, incremental features.
+
+The focus is on:
+
+- Learning Python
+- Practicing software engineering
+- Collecting meaningful trading data
+- Improving trading discipline
+- Building reusable infrastructure before adding features
+
+---
+
+## License
+
+```text
+Personal educational project.
+Acknowledgement Appreciated, but open source.
+```
