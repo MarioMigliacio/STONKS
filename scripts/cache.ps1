@@ -1,13 +1,7 @@
 # =============================================================================
-# File: run.ps1
-# Purpose: Activate the STONKS environment and run the application.
+# File: cache.ps1
+# Purpose: Launch STONKS cache tools.
 # =============================================================================
-
-Write-Host ""
-Write-Host "====================================="
-Write-Host "Launching STONKS..."
-Write-Host "====================================="
-Write-Host ""
 
 $root = Split-Path -Parent $PSScriptRoot
 
@@ -18,7 +12,7 @@ try {
 
     $env:PYTHONPATH = "src"
 
-    python -m stonks
+    python -m stonks.cache.cache_cli
 }
 finally {
     Pop-Location

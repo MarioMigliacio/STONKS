@@ -42,3 +42,20 @@ def get_quote(symbol):
         return None
 
     return response.json()
+
+def get_daily_time_series(symbol):
+    """Fetch daily historical data for a stock symbol."""
+
+    params = {
+        "function": "TIME_SERIES_DAILY",
+        "symbol": symbol,
+        "apikey": API_KEY
+    }
+
+    response = requests.get(BASE_URL, params=params)
+
+    if response.status_code != 200:
+        print(f"Request failed for {symbol}")
+        return None
+
+    return response.json()

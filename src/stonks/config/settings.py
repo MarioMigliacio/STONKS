@@ -18,11 +18,19 @@ if not API_KEY:
 
 # Initial hardcoded watchlist used by the scanner.
 WATCHLIST = [
-    "AAPL",
-    "TSLA",
+    "SPCX",
+    "MSFT",
     "AMD",
     "NVDA"
 ]
 
 # Minimum daily volume required for a stock to appear in results.
 MIN_VOLUME = 1000
+
+# Cache behavior
+USE_CACHE = True
+
+# Safety switch:
+# False = never call external APIs; cache-only mode.
+# True  = call API only when cache is missing/stale.
+ALLOW_API_CALLS = True

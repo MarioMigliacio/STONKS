@@ -9,3 +9,4 @@ Thumbs.db
 *.log
 data/journal/*.csv
 backups/*.zip
+data/cache/**/*.json
