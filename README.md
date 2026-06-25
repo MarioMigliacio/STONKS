@@ -22,6 +22,7 @@ The project focuses on:
 - Live quote retrieval
 - Change % scanner
 - Gap % scanner
+- Relative Volume scanner
 - Historical data cache subsystem
 
 ### Journal
@@ -135,6 +136,7 @@ STONKS/
 
 - Change % Scanner
 - Gap % Scanner
+- Relative Volume Scanner
 - Trade Journal
 - Account Snapshots
 - Journal Backups
@@ -142,11 +144,10 @@ STONKS/
 
 ### In Progress
 
-- Relative Volume Scanner
+- Breaking News (provider, then scanner)
 
 ### Planned
 
-- Breaking News Scanner
 - Analytics & Reporting
 - GUI Layer
 - Data Abstraction Layer

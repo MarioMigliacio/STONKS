@@ -18,10 +18,11 @@ if not API_KEY:
 
 # Initial hardcoded watchlist used by the scanner.
 WATCHLIST = [
-    "SPCX",
-    "MSFT",
-    "AMD",
-    "NVDA"
+    "AAPL",
+    "SPCX"#,
+    #"MSFT",
+    #"AMD",
+    #"NVDA"
 ]
 
 # Minimum daily volume required for a stock to appear in results.
@@ -34,3 +35,6 @@ USE_CACHE = True
 # False = never call external APIs; cache-only mode.
 # True  = call API only when cache is missing/stale.
 ALLOW_API_CALLS = True
+
+# historic data lookback constant for 30 day average.
+RELATIVE_VOLUME_LOOKBACK_DAYS = 30

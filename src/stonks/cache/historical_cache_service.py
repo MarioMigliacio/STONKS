@@ -16,14 +16,17 @@ from stonks.cache.json_cache import write_json
 from stonks.config.settings import ALLOW_API_CALLS
 from stonks.config.settings import USE_CACHE
 
-def get_historical_data(symbol: str):
+def get_historical_data(
+    symbol: str,
+    force_refresh: bool = False
+):
     """Get historical data for a symbol using cache-first logic."""
 
     ensure_cache_directories_exist()
 
     cache_file = HISTORICAL_CACHE_DIRECTORY / f"{symbol.upper()}_daily.json"
 
-    if USE_CACHE:
+    if USE_CACHE and not force_refresh:
         cached_data = read_json(cache_file)
 
         if cached_data:
