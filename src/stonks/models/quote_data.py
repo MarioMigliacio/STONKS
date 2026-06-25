@@ -30,6 +30,15 @@ class QuoteData:
 
         gap_percent:
             Percentage difference between today's open and previous close.
+
+        latest_trading_day:
+            Most recent cached day string, to exclude from computations for relative volume.
+
+        relative_volume:
+            Important scanning metric of cached volume data vs current volume.
+
+        average_volume: 
+            Important scanning metric of cached volume data average across X days.
     """
 
     symbol: str
@@ -37,12 +46,17 @@ class QuoteData:
     volume: int
     change_percent: float
     gap_percent: float
+    latest_trading_day: str
+    relative_volume: float = 0.0
+    average_volume: float = 0.0
 
     def __repr__(self):
         return (
             f"{self.symbol} | "
             f"Price: ${self.price:.2f} | "
             f"Volume: {self.volume:,} | "
+            f"Avg Vol: {self.average_volume:,.0f} | "
+            f"RVOL: {self.relative_volume:.2f} | "
             f"Change: {self.change_percent:+.2f}% | "
             f"Gap: {self.gap_percent:+.2f}%"
         )

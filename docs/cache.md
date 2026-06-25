@@ -156,6 +156,8 @@ NO ──► Return No Data
 
 Launch the cache CLI:
 
+- New update will ask if you want to force a refresh (this is useful if the cache file existed but is out of date)
+
 ```powershell
 .\scripts\cache.ps1
 ```
@@ -164,6 +166,7 @@ Example:
 
 ```text
 Symbol to cache: AAPL
+Force refresh from API? (Y/N): n
 ```
 
 First run:
@@ -178,6 +181,17 @@ Subsequent runs:
 ```text
 Using cached historical data for AAPL
 Historical data ready for AAPL.
+```
+
+Forced Cache refresh option:
+
+```text
+Symbol to cache: aapl
+Force refresh from API? (Y/N): y
+Fetching historical data for AAPL from API...
+
+Parsed 100 historical volume records.
+HistoricalVolumeData(trade_date='2026-06-24', volume=53081859)
 ```
 
 ---
