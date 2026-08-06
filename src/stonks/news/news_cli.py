@@ -39,7 +39,8 @@ def main():
         print(
             f"{index}. {article.title}\n"
             f"   Source: {article.source}\n"
-            f"   Published: {article.published_at}\n"
+            f"   Published: "
+            f"{article.published_at.strftime('%b %d, %Y at %I:%M %p')}\n"
             f"   Sentiment: "
             f"{article.overall_sentiment_label} "
             f"({article.overall_sentiment_score:.3f})\n"

@@ -4,6 +4,15 @@
 # =============================================================================
 
 from stonks.models.news_article import NewsArticle
+from datetime import datetime
+
+def parse_published_time(value: str) -> datetime:
+    """Convert an Alpha Vantage timestamp into a datetime object."""
+
+    return datetime.strptime(
+        value,
+        "%Y%m%dT%H%M%S"
+    )
 
 def parse_news_articles(data) -> list[NewsArticle]:
     """Parse Alpha Vantage news data into normalized article models."""
@@ -26,13 +35,20 @@ def parse_news_articles(data) -> list[NewsArticle]:
             )
         )
 
+        published_time = article_data.get(
+            "time_published",
+            ""
+        )
+
+        if not published_time:
+            continue
+
         articles.append(
             NewsArticle(
                 title=article_data.get("title", ""),
                 source=article_data.get("source", ""),
-                published_at=article_data.get(
-                    "time_published",
-                    ""
+                published_at=parse_published_time(
+                    published_time
                 ),
                 summary=article_data.get("summary", ""),
                 url=article_data.get("url", ""),

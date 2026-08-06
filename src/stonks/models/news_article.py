@@ -8,6 +8,7 @@
 # =============================================================================
 
 from dataclasses import dataclass
+from datetime import datetime
 
 @dataclass
 class NewsArticle:
@@ -39,7 +40,7 @@ class NewsArticle:
 
     title: str
     source: str
-    published_at: str
+    published_at: datetime
     summary: str
     url: str
     overall_sentiment_score: float
