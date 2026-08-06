@@ -24,6 +24,9 @@ The project focuses on:
 - Gap % scanner
 - Relative Volume scanner
 - Historical data cache subsystem
+- Ticker-specific financial news retrieval
+- Provider-generated news sentiment
+- C.I.A. catalyst intelligence foundation
 
 ### Journal
 
@@ -61,6 +64,7 @@ STONKS/
 |       ├── config/
 │       ├── journal/
 |       ├── models/
+|       ├── news/
 |       └── scanner/
 ├── venv/
 ├── .env (secret)
@@ -112,6 +116,12 @@ STONKS/
 .\scripts\backup_journal.ps1
 ```
 
+### News C.I.A CLI
+
+```powershell
+.\scripts\news.ps1
+```
+
 ---
 
 ## Documentation
@@ -120,6 +130,7 @@ STONKS/
 
 - [Journal Subsystem](docs/journal.md)
 - [Historical Cache](docs/cache.md)
+- [C.I.A. News Subsystem](docs/news.md)
 
 ### Planned Documentation
 
