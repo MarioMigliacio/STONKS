@@ -59,3 +59,32 @@ def get_daily_time_series(symbol):
         return None
 
     return response.json()
+
+def get_news_sentiment(
+    symbol: str,
+    limit: int = 10
+):
+    """Fetch recent news and sentiment data for a stock symbol."""
+
+    params = {
+        "function": "NEWS_SENTIMENT",
+        "tickers": symbol.upper(),
+        "sort": "LATEST",
+        "limit": limit,
+        "apikey": API_KEY
+    }
+
+    response = requests.get(
+        BASE_URL,
+        params=params,
+        timeout=15
+    )
+
+    if response.status_code != 200:
+        print(
+            f"News request failed for {symbol.upper()} "
+            f"with status {response.status_code}."
+        )
+        return None
+
+    return response.json()
