@@ -4,7 +4,9 @@
 # =============================================================================
 
 from stonks.api.market_data import get_news_sentiment
+from stonks.cia.duplicate_filter import filter_duplicate_articles
 from stonks.scanner.news_parser import parse_news_articles
+
 
 def main():
     """Run the STONKS news-provider test CLI."""
@@ -24,6 +26,9 @@ def main():
 
     articles = parse_news_articles(data)
 
+    unique_articles = filter_duplicate_articles(articles)
+    duplicate_count = (len(articles) - len(unique_articles))
+
     print("")
     print(f"=== Recent News for {symbol} ===")
     print("")
@@ -31,9 +36,15 @@ def main():
     if not articles:
         print("No news articles were returned.")
         return
+    
+    print(
+        f"Articles: {len(articles)} | "
+        f"Unique: {len(unique_articles)} | "
+        f"Duplicates Removed: {duplicate_count}"
+    )
 
     for index, article in enumerate(
-        articles,
+        unique_articles,
         start=1
     ):
         print(

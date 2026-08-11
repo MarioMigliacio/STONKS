@@ -17,6 +17,7 @@ from datetime import datetime
 from stonks.cia.catalyst_category import CatalystCategory
 from stonks.cia.catalyst_strength import CatalystStrength
 
+
 @dataclass
 class CatalystReport:
     """

@@ -5,6 +5,7 @@
 
 from enum import Enum
 
+
 class CatalystStrength(Enum):
     """Represents the assessed strength of a catalyst."""
 
