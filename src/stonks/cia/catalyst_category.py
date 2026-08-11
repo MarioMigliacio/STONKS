@@ -9,6 +9,7 @@
 
 from enum import Enum
 
+
 class CatalystCategory(Enum):
     """Known catalyst categories used by C.I.A."""
 
