@@ -4,6 +4,7 @@
 # =============================================================================
 
 from stonks.api.market_data import get_news_sentiment
+from stonks.cia.catalyst_classifier import classify_article
 from stonks.cia.duplicate_filter import filter_duplicate_articles
 from stonks.scanner.news_parser import parse_news_articles
 
@@ -47,6 +48,16 @@ def main():
         unique_articles,
         start=1
     ):
+
+        categories = classify_article(
+            article
+        )
+
+        category_text = ", ".join(
+            category.value
+            for category in categories
+        )
+        
         print(
             f"{index}. {article.title}\n"
             f"   Source: {article.source}\n"
@@ -55,6 +66,7 @@ def main():
             f"   Sentiment: "
             f"{article.overall_sentiment_label} "
             f"({article.overall_sentiment_score:.3f})\n"
+            f"   C.I.A.: {category_text}\n"
         )
 
 
