@@ -23,6 +23,7 @@ class CatalystCategory(Enum):
     REGULATORY_APPROVAL = "Regulatory Approval"
     PATENT = "Patent"
     INSTITUTIONAL_INVESTMENT = "Institutional Investment"
+    SHORT_INTEREST = "Short Interest"
 
     REVERSE_SPLIT = "Reverse Stock Split"
     PUBLIC_OFFERING = "Public Offering"
