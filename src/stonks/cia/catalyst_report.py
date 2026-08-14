@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from stonks.cia.catalyst_category import CatalystCategory
+from stonks.cia.catalyst_freshness import CatalystFreshness
 from stonks.cia.catalyst_strength import CatalystStrength
 
 
@@ -53,6 +54,16 @@ class CatalystReport:
 
         newest_article:
             Publication time of the newest article considered.
+
+        freshness:
+            Freshness classification of the newest recognized catalyst.
+
+        news_age_minutes:
+            Age in minutes of the newest recognized catalyst.
+
+        has_breaking_news:
+            True when a recognized catalyst falls within the configured
+            breaking-news window.
     """
 
     ticker: str
@@ -74,3 +85,9 @@ class CatalystReport:
     duplicate_articles_removed: int
 
     newest_article: datetime
+
+    freshness: CatalystFreshness
+
+    news_age_minutes: int
+
+    has_breaking_news: bool
