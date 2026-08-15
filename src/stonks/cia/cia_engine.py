@@ -4,9 +4,9 @@
 #
 # Notes:
 # - Consumes normalized NewsArticle objects.
+# - Separates active catalyst intelligence from historical context.
 # - Aggregates catalyst categories, sentiment, freshness, and confidence.
 # - Does not perform presentation or CLI formatting.
-# - AI summarization and advanced weighting belong to future C.I.A. versions.
 # =============================================================================
 
 from datetime import datetime
@@ -22,27 +22,72 @@ from stonks.cia.catalyst_strength import CatalystStrength
 from stonks.models.news_article import NewsArticle
 
 
-def collect_catalyst_categories(
-    articles: list[NewsArticle]
-) -> list[CatalystCategory]:
-    """Collect unique recognized catalyst categories from news articles."""
+def add_unique_categories(
+    destination: list[CatalystCategory],
+    categories: list[CatalystCategory]
+):
+    """Add recognized categories without creating duplicates."""
 
-    categories = []
+    for category in categories:
+
+        if category == CatalystCategory.UNKNOWN:
+            continue
+
+        if category not in destination:
+            destination.append(category)
+
+
+def collect_catalyst_categories(
+    articles: list[NewsArticle],
+    current_time: datetime
+) -> tuple[list[CatalystCategory], list[CatalystCategory]]:
+    """
+    Separate active catalyst categories from historical categories.
+
+    BREAKING, FRESH, and RECENT articles are considered active.
+    STALE articles are retained as historical context.
+    """
+
+    active_categories = []
+    historical_categories = []
 
     for article in articles:
-        article_categories = classify_article(
+        categories = classify_article(
             article
         )
 
-        for category in article_categories:
+        if categories == [CatalystCategory.UNKNOWN]:
+            continue
 
-            if category == CatalystCategory.UNKNOWN:
-                continue
+        news_age_minutes = calculate_news_age_minutes(
+            article.published_at,
+            current_time
+        )
 
-            if category not in categories:
-                categories.append(category)
+        freshness = calculate_freshness(
+            news_age_minutes
+        )
 
-    return categories
+        if freshness in [
+            CatalystFreshness.BREAKING,
+            CatalystFreshness.FRESH,
+            CatalystFreshness.RECENT
+        ]:
+            add_unique_categories(
+                active_categories,
+                categories
+            )
+
+        else:
+            add_unique_categories(
+                historical_categories,
+                categories
+            )
+
+    return (
+        active_categories,
+        historical_categories
+    )
 
 
 def calculate_overall_sentiment(
@@ -78,19 +123,19 @@ def calculate_overall_sentiment(
 
 
 def calculate_catalyst_strength(
-    categories: list[CatalystCategory],
+    active_categories: list[CatalystCategory],
     freshness: CatalystFreshness
 ) -> CatalystStrength:
     """
-    Calculate a simple catalyst strength from category count and freshness.
-
-    This intentionally remains conservative for C.I.A. v1.
+    Calculate catalyst strength using active intelligence only.
     """
 
-    if not categories:
-        return CatalystStrength.UNKNOWN
+    if not active_categories:
+        return CatalystStrength.WEAK
 
-    category_count = len(categories)
+    category_count = len(
+        active_categories
+    )
 
     if (
         freshness == CatalystFreshness.BREAKING
@@ -98,41 +143,43 @@ def calculate_catalyst_strength(
     ):
         return CatalystStrength.STRONG
 
-    if (
-        freshness in [
-            CatalystFreshness.BREAKING,
-            CatalystFreshness.FRESH
-        ]
-    ):
+    if freshness == CatalystFreshness.BREAKING:
         return CatalystStrength.MODERATE
 
-    if category_count >= 2:
+    if (
+        freshness == CatalystFreshness.FRESH
+        and category_count >= 2
+    ):
+        return CatalystStrength.STRONG
+
+    if freshness == CatalystFreshness.FRESH:
+        return CatalystStrength.MODERATE
+
+    if freshness == CatalystFreshness.RECENT:
         return CatalystStrength.MODERATE
 
     return CatalystStrength.WEAK
 
 
 def calculate_confidence(
-    articles: list[NewsArticle],
-    categories: list[CatalystCategory]
+    articles: list[NewsArticle]
 ) -> float:
     """
-    Calculate a basic confidence score for the C.I.A. report.
-
-    Confidence is intentionally simple in v1.
+    Calculate confidence from the percentage of articles that contain
+    recognized catalyst intelligence.
     """
 
-    if not articles or not categories:
+    if not articles:
         return 0.0
 
     recognized_article_count = 0
 
     for article in articles:
-        article_categories = classify_article(
+        categories = classify_article(
             article
         )
 
-        if article_categories != [CatalystCategory.UNKNOWN]:
+        if categories != [CatalystCategory.UNKNOWN]:
             recognized_article_count += 1
 
     confidence = (
@@ -147,26 +194,35 @@ def calculate_confidence(
 
 def build_summary(
     ticker: str,
-    categories: list[CatalystCategory],
+    active_categories: list[CatalystCategory],
+    historical_categories: list[CatalystCategory],
     freshness: CatalystFreshness
 ) -> str:
-    """Build a simple deterministic C.I.A. summary."""
+    """Build a deterministic day-trading focused C.I.A. summary."""
 
-    if not categories:
-        return (
-            f"No significant catalyst intelligence "
-            f"was identified for {ticker}."
+    if active_categories:
+        active_text = ", ".join(
+            category.value
+            for category in active_categories
         )
 
-    category_text = ", ".join(
-        category.value
-        for category in categories
-    )
+        return (
+            f"{ticker} has active catalyst intelligence involving "
+            f"{active_text}. "
+            f"The newest recognized catalyst is "
+            f"{freshness.value.lower()}."
+        )
+
+    if historical_categories:
+        return (
+            f"No active catalyst intelligence was identified for {ticker}. "
+            f"Older catalyst activity exists, but the newest recognized "
+            f"intelligence is {freshness.value.lower()}."
+        )
 
     return (
-        f"{ticker} has recognized catalyst activity involving "
-        f"{category_text}. "
-        f"The newest recognized catalyst is {freshness.value.lower()}."
+        f"No significant catalyst intelligence "
+        f"was identified for {ticker}."
     )
 
 
@@ -178,8 +234,12 @@ def build_catalyst_report(
 ) -> CatalystReport:
     """Build a complete C.I.A. CatalystReport."""
 
-    categories = collect_catalyst_categories(
-        articles
+    (
+        active_categories,
+        historical_categories
+    ) = collect_catalyst_categories(
+        articles,
+        current_time
     )
 
     newest_catalyst = find_newest_catalyst_article(
@@ -205,7 +265,7 @@ def build_catalyst_report(
         newest_article_time = current_time
 
     catalyst_strength = calculate_catalyst_strength(
-        categories,
+        active_categories,
         freshness
     )
 
@@ -214,13 +274,13 @@ def build_catalyst_report(
     )
 
     confidence = calculate_confidence(
-        articles,
-        categories
+        articles
     )
 
     summary = build_summary(
         ticker,
-        categories,
+        active_categories,
+        historical_categories,
         freshness
     )
 
@@ -231,15 +291,18 @@ def build_catalyst_report(
     return CatalystReport(
         ticker=ticker,
         catalyst_strength=catalyst_strength,
-        categories=categories,
+        categories=active_categories,
+        historical_categories=historical_categories,
         overall_sentiment=overall_sentiment,
         confidence=confidence,
         summary=summary,
         article_count=original_article_count,
+
         # NOTE:
         # This currently represents unique filtered articles.
         # True event-level deduplication is future C.I.A. work.
         unique_event_count=len(articles),
+
         duplicate_articles_removed=duplicate_articles_removed,
         newest_article=newest_article_time,
         freshness=freshness,

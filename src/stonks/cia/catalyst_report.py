@@ -32,7 +32,10 @@ class CatalystReport:
             Overall assessed strength of the discovered catalysts.
 
         categories:
-            Unique catalyst categories discovered in the news.
+            Unique catalyst categories discovered in the news that are within the freshness constants in the config settings.
+
+        historical_categories:
+            Unique catalyst categories that fall outside the freshness constants in the config settings.
 
         overall_sentiment:
             Human-readable overall sentiment description.
@@ -71,6 +74,8 @@ class CatalystReport:
     catalyst_strength: CatalystStrength
 
     categories: list[CatalystCategory]
+
+    historical_categories: list[CatalystCategory]
 
     overall_sentiment: str
 

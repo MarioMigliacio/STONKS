@@ -48,9 +48,14 @@ def main():
         current_time=datetime.now()
     )
 
+    # =========================================================================
+    # C.I.A. Report
+    # =========================================================================
+
     print("")
     print("=== C.I.A. Report ===")
     print("")
+
     print(f"Ticker: {report.ticker}")
     print(f"Strength: {report.catalyst_strength.value}")
     print(f"Freshness: {report.freshness.value}")
@@ -59,15 +64,36 @@ def main():
     print(f"Confidence: {report.confidence:.0%}")
 
     if report.categories:
-        category_text = ", ".join(
+        current_category_text = ", ".join(
             category.value
             for category in report.categories
         )
     else:
-        category_text = "None"
+        current_category_text = "None"
 
-    print(f"Categories: {category_text}")
+    if report.historical_categories:
+        historical_category_text = ", ".join(
+            category.value
+            for category in report.historical_categories
+        )
+    else:
+        historical_category_text = "None"
+
+    print(
+        f"Current Categories: "
+        f"{current_category_text}"
+    )
+
+    print(
+        f"Historical Categories: "
+        f"{historical_category_text}"
+    )
+
     print(f"Summary: {report.summary}")
+
+    # =========================================================================
+    # Raw News Output
+    # =========================================================================
 
     print("")
     print(f"=== Recent News for {symbol} ===")
