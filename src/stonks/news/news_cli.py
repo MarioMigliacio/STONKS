@@ -1,22 +1,19 @@
 # =============================================================================
 # File: news_cli.py
-# Purpose: Tests ticker-specific news retrieval and normalization.
+# Purpose: Tests ticker-specific news retrieval and C.I.A. analysis.
 # =============================================================================
 
 from datetime import datetime
 
 from stonks.api.market_data import get_news_sentiment
 from stonks.cia.catalyst_classifier import classify_article
+from stonks.cia.cia_engine import build_catalyst_report
 from stonks.cia.duplicate_filter import filter_duplicate_articles
 from stonks.scanner.news_parser import parse_news_articles
-from stonks.cia.catalyst_freshness import CatalystFreshness
-from stonks.cia.catalyst_freshness import calculate_freshness
-from stonks.cia.catalyst_freshness import calculate_news_age_minutes
-from stonks.cia.catalyst_freshness import find_newest_catalyst_article
 
 
 def main():
-    """Run the STONKS news-provider test CLI."""
+    """Run the STONKS news and C.I.A. command-line interface."""
 
     symbol = input(
         "Ticker to search for news: "
@@ -28,69 +25,65 @@ def main():
 
     data = get_news_sentiment(
         symbol=symbol,
-        limit=5
+        limit=50
     )
 
     articles = parse_news_articles(
         data
     )
 
+    if not articles:
+        print("")
+        print(f"No news articles were returned for {symbol}.")
+        return
+
     unique_articles = filter_duplicate_articles(
         articles
     )
 
-    duplicate_count = (
-        len(articles) - len(unique_articles)
+    report = build_catalyst_report(
+        ticker=symbol,
+        articles=unique_articles,
+        original_article_count=len(articles),
+        current_time=datetime.now()
     )
 
-    newest_catalyst = find_newest_catalyst_article(
-        unique_articles
-    )
-    
-    if newest_catalyst:
-        current_time = datetime.now()
+    print("")
+    print("=== C.I.A. Report ===")
+    print("")
+    print(f"Ticker: {report.ticker}")
+    print(f"Strength: {report.catalyst_strength.value}")
+    print(f"Freshness: {report.freshness.value}")
+    print(f"Breaking News: {report.has_breaking_news}")
+    print(f"Sentiment: {report.overall_sentiment}")
+    print(f"Confidence: {report.confidence:.0%}")
 
-        news_age_minutes = calculate_news_age_minutes(
-            newest_catalyst.published_at,
-            current_time
-        )
-
-        freshness = calculate_freshness(
-            news_age_minutes
-        )
-
-        print(
-            f"Newest Catalyst: {newest_catalyst.title}\n"
-            f"Published: "
-            f"{newest_catalyst.published_at.strftime('%b %d, %Y at %I:%M %p')}\n"
-            f"Age: {news_age_minutes} minutes\n"
-            f"Freshness: {freshness.value}\n"
+    if report.categories:
+        category_text = ", ".join(
+            category.value
+            for category in report.categories
         )
     else:
-        print(
-            f"Newest Catalyst: None\n"
-            f"Freshness: {CatalystFreshness.UNKNOWN.value}\n"
-        )
+        category_text = "None"
+
+    print(f"Categories: {category_text}")
+    print(f"Summary: {report.summary}")
 
     print("")
     print(f"=== Recent News for {symbol} ===")
     print("")
 
-    if not articles:
-        print("No news articles were returned.")
-        return
-    
     print(
         f"Articles: {len(articles)} | "
         f"Unique: {len(unique_articles)} | "
-        f"Duplicates Removed: {duplicate_count}"
+        f"Duplicates Removed: "
+        f"{len(articles) - len(unique_articles)}"
     )
 
     for index, article in enumerate(
         unique_articles,
         start=1
     ):
-
         categories = classify_article(
             article
         )
@@ -99,7 +92,7 @@ def main():
             category.value
             for category in categories
         )
-        
+
         print(
             f"{index}. {article.title}\n"
             f"   Source: {article.source}\n"
