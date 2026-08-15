@@ -9,6 +9,7 @@ from stonks.api.market_data import get_news_sentiment
 from stonks.cia.catalyst_classifier import classify_article
 from stonks.cia.cia_engine import build_catalyst_report
 from stonks.cia.duplicate_filter import filter_duplicate_articles
+from stonks.cia.mission_brief import build_mission_brief
 from stonks.scanner.news_parser import parse_news_articles
 
 
@@ -48,48 +49,12 @@ def main():
         current_time=datetime.now()
     )
 
-    # =========================================================================
-    # C.I.A. Report
-    # =========================================================================
-
     print("")
-    print("=== C.I.A. Report ===")
-    print("")
-
-    print(f"Ticker: {report.ticker}")
-    print(f"Strength: {report.catalyst_strength.value}")
-    print(f"Freshness: {report.freshness.value}")
-    print(f"Breaking News: {report.has_breaking_news}")
-    print(f"Sentiment: {report.overall_sentiment}")
-    print(f"Confidence: {report.confidence:.0%}")
-
-    if report.categories:
-        current_category_text = ", ".join(
-            category.value
-            for category in report.categories
-        )
-    else:
-        current_category_text = "None"
-
-    if report.historical_categories:
-        historical_category_text = ", ".join(
-            category.value
-            for category in report.historical_categories
-        )
-    else:
-        historical_category_text = "None"
-
     print(
-        f"Current Categories: "
-        f"{current_category_text}"
+        build_mission_brief(
+            report
+        )
     )
-
-    print(
-        f"Historical Categories: "
-        f"{historical_category_text}"
-    )
-
-    print(f"Summary: {report.summary}")
 
     # =========================================================================
     # Raw News Output
