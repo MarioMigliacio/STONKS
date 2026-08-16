@@ -35,12 +35,15 @@ The project focuses on:
 - CSV-based persistence
 - Journal backup utility
 
-### Infrastructure
+### C.I.A.
 
-- Alpha Vantage integration
-- Local historical data cache
-- API usage safeguards
-- PowerShell utility scripts
+- Financial news retrieval
+- Duplicate article filtering
+- Catalyst classification
+- Breaking-news freshness detection
+- Catalyst strength and confidence
+- Aggregated sentiment analysis
+- Mission brief reporting
 
 ---
 
@@ -60,6 +63,7 @@ STONKS/
 ├── src/
 │   └── stonks/
 │       ├── api/
+|       ├── cia/
 |       ├── cache/
 |       ├── config/
 │       ├── journal/
@@ -130,7 +134,7 @@ STONKS/
 
 - [Journal Subsystem](docs/journal.md)
 - [Historical Cache](docs/cache.md)
-- [C.I.A. News Subsystem](docs/news.md)
+- [C.I.A. News Subsystem](docs/cia.md)
 
 ### Planned Documentation
 
