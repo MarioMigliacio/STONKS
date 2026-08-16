@@ -90,22 +90,26 @@ def collect_catalyst_categories(
     )
 
 
-def calculate_overall_sentiment(
+def calculate_average_sentiment(
     articles: list[NewsArticle]
-) -> str:
-    """Calculate a simple overall sentiment label from article scores."""
+) -> float:
+    """Calculate the average sentiment score across all articles."""
 
     if not articles:
-        return "Unknown"
+        return 0.0
 
     sentiment_total = sum(
         article.overall_sentiment_score
         for article in articles
     )
 
-    average_sentiment = (
-        sentiment_total / len(articles)
-    )
+    return sentiment_total / len(articles)
+
+
+def classify_overall_sentiment(
+    average_sentiment: float
+) -> str:
+    """Classify an average sentiment score."""
 
     if average_sentiment >= 0.35:
         return "Bullish"
@@ -269,8 +273,12 @@ def build_catalyst_report(
         freshness
     )
 
-    overall_sentiment = calculate_overall_sentiment(
+    average_sentiment = calculate_average_sentiment(
         articles
+    )
+
+    overall_sentiment = classify_overall_sentiment(
+        average_sentiment
     )
 
     confidence = calculate_confidence(
@@ -294,6 +302,7 @@ def build_catalyst_report(
         categories=active_categories,
         historical_categories=historical_categories,
         overall_sentiment=overall_sentiment,
+        average_sentiment=average_sentiment,
         confidence=confidence,
         summary=summary,
         article_count=original_article_count,

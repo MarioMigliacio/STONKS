@@ -37,6 +37,9 @@ class CatalystReport:
         historical_categories:
             Unique catalyst categories that fall outside the freshness constants in the config settings.
 
+        average_sentiment:
+            News sentiment aggregated into average value across collection of news objects.
+
         overall_sentiment:
             Human-readable overall sentiment description.
 
@@ -76,6 +79,8 @@ class CatalystReport:
     categories: list[CatalystCategory]
 
     historical_categories: list[CatalystCategory]
+
+    average_sentiment: float
 
     overall_sentiment: str
 
