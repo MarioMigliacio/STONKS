@@ -1,16 +1,20 @@
 # =============================================================================
 # File: news_cli.py
-# Purpose: Tests ticker-specific news retrieval and normalization.
+# Purpose: Tests ticker-specific news retrieval and C.I.A. analysis.
 # =============================================================================
+
+from datetime import datetime
 
 from stonks.api.market_data import get_news_sentiment
 from stonks.cia.catalyst_classifier import classify_article
+from stonks.cia.cia_engine import build_catalyst_report
 from stonks.cia.duplicate_filter import filter_duplicate_articles
+from stonks.cia.mission_brief import build_mission_brief
 from stonks.scanner.news_parser import parse_news_articles
 
 
 def main():
-    """Run the STONKS news-provider test CLI."""
+    """Run the STONKS news and C.I.A. command-line interface."""
 
     symbol = input(
         "Ticker to search for news: "
@@ -22,33 +26,55 @@ def main():
 
     data = get_news_sentiment(
         symbol=symbol,
-        limit=5
+        limit=50
     )
 
-    articles = parse_news_articles(data)
+    articles = parse_news_articles(
+        data
+    )
 
-    unique_articles = filter_duplicate_articles(articles)
-    duplicate_count = (len(articles) - len(unique_articles))
+    if not articles:
+        print("")
+        print(f"No news articles were returned for {symbol}.")
+        return
+
+    unique_articles = filter_duplicate_articles(
+        articles
+    )
+
+    report = build_catalyst_report(
+        ticker=symbol,
+        articles=unique_articles,
+        original_article_count=len(articles),
+        current_time=datetime.now()
+    )
+
+    print("")
+    print(
+        build_mission_brief(
+            report
+        )
+    )
+
+    # =========================================================================
+    # Raw News Output
+    # =========================================================================
 
     print("")
     print(f"=== Recent News for {symbol} ===")
     print("")
 
-    if not articles:
-        print("No news articles were returned.")
-        return
-    
     print(
         f"Articles: {len(articles)} | "
         f"Unique: {len(unique_articles)} | "
-        f"Duplicates Removed: {duplicate_count}"
+        f"Duplicates Removed: "
+        f"{len(articles) - len(unique_articles)}"
     )
 
     for index, article in enumerate(
         unique_articles,
         start=1
     ):
-
         categories = classify_article(
             article
         )
@@ -57,7 +83,7 @@ def main():
             category.value
             for category in categories
         )
-        
+
         print(
             f"{index}. {article.title}\n"
             f"   Source: {article.source}\n"

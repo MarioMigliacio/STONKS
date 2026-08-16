@@ -38,3 +38,12 @@ ALLOW_API_CALLS = True
 
 # historic data lookback constant for 30 day average.
 RELATIVE_VOLUME_LOOKBACK_DAYS = 30
+
+# CIA breaking news thresholds
+# 0 - 60 minutes    🔥 Breaking
+# 1 - 4 hours          Fresh
+# 4 - 24 hours         Recent
+# 24+ hours            Stale
+CIA_BREAKING_NEWS_MINUTES = 60
+CIA_FRESH_NEWS_HOURS = 4
+CIA_RECENT_NEWS_HOURS = 24

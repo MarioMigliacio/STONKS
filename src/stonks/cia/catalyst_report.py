@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from stonks.cia.catalyst_category import CatalystCategory
+from stonks.cia.catalyst_freshness import CatalystFreshness
 from stonks.cia.catalyst_strength import CatalystStrength
 
 
@@ -31,7 +32,13 @@ class CatalystReport:
             Overall assessed strength of the discovered catalysts.
 
         categories:
-            Unique catalyst categories discovered in the news.
+            Unique catalyst categories discovered in the news that are within the freshness constants in the config settings.
+
+        historical_categories:
+            Unique catalyst categories that fall outside the freshness constants in the config settings.
+
+        average_sentiment:
+            News sentiment aggregated into average value across collection of news objects.
 
         overall_sentiment:
             Human-readable overall sentiment description.
@@ -53,6 +60,16 @@ class CatalystReport:
 
         newest_article:
             Publication time of the newest article considered.
+
+        freshness:
+            Freshness classification of the newest recognized catalyst.
+
+        news_age_minutes:
+            Age in minutes of the newest recognized catalyst.
+
+        has_breaking_news:
+            True when a recognized catalyst falls within the configured
+            breaking-news window.
     """
 
     ticker: str
@@ -60,6 +77,10 @@ class CatalystReport:
     catalyst_strength: CatalystStrength
 
     categories: list[CatalystCategory]
+
+    historical_categories: list[CatalystCategory]
+
+    average_sentiment: float
 
     overall_sentiment: str
 
@@ -74,3 +95,9 @@ class CatalystReport:
     duplicate_articles_removed: int
 
     newest_article: datetime
+
+    freshness: CatalystFreshness
+
+    news_age_minutes: int
+
+    has_breaking_news: bool
