@@ -63,8 +63,8 @@ STONKS/
 ├── src/
 │   └── stonks/
 │       ├── api/
-|       ├── cia/
 |       ├── cache/
+|       ├── cia/
 |       ├── config/
 │       ├── journal/
 |       ├── models/
