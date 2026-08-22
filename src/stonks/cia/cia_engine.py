@@ -100,7 +100,7 @@ def calculate_average_sentiment(
         return 0.0
 
     sentiment_total = sum(
-        article.overall_sentiment_score
+        article.sentiment_score
         for article in articles
     )
 

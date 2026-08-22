@@ -35,12 +35,14 @@ def filter_duplicate_articles(
         if normalized_title in seen_titles:
             continue
 
-        if article.url in seen_urls:
+        if article.url and article.url in seen_urls:
             continue
 
         unique_articles.append(article)
 
         seen_titles.add(normalized_title)
-        seen_urls.add(article.url)
+
+        if article.url:
+            seen_urls.add(article.url)
 
     return unique_articles

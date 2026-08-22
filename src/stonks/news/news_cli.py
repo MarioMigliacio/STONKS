@@ -4,6 +4,7 @@
 # =============================================================================
 
 from datetime import datetime
+from datetime import timezone
 
 from stonks.api.market_data import get_news_sentiment
 from stonks.cia.catalyst_classifier import classify_article
@@ -13,7 +14,7 @@ from stonks.cia.mission_brief import build_mission_brief
 from stonks.scanner.news_parser import parse_news_articles
 
 
-def main():
+def main() -> None:
     """Run the STONKS news and C.I.A. command-line interface."""
 
     symbol = input(
@@ -30,7 +31,8 @@ def main():
     )
 
     articles = parse_news_articles(
-        data
+        data,
+        symbol
     )
 
     if not articles:
@@ -46,7 +48,9 @@ def main():
         ticker=symbol,
         articles=unique_articles,
         original_article_count=len(articles),
-        current_time=datetime.now()
+        current_time=datetime.now(
+            timezone.utc
+        )
     )
 
     print("")
@@ -65,10 +69,10 @@ def main():
     print("")
 
     print(
-        f"Articles: {len(articles)} | "
-        f"Unique: {len(unique_articles)} | "
+        f"Articles: {report.original_article_count} | "
+        f"Unique: {report.unique_article_count} | "
         f"Duplicates Removed: "
-        f"{len(articles) - len(unique_articles)}"
+        f"{report.duplicate_articles_removed}"
     )
 
     for index, article in enumerate(
@@ -88,10 +92,10 @@ def main():
             f"{index}. {article.title}\n"
             f"   Source: {article.source}\n"
             f"   Published: "
-            f"{article.published_at.strftime('%b %d, %Y at %I:%M %p')}\n"
+            f"{article.published_at.strftime('%b %d, %Y at %I:%M %p UTC')}\n"
             f"   Sentiment: "
-            f"{article.overall_sentiment_label} "
-            f"({article.overall_sentiment_score:.3f})\n"
+            f"{article.sentiment_label} "
+            f"({article.sentiment_score:.3f})\n"
             f"   C.I.A.: {category_text}\n"
         )
 

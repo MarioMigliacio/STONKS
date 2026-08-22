@@ -3,12 +3,13 @@
 # Purpose: Defines normalized news article data used by STONKS.
 #
 # Notes:
-# - Isolates scanner logic from provider-specific JSON fields.
+# - Provides a provider-independent article model for scanner and C.I.A. logic.
 # - Additional providers can normalize their responses into this same model.
 # =============================================================================
 
 from dataclasses import dataclass
 from datetime import datetime
+
 
 @dataclass
 class NewsArticle:
@@ -31,11 +32,11 @@ class NewsArticle:
         url:
             Link to the original article.
 
-        overall_sentiment_score:
-            Provider-generated sentiment score.
+        sentiment_score:
+            Sentiment score for the stock ticker being analyzed.
 
-        overall_sentiment_label:
-            Provider-generated sentiment label.
+        sentiment_label:
+            Human-readable sentiment label for the stock ticker being analyzed.
     """
 
     title: str
@@ -43,5 +44,5 @@ class NewsArticle:
     published_at: datetime
     summary: str
     url: str
-    overall_sentiment_score: float
-    overall_sentiment_label: str
+    sentiment_score: float
+    sentiment_label: str

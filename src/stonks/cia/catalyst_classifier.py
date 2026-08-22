@@ -34,8 +34,9 @@ CATALYST_RULES = {
 
     CatalystCategory.MERGER: [
         "merger",
-        "merge",
         "merging",
+        "merges with",
+        "merge agreement",
     ],
 
     CatalystCategory.EARNINGS: [
@@ -69,10 +70,13 @@ CATALYST_RULES = {
     ],
 
     CatalystCategory.INSTITUTIONAL_INVESTMENT: [
-        "stake",
-        "investment",
         "institutional investor",
+        "institutional investment",
         "strategic investment",
+        "acquires stake",
+        "acquired stake",
+        "takes stake",
+        "purchases shares",
     ],
     
     CatalystCategory.SHORT_INTEREST: [

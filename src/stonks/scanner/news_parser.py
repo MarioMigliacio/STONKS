@@ -3,19 +3,32 @@
 # Purpose: Normalizes provider news responses into NewsArticle models.
 # =============================================================================
 
-from stonks.models.news_article import NewsArticle
 from datetime import datetime
+from datetime import timezone
 
-def parse_published_time(value: str) -> datetime:
-    """Convert an Alpha Vantage timestamp into a datetime object."""
+from stonks.models.news_article import NewsArticle
 
-    return datetime.strptime(
+
+def parse_published_time(
+    value: str
+) -> datetime:
+    """Convert an Alpha Vantage UTC timestamp into a datetime object."""
+
+    parsed_time = datetime.strptime(
         value,
         "%Y%m%dT%H%M%S"
     )
 
-def parse_news_articles(data) -> list[NewsArticle]:
-    """Parse Alpha Vantage news data into normalized article models."""
+    return parsed_time.replace(
+        tzinfo=timezone.utc
+    )
+
+
+def parse_news_articles(
+    data,
+    symbol: str
+) -> list[NewsArticle]:
+    """Parse ticker-relevant Alpha Vantage news into normalized articles."""
 
     if not data:
         return []
@@ -25,16 +38,11 @@ def parse_news_articles(data) -> list[NewsArticle]:
     if not feed:
         return []
 
-    articles = []
+    symbol = symbol.upper()
+
+    articles: list[NewsArticle] = []
 
     for article_data in feed:
-        sentiment_score = float(
-            article_data.get(
-                "overall_sentiment_score",
-                0.0
-            )
-        )
-
         published_time = article_data.get(
             "time_published",
             ""
@@ -42,6 +50,56 @@ def parse_news_articles(data) -> list[NewsArticle]:
 
         if not published_time:
             continue
+
+        ticker_sentiments = article_data.get(
+            "ticker_sentiment",
+            []
+        )
+
+        if not ticker_sentiments:
+            continue
+
+        target_ticker_data = None
+
+        for ticker_data in ticker_sentiments:
+            if ticker_data.get("ticker", "").upper() == symbol:
+                target_ticker_data = ticker_data
+                break
+
+        if not target_ticker_data:
+            continue
+
+        target_relevance = float(
+            target_ticker_data.get(
+                "relevance_score",
+                0.0
+            )
+        )
+
+        highest_relevance = max(
+            float(
+                ticker_data.get(
+                    "relevance_score",
+                    0.0
+                )
+            )
+            for ticker_data in ticker_sentiments
+        )
+
+        if target_relevance < highest_relevance:
+            continue
+
+        sentiment_score = float(
+            target_ticker_data.get(
+                "ticker_sentiment_score",
+                0.0
+            )
+        )
+
+        sentiment_label = target_ticker_data.get(
+            "ticker_sentiment_label",
+            ""
+        )
 
         articles.append(
             NewsArticle(
@@ -52,11 +110,8 @@ def parse_news_articles(data) -> list[NewsArticle]:
                 ),
                 summary=article_data.get("summary", ""),
                 url=article_data.get("url", ""),
-                overall_sentiment_score=sentiment_score,
-                overall_sentiment_label=article_data.get(
-                    "overall_sentiment_label",
-                    ""
-                )
+                sentiment_score=sentiment_score,
+                sentiment_label=sentiment_label
             )
         )
 

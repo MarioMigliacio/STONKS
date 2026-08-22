@@ -50,16 +50,16 @@ class CatalystReport:
         summary:
             Human-readable catalyst summary.
 
-        article_count:
+        original_article_count:
             Total number of articles considered.
 
-        unique_event_count:
-            Number of distinct events after duplicate removal.
+        unique_article_count:
+            Number of distinct articles after duplicate removal.
 
         duplicate_articles_removed:
             Number of duplicate or redundant articles removed.
 
-        newest_article:
+        newest_catalyst_article:
             Publication time of the newest article considered.
 
         freshness:
