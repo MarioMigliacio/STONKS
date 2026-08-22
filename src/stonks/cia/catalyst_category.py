@@ -4,7 +4,7 @@
 #
 # Notes:
 # - Categories describe the type of event associated with market news.
-# - Classification logic will be implemented in a later feature branch.
+# - Classification logic is handled by catalyst_classifier.py.
 # =============================================================================
 
 from enum import Enum
@@ -15,6 +15,7 @@ class CatalystCategory(Enum):
 
     UNKNOWN = "Unknown"
 
+    # positive/general catalysts
     CONTRACT = "Contract / Purchase Order"
     ACQUISITION = "Acquisition"
     MERGER = "Merger"
@@ -25,10 +26,12 @@ class CatalystCategory(Enum):
     INSTITUTIONAL_INVESTMENT = "Institutional Investment"
     SHORT_INTEREST = "Short Interest"
 
+    # risk/negative catalysts
     REVERSE_SPLIT = "Reverse Stock Split"
     PUBLIC_OFFERING = "Public Offering"
     BANKRUPTCY = "Bankruptcy / Restructuring"
     MANAGEMENT_CHANGE = "Management Change"
 
+    # market commentary/momentum
     ANALYST_REPORT = "Analyst Report"
     MOMENTUM_HYPE = "Momentum / Hype"

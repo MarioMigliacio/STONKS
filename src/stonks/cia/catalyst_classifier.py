@@ -20,8 +20,8 @@ CATALYST_RULES = {
     CatalystCategory.CONTRACT: [
         "contract",
         "purchase order",
-        "order",
-        "awarded",
+        "awarded contract",
+        "contract awarded",
     ],
 
     CatalystCategory.ACQUISITION: [
@@ -148,24 +148,23 @@ def find_categories(
 
     return categories
 
+
 def classify_article(
     article: NewsArticle
 ) -> list[CatalystCategory]:
-    """
-    Classify an article using the title as the primary source
-    and the summary as a fallback.
-    """
+    """Classify an article using its title and summary."""
 
     categories = find_categories(
         article.title
     )
 
-    if categories:
-        return categories
-
-    categories = find_categories(
+    summary_categories = find_categories(
         article.summary
     )
+
+    for category in summary_categories:
+        if category not in categories:
+            categories.append(category)
 
     if categories:
         return categories

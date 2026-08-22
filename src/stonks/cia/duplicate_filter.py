@@ -20,12 +20,12 @@ def normalize_title(title: str) -> str:
 def filter_duplicate_articles(
     articles: list[NewsArticle]
 ) -> list[NewsArticle]:
-    """Return news articles with exact duplicates removed."""
+    """Return news articles with duplicate titles or URLs removed."""
 
-    unique_articles = []
+    unique_articles: list[NewsArticle] = []
 
-    seen_titles = set()
-    seen_urls = set()
+    seen_titles: set[str] = set()
+    seen_urls: set[str] = set()
 
     for article in articles:
         normalized_title = normalize_title(

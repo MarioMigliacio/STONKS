@@ -13,6 +13,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
 from stonks.cia.catalyst_category import CatalystCategory
 from stonks.cia.catalyst_freshness import CatalystFreshness
@@ -44,7 +45,7 @@ class CatalystReport:
             Human-readable overall sentiment description.
 
         confidence:
-            Confidence in the analysis from 0.0 to 1.0.
+            The proportion of analyzed articles that contained recognized catalyst intelligence from 0.0 to 1.0.
 
         summary:
             Human-readable catalyst summary.
@@ -88,13 +89,13 @@ class CatalystReport:
 
     summary: str
 
-    article_count: int
+    original_article_count: int
 
-    unique_event_count: int
+    unique_article_count: int
 
     duplicate_articles_removed: int
 
-    newest_article: datetime
+    newest_catalyst_article: Optional[datetime]
 
     freshness: CatalystFreshness
 

@@ -19,13 +19,14 @@ from stonks.cia.catalyst_freshness import calculate_news_age_minutes
 from stonks.cia.catalyst_freshness import find_newest_catalyst_article
 from stonks.cia.catalyst_report import CatalystReport
 from stonks.cia.catalyst_strength import CatalystStrength
+from stonks.cia.catalyst_strength import calculate_catalyst_strength
 from stonks.models.news_article import NewsArticle
 
 
 def add_unique_categories(
     destination: list[CatalystCategory],
     categories: list[CatalystCategory]
-):
+) -> None:
     """Add recognized categories without creating duplicates."""
 
     for category in categories:
@@ -124,45 +125,6 @@ def classify_overall_sentiment(
         return "Somewhat-Bearish"
 
     return "Neutral"
-
-
-def calculate_catalyst_strength(
-    active_categories: list[CatalystCategory],
-    freshness: CatalystFreshness
-) -> CatalystStrength:
-    """
-    Calculate catalyst strength using active intelligence only.
-    """
-
-    if not active_categories:
-        return CatalystStrength.WEAK
-
-    category_count = len(
-        active_categories
-    )
-
-    if (
-        freshness == CatalystFreshness.BREAKING
-        and category_count >= 2
-    ):
-        return CatalystStrength.STRONG
-
-    if freshness == CatalystFreshness.BREAKING:
-        return CatalystStrength.MODERATE
-
-    if (
-        freshness == CatalystFreshness.FRESH
-        and category_count >= 2
-    ):
-        return CatalystStrength.STRONG
-
-    if freshness == CatalystFreshness.FRESH:
-        return CatalystStrength.MODERATE
-
-    if freshness == CatalystFreshness.RECENT:
-        return CatalystStrength.MODERATE
-
-    return CatalystStrength.WEAK
 
 
 def calculate_confidence(
@@ -266,7 +228,7 @@ def build_catalyst_report(
     else:
         news_age_minutes = 0
         freshness = CatalystFreshness.UNKNOWN
-        newest_article_time = current_time
+        newest_article_time = None
 
     catalyst_strength = calculate_catalyst_strength(
         active_categories,
@@ -305,15 +267,15 @@ def build_catalyst_report(
         average_sentiment=average_sentiment,
         confidence=confidence,
         summary=summary,
-        article_count=original_article_count,
+        original_article_count=original_article_count,
 
         # NOTE:
         # This currently represents unique filtered articles.
         # True event-level deduplication is future C.I.A. work.
-        unique_event_count=len(articles),
+        unique_article_count=len(articles),
 
         duplicate_articles_removed=duplicate_articles_removed,
-        newest_article=newest_article_time,
+        newest_catalyst_article=newest_article_time,
         freshness=freshness,
         news_age_minutes=news_age_minutes,
         has_breaking_news=(

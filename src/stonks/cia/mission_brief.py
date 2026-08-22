@@ -8,6 +8,7 @@
 # - Does not perform classification, scoring, freshness, or API logic.
 # =============================================================================
 
+from stonks.cia.catalyst_category import CatalystCategory
 from stonks.cia.catalyst_report import CatalystReport
 
 
@@ -41,7 +42,7 @@ def get_mission_status(
 
 
 def format_categories(
-    categories
+    categories: list[CatalystCategory]
 ) -> str:
     """Format catalyst categories for terminal display."""
 
