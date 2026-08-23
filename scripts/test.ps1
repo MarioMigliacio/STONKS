@@ -3,4 +3,13 @@
 # Purpose: Run the STONKS automated test suite.
 # =============================================================================
 
-pytest -v
+$root = Split-Path -Parent $PSScriptRoot
+
+Push-Location $root
+
+try {
+    pytest -v
+}
+finally {
+    Pop-Location
+}
