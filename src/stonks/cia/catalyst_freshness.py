@@ -30,6 +30,7 @@ class CatalystFreshness(Enum):
     RECENT = "Recent"
     STALE = "Stale"
 
+
 def find_newest_catalyst_article(
     articles: list[NewsArticle]
 ) -> Optional[NewsArticle]:
@@ -70,7 +71,7 @@ def calculate_news_age_minutes(
 
 def calculate_freshness(
     news_age_minutes: int
-) -> "CatalystFreshness":
+) -> CatalystFreshness:
     """Determine catalyst freshness from its age."""
 
     if news_age_minutes <= CIA_BREAKING_NEWS_MINUTES:

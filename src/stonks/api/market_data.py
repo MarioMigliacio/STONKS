@@ -7,6 +7,7 @@ import requests
 
 from stonks.config.settings import API_KEY
 
+
 BASE_URL = "https://www.alphavantage.co/query"
 
 """ NOTE:  Alpha Vantage GLOBAL_QUOTE function returns json format: 
@@ -26,7 +27,10 @@ BASE_URL = "https://www.alphavantage.co/query"
     }
 """
 
-def get_quote(symbol):
+
+def get_quote(
+    symbol: str
+):
     """Fetch the latest quote data for a stock symbol."""
 
     params = {
@@ -35,7 +39,11 @@ def get_quote(symbol):
         "apikey": API_KEY
     }
 
-    response = requests.get(BASE_URL, params=params)
+    response = requests.get(
+        BASE_URL,
+        params=params,
+        timeout=15
+    )
 
     if response.status_code != 200:
         print(f"Request failed for {symbol}")
@@ -43,7 +51,9 @@ def get_quote(symbol):
 
     return response.json()
 
-def get_daily_time_series(symbol):
+def get_daily_time_series(
+    symbol: str
+):
     """Fetch daily historical data for a stock symbol."""
 
     params = {
@@ -52,7 +62,11 @@ def get_daily_time_series(symbol):
         "apikey": API_KEY
     }
 
-    response = requests.get(BASE_URL, params=params)
+    response = requests.get(
+        BASE_URL,
+        params=params,
+        timeout=15
+    )
 
     if response.status_code != 200:
         print(f"Request failed for {symbol}")
