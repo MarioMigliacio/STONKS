@@ -1,5 +1,5 @@
 # =============================================================================
-# File: run.ps1
+# File: init.ps1
 # Purpose: Initialize the STONKS environment and show next steps.
 # =============================================================================
 
@@ -25,5 +25,5 @@ else {
 Write-Host ""
 Write-Host "Next steps:"
 Write-Host "1. Run: venv\Scripts\activate"
-Write-Host "2. Run: pip install requests pandas python-dotenv"
+Write-Host "2. Run: pip install -r requirements.txt"
 Write-Host "3. Edit .env and add your API key"
