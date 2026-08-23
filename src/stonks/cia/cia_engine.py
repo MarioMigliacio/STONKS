@@ -11,6 +11,8 @@
 
 from datetime import datetime
 
+from stonks.config import settings
+
 from stonks.cia.catalyst_category import CatalystCategory
 from stonks.cia.catalyst_classifier import classify_article
 from stonks.cia.catalyst_freshness import CatalystFreshness
@@ -112,16 +114,16 @@ def classify_overall_sentiment(
 ) -> str:
     """Classify an average sentiment score."""
 
-    if average_sentiment >= 0.35:
+    if average_sentiment >= settings.CIA_BULLISH_SENTIMENT_THRESHOLD:
         return "Bullish"
 
-    if average_sentiment >= 0.15:
+    if average_sentiment >= settings.CIA_SOMEWHAT_BULLISH_SENTIMENT_THRESHOLD:
         return "Somewhat-Bullish"
 
-    if average_sentiment <= -0.35:
+    if average_sentiment <= settings.CIA_BEARISH_SENTIMENT_THRESHOLD:
         return "Bearish"
 
-    if average_sentiment <= -0.15:
+    if average_sentiment <= settings.CIA_SOMEWHAT_BEARISH_SENTIMENT_THRESHOLD:
         return "Somewhat-Bearish"
 
     return "Neutral"
