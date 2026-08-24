@@ -5,3 +5,20 @@ pythonpath = [
 testpaths = [
     "tests"
 ]
+
+[tool.ruff]
+src = ["src"]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

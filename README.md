@@ -76,7 +76,8 @@ STONKS/
 ├── venv/
 ├── .env (secret)
 ├── pyproject.toml (for pytest path consistency)
-└── README.md
+├── README.md
+└── requirements.txt (dependencies)
 
 ```
 
@@ -133,6 +134,18 @@ STONKS/
 
 ```powershell
 .\scripts\test.ps1
+```
+
+### Lint format checking (non mutative)
+
+```powershell
+.\scripts\lint.ps1
+```
+
+### Fix Linting Format (mutative)
+
+```powershell
+.\scripts\format.ps1
 ```
 
 ---
