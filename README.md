@@ -70,8 +70,12 @@ STONKS/
 |       ├── models/
 |       ├── news/
 |       └── scanner/
+├── tests/
+│   ├── cia/
+│   └── scanner/
 ├── venv/
 ├── .env (secret)
+├── pyproject.toml (for pytest path consistency)
 └── README.md
 
 ```
@@ -85,8 +89,7 @@ STONKS/
 - run git clone https://github.com/MarioMigliacio/STONKS.git
 - cd into STONKS/
 - run ".\scripts\init.ps1"
-- run ".\venv\Scripts\activate.ps1"
-- run pip install requests pandas python-dotenv
+- run ".\scripts\activate.ps1"
 - visit https://www.alphavantage.co/support/# 'Claim your API key' and update .env file as described in init.ps1
 - . . .
 - profit
@@ -126,6 +129,12 @@ STONKS/
 .\scripts\news.ps1
 ```
 
+### Test Framework
+
+```powershell
+.\scripts\test.ps1
+```
+
 ---
 
 ## Documentation
@@ -135,52 +144,6 @@ STONKS/
 - [Journal Subsystem](docs/journal.md)
 - [Historical Cache](docs/cache.md)
 - [C.I.A. News Subsystem](docs/cia.md)
-
-### Planned Documentation
-
-- Scanner Architecture
-- Analytics & Reporting
-- Data Abstraction Layer
-- GUI Layer
-
----
-
-## Roadmap
-
-### Completed
-
-- Change % Scanner
-- Gap % Scanner
-- Relative Volume Scanner
-- Trade Journal
-- Account Snapshots
-- Journal Backups
-- Historical Cache Infrastructure
-
-### In Progress
-
-- Breaking News (provider, then scanner)
-
-### Planned
-
-- Analytics & Reporting
-- GUI Layer
-- Data Abstraction Layer
-- Advanced Scanner Filters
-
----
-
-## Development Philosophy
-
-STONKS is intentionally developed in small, incremental features.
-
-The focus is on:
-
-- Learning Python
-- Practicing software engineering
-- Collecting meaningful trading data
-- Improving trading discipline
-- Building reusable infrastructure before adding features
 
 ---
 

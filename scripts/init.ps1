@@ -1,29 +1,43 @@
 # =============================================================================
-# File: run.ps1
+# File: init.ps1
 # Purpose: Initialize the STONKS environment and show next steps.
 # =============================================================================
 
-Write-Host "Initializing STONKS..."
+$root = Split-Path -Parent $PSScriptRoot
 
-if (!(Test-Path ".env")) {
-    Copy-Item ".env.example" ".env"
-    Write-Host "Created .env from .env.example"
-    Write-Host "Edit .env and add your STONKS_API_KEY."
-}
-else {
-    Write-Host ".env already exists. Skipping."
-}
+Push-Location $root
 
-if (!(Test-Path "venv")) {
-    python -m venv venv
-    Write-Host "Created virtual environment."
-}
-else {
-    Write-Host "venv already exists. Skipping."
-}
+try {
+    Write-Host "Initializing STONKS..."
 
-Write-Host ""
-Write-Host "Next steps:"
-Write-Host "1. Run: venv\Scripts\activate"
-Write-Host "2. Run: pip install requests pandas python-dotenv"
-Write-Host "3. Edit .env and add your API key"
+    if (!(Test-Path ".env")) {
+        Copy-Item ".env.example" ".env"
+        Write-Host "Created .env from .env.example"
+    }
+    else {
+        Write-Host ".env already exists. Skipping."
+    }
+
+    if (!(Test-Path "venv")) {
+        python -m venv venv
+        Write-Host "Created virtual environment."
+    }
+    else {
+        Write-Host "venv already exists. Skipping."
+    }
+
+    Write-Host "Installing project dependencies..."
+
+    & ".\venv\Scripts\python.exe" -m pip install -r requirements.txt
+
+    Write-Host "Dependencies installed."
+
+    Write-Host ""
+    Write-Host "STONKS initialization complete."
+    Write-Host ""
+    Write-Host "Run venv\Scripts\activate to begin development."
+    Write-Host "Add your STONKS_API_KEY to .env if it has not been configured."
+}
+finally {
+    Pop-Location
+}
