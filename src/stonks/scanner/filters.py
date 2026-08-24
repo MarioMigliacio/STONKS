@@ -7,14 +7,14 @@ import time
 
 from stonks.api.market_data import get_quote
 from stonks.cache.historical_cache_service import get_historical_data
+from stonks.config.settings import MIN_VOLUME, RELATIVE_VOLUME_LOOKBACK_DAYS, WATCHLIST
 from stonks.models.quote_data import QuoteData
 from stonks.scanner.historical_volume_parser import parse_historical_volumes
-from stonks.scanner.relative_volume import calculate_average_volume
-from stonks.scanner.relative_volume import calculate_relative_volume
+from stonks.scanner.relative_volume import (
+    calculate_average_volume,
+    calculate_relative_volume,
+)
 
-from stonks.config.settings import WATCHLIST
-from stonks.config.settings import MIN_VOLUME
-from stonks.config.settings import RELATIVE_VOLUME_LOOKBACK_DAYS
 
 def parse_latest(data):
     """Parse the latest quote price and volume from API response data."""
@@ -38,13 +38,14 @@ def parse_latest(data):
     gap_percent = ((open_price - previous_close) / previous_close) * 100
 
     return QuoteData(
-    symbol=quote["01. symbol"],
-    price=price,
-    volume=volume,
-    change_percent=change_percent,
-    gap_percent=gap_percent,
-    latest_trading_day=latest_trading_day
-)
+        symbol=quote["01. symbol"],
+        price=price,
+        volume=volume,
+        change_percent=change_percent,
+        gap_percent=gap_percent,
+        latest_trading_day=latest_trading_day,
+    )
+
 
 def scan_stocks():
     """Scan the watchlist and return stocks matching configured filters."""
@@ -66,24 +67,17 @@ def scan_stocks():
 
         quote_data = parsed
 
-        historical_data = get_historical_data(
-            quote_data.symbol
-        )
+        historical_data = get_historical_data(quote_data.symbol)
 
-        historical_volumes = parse_historical_volumes(
-            historical_data
-        )
+        historical_volumes = parse_historical_volumes(historical_data)
 
         average_volume = calculate_average_volume(
             historical_volumes,
             RELATIVE_VOLUME_LOOKBACK_DAYS,
-            quote_data.latest_trading_day
+            quote_data.latest_trading_day,
         )
 
-        relative_volume = calculate_relative_volume(
-            quote_data.volume,
-            average_volume
-        )
+        relative_volume = calculate_relative_volume(quote_data.volume, average_volume)
 
         quote_data.average_volume = average_volume
         quote_data.relative_volume = relative_volume

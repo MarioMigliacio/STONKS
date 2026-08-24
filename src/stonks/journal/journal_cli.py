@@ -8,17 +8,16 @@
 # - Delegates persistence to journal_storage.py.
 # =============================================================================
 
-from datetime import date
-from datetime import datetime
+from datetime import date, datetime
 
-from stonks.journal.trade_order import TradeOrder
-from stonks.journal.journal_storage import save_order
 from stonks.journal.account_snapshot import AccountSnapshot
-from stonks.journal.journal_storage import save_snapshot
+from stonks.journal.journal_storage import save_order, save_snapshot
+from stonks.journal.trade_order import TradeOrder
 
 # =============================================================================
 # Input Helpers
 # =============================================================================
+
 
 def prompt_string(message: str, allow_empty: bool = False) -> str:
     """Prompt user for a string value."""
@@ -30,6 +29,7 @@ def prompt_string(message: str, allow_empty: bool = False) -> str:
             return value
 
         print("Value cannot be empty.")
+
 
 def prompt_int(message: str) -> int:
     """Prompt user for an integer value."""
@@ -43,6 +43,7 @@ def prompt_int(message: str) -> int:
         except ValueError:
             print("Invalid integer. Please try again.")
 
+
 def prompt_float(message: str) -> float:
     """Prompt user for a floating point value."""
 
@@ -55,6 +56,7 @@ def prompt_float(message: str) -> float:
         except ValueError:
             print("Invalid number. Please try again.")
 
+
 def prompt_order_type() -> str:
     """Prompt user for BUY or SELL."""
 
@@ -66,9 +68,11 @@ def prompt_order_type() -> str:
 
         print("Order type must be BUY or SELL.")
 
+
 # =============================================================================
 # Journal Entry Workflow
 # =============================================================================
+
 
 def add_trade_order():
     """Prompt user for trade order details and save the order."""
@@ -80,10 +84,7 @@ def add_trade_order():
     order_id = prompt_int("Order ID: ")
     position_id = prompt_int("Position ID: ")
 
-    trade_date = prompt_string(
-        f"Trade Date [{date.today()}]: ",
-        allow_empty=True
-    )
+    trade_date = prompt_string(f"Trade Date [{date.today()}]: ", allow_empty=True)
 
     if not trade_date:
         trade_date = str(date.today())
@@ -93,15 +94,9 @@ def add_trade_order():
     fill_price = prompt_float("Fill Price: ")
     shares = prompt_int("Shares: ")
 
-    order_total = round(
-        fill_price * shares,
-        2
-    )
+    order_total = round(fill_price * shares, 2)
 
-    time_issued = prompt_string(
-        f"Time Issued [{datetime.now().strftime('%H:%M:%S')}]: ",
-        allow_empty=True
-    )
+    time_issued = prompt_string(f"Time Issued [{datetime.now().strftime('%H:%M:%S')}]: ", allow_empty=True)
 
     if not time_issued:
         time_issued = datetime.now().strftime("%H:%M:%S")
@@ -118,7 +113,7 @@ def add_trade_order():
         shares=shares,
         order_total=order_total,
         time_issued=time_issued,
-        notes=notes
+        notes=notes,
     )
 
     save_order(order)
@@ -131,7 +126,8 @@ def add_trade_order():
         f"{order.shares} shares @ ${order.fill_price:.2f} | "
         f"Total: ${order.order_total:.2f}"
     )
-    
+
+
 def add_account_snapshot():
     """Prompt user for account snapshot details and save the snapshot."""
 
@@ -139,10 +135,7 @@ def add_account_snapshot():
     print("=== Add Account Snapshot ===")
     print("")
 
-    snapshot_date = prompt_string(
-        f"Snapshot Date [{date.today()}]: ",
-        allow_empty=True
-    )
+    snapshot_date = prompt_string(f"Snapshot Date [{date.today()}]: ", allow_empty=True)
 
     if not snapshot_date:
         snapshot_date = str(date.today())
@@ -155,7 +148,7 @@ def add_account_snapshot():
         snapshot_date=snapshot_date,
         account_value_before=account_value_before,
         account_value_after=account_value_after,
-        notes=notes
+        notes=notes,
     )
 
     save_snapshot(snapshot)
@@ -169,6 +162,7 @@ def add_account_snapshot():
         f"Change: ${snapshot.dollar_change:.2f} | "
         f"Change %: {snapshot.percent_change:+.2f}%"
     )
+
 
 def main():
     """Run the journal command-line interface."""
@@ -188,6 +182,7 @@ def main():
         add_account_snapshot()
     else:
         print("Invalid option.")
+
 
 if __name__ == "__main__":
     main()

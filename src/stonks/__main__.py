@@ -1,9 +1,10 @@
 # =============================================================================
 # File: __main__.py
 # Purpose: Entry point for running STONKS as a Python module.
-# ============================================================================= 
+# =============================================================================
 
 from stonks.scanner.filters import scan_stocks
+
 
 def main():
     """Run the STONKS scanner."""
@@ -20,6 +21,7 @@ def main():
 
     for quote in results:
         print(quote)
+
 
 if __name__ == "__main__":
     main()

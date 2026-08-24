@@ -33,7 +33,8 @@ class CatalystReport:
             Overall assessed strength of the discovered catalysts.
 
         categories:
-            Unique catalyst categories discovered in the news that are within the freshness constants in the config settings.
+            Unique catalyst categories discovered in the news that are within the freshness constants in the
+            config settings.
 
         historical_categories:
             Unique catalyst categories that fall outside the freshness constants in the config settings.

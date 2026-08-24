@@ -9,17 +9,15 @@
 # =============================================================================
 
 from stonks.api.market_data import get_daily_time_series
-from stonks.cache.cache_paths import HISTORICAL_CACHE_DIRECTORY
-from stonks.cache.cache_paths import ensure_cache_directories_exist
-from stonks.cache.json_cache import read_json
-from stonks.cache.json_cache import write_json
-from stonks.config.settings import ALLOW_API_CALLS
-from stonks.config.settings import USE_CACHE
+from stonks.cache.cache_paths import (
+    HISTORICAL_CACHE_DIRECTORY,
+    ensure_cache_directories_exist,
+)
+from stonks.cache.json_cache import read_json, write_json
+from stonks.config.settings import ALLOW_API_CALLS, USE_CACHE
 
-def get_historical_data(
-    symbol: str,
-    force_refresh: bool = False
-):
+
+def get_historical_data(symbol: str, force_refresh: bool = False):
     """Get historical data for a symbol using cache-first logic."""
 
     ensure_cache_directories_exist()
@@ -34,9 +32,7 @@ def get_historical_data(
             return cached_data
 
     if not ALLOW_API_CALLS:
-        print(
-            f"API calls disabled and no cache found for {symbol.upper()}."
-        )
+        print(f"API calls disabled and no cache found for {symbol.upper()}.")
         return None
 
     print(f"Fetching historical data for {symbol.upper()} from API...")

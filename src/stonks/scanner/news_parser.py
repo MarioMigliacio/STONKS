@@ -3,31 +3,20 @@
 # Purpose: Normalizes provider news responses into NewsArticle models.
 # =============================================================================
 
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 
 from stonks.models.news_article import NewsArticle
 
 
-def parse_published_time(
-    value: str
-) -> datetime:
+def parse_published_time(value: str) -> datetime:
     """Convert an Alpha Vantage UTC timestamp into a datetime object."""
 
-    parsed_time = datetime.strptime(
-        value,
-        "%Y%m%dT%H%M%S"
-    )
+    parsed_time = datetime.strptime(value, "%Y%m%dT%H%M%S")
 
-    return parsed_time.replace(
-        tzinfo=timezone.utc
-    )
+    return parsed_time.replace(tzinfo=timezone.utc)
 
 
-def parse_news_articles(
-    data,
-    symbol: str
-) -> list[NewsArticle]:
+def parse_news_articles(data, symbol: str) -> list[NewsArticle]:
     """Parse ticker-relevant Alpha Vantage news into normalized articles."""
 
     if not data:
@@ -43,18 +32,12 @@ def parse_news_articles(
     articles: list[NewsArticle] = []
 
     for article_data in feed:
-        published_time = article_data.get(
-            "time_published",
-            ""
-        )
+        published_time = article_data.get("time_published", "")
 
         if not published_time:
             continue
 
-        ticker_sentiments = article_data.get(
-            "ticker_sentiment",
-            []
-        )
+        ticker_sentiments = article_data.get("ticker_sentiment", [])
 
         if not ticker_sentiments:
             continue
@@ -69,49 +52,26 @@ def parse_news_articles(
         if not target_ticker_data:
             continue
 
-        target_relevance = float(
-            target_ticker_data.get(
-                "relevance_score",
-                0.0
-            )
-        )
+        target_relevance = float(target_ticker_data.get("relevance_score", 0.0))
 
-        highest_relevance = max(
-            float(
-                ticker_data.get(
-                    "relevance_score",
-                    0.0
-                )
-            )
-            for ticker_data in ticker_sentiments
-        )
+        highest_relevance = max(float(ticker_data.get("relevance_score", 0.0)) for ticker_data in ticker_sentiments)
 
         if target_relevance < highest_relevance:
             continue
 
-        sentiment_score = float(
-            target_ticker_data.get(
-                "ticker_sentiment_score",
-                0.0
-            )
-        )
+        sentiment_score = float(target_ticker_data.get("ticker_sentiment_score", 0.0))
 
-        sentiment_label = target_ticker_data.get(
-            "ticker_sentiment_label",
-            ""
-        )
+        sentiment_label = target_ticker_data.get("ticker_sentiment_label", "")
 
         articles.append(
             NewsArticle(
                 title=article_data.get("title", ""),
                 source=article_data.get("source", ""),
-                published_at=parse_published_time(
-                    published_time
-                ),
+                published_at=parse_published_time(published_time),
                 summary=article_data.get("summary", ""),
                 url=article_data.get("url", ""),
                 sentiment_score=sentiment_score,
-                sentiment_label=sentiment_label
+                sentiment_label=sentiment_label,
             )
         )
 

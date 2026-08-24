@@ -11,7 +11,6 @@
 from stonks.cia.catalyst_category import CatalystCategory
 from stonks.cia.catalyst_report import CatalystReport
 
-
 STONKS_BANNER = r"""
 =============================================================================
   ███████╗████████╗ ██████╗ ███╗   ██╗██╗  ██╗███████╗
@@ -27,9 +26,7 @@ STONKS_BANNER = r"""
 """
 
 
-def get_mission_status(
-    report: CatalystReport
-) -> str:
+def get_mission_status(report: CatalystReport) -> str:
     """Return a human-readable mission status."""
 
     if report.has_breaking_news:
@@ -41,36 +38,23 @@ def get_mission_status(
     return "NO ACTIVE CATALYST"
 
 
-def format_categories(
-    categories: list[CatalystCategory]
-) -> str:
+def format_categories(categories: list[CatalystCategory]) -> str:
     """Format catalyst categories for terminal display."""
 
     if not categories:
         return "None"
 
-    return "\n".join(
-        f"- {category.value}"
-        for category in categories
-    )
+    return "\n".join(f"- {category.value}" for category in categories)
 
 
-def build_mission_brief(
-    report: CatalystReport
-) -> str:
+def build_mission_brief(report: CatalystReport) -> str:
     """Build the complete STONKS C.I.A. mission briefing."""
 
-    mission_status = get_mission_status(
-        report
-    )
+    mission_status = get_mission_status(report)
 
-    current_intelligence = format_categories(
-        report.categories
-    )
+    current_intelligence = format_categories(report.categories)
 
-    historical_context = format_categories(
-        report.historical_categories
-    )
+    historical_context = format_categories(report.historical_categories)
 
     return (
         f"{STONKS_BANNER}\n"
