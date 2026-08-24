@@ -1,3 +1,8 @@
+# =============================================================================
+# File: test_news_parser.py
+# Purpose: Pytest file for news_parser.py.
+# =============================================================================
+
 from datetime import timezone
 
 from stonks.scanner.news_parser import parse_news_articles

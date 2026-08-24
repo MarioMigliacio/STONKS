@@ -8,7 +8,7 @@ $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 
 try {
-    pytest -v
+    pytest -v --tb=short
 }
 finally {
     Pop-Location
