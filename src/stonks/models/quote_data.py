@@ -10,6 +10,7 @@
 
 from dataclasses import dataclass
 
+
 @dataclass
 class QuoteData:
     """
@@ -37,7 +38,7 @@ class QuoteData:
         relative_volume:
             Important scanning metric of cached volume data vs current volume.
 
-        average_volume: 
+        average_volume:
             Important scanning metric of cached volume data average across X days.
     """
 

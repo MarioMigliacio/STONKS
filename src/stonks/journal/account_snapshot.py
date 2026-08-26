@@ -12,6 +12,7 @@
 
 from dataclasses import dataclass
 
+
 @dataclass
 class AccountSnapshot:
     """
@@ -47,7 +48,4 @@ class AccountSnapshot:
         if self.account_value_before == 0:
             return 0.0
 
-        return (
-            (self.account_value_after - self.account_value_before)
-            / self.account_value_before
-        ) * 100.0
+        return ((self.account_value_after - self.account_value_before) / self.account_value_before) * 100.0

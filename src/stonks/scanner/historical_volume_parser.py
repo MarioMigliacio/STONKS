@@ -5,6 +5,7 @@
 
 from stonks.models.historical_volume_data import HistoricalVolumeData
 
+
 def parse_historical_volumes(data) -> list[HistoricalVolumeData]:
     """
     Parse Alpha Vantage daily time series data into historical volume records.
@@ -23,11 +24,6 @@ def parse_historical_volumes(data) -> list[HistoricalVolumeData]:
     for trade_date, daily_data in time_series.items():
         volume = int(daily_data["5. volume"])
 
-        historical_volumes.append(
-            HistoricalVolumeData(
-                trade_date=trade_date,
-                volume=volume
-            )
-        )
+        historical_volumes.append(HistoricalVolumeData(trade_date=trade_date, volume=volume))
 
     return historical_volumes

@@ -11,7 +11,6 @@
 from stonks.cia.catalyst_category import CatalystCategory
 from stonks.models.news_article import NewsArticle
 
-
 # =============================================================================
 # Catalyst Keyword Rules
 # =============================================================================
@@ -23,7 +22,6 @@ CATALYST_RULES = {
         "awarded contract",
         "contract awarded",
     ],
-
     CatalystCategory.ACQUISITION: [
         "acquisition",
         "acquires",
@@ -31,14 +29,12 @@ CATALYST_RULES = {
         "acquire",
         "majority stake",
     ],
-
     CatalystCategory.MERGER: [
         "merger",
         "merging",
         "merges with",
         "merge agreement",
     ],
-
     CatalystCategory.EARNINGS: [
         "earnings",
         "quarterly results",
@@ -46,7 +42,6 @@ CATALYST_RULES = {
         "net income",
         "eps",
     ],
-
     CatalystCategory.REVENUE_GROWTH: [
         "revenue growth",
         "record revenue",
@@ -54,7 +49,6 @@ CATALYST_RULES = {
         "revenue increased",
         "sales increased",
     ],
-
     CatalystCategory.REGULATORY_APPROVAL: [
         "fda approval",
         "fda approved",
@@ -62,13 +56,11 @@ CATALYST_RULES = {
         "approved by the fda",
         "clearance",
     ],
-
     CatalystCategory.PATENT: [
         "patent",
         "patent granted",
         "patent approval",
     ],
-
     CatalystCategory.INSTITUTIONAL_INVESTMENT: [
         "institutional investor",
         "institutional investment",
@@ -78,31 +70,26 @@ CATALYST_RULES = {
         "takes stake",
         "purchases shares",
     ],
-    
     CatalystCategory.SHORT_INTEREST: [
         "short interest",
         "short float",
         "shorted shares",
     ],
-
     CatalystCategory.REVERSE_SPLIT: [
         "reverse split",
         "reverse stock split",
     ],
-
     CatalystCategory.PUBLIC_OFFERING: [
         "public offering",
         "registered offering",
         "direct offering",
         "stock offering",
     ],
-
     CatalystCategory.BANKRUPTCY: [
         "bankruptcy",
         "chapter 11",
         "restructuring",
     ],
-
     CatalystCategory.MANAGEMENT_CHANGE: [
         "appoints ceo",
         "new ceo",
@@ -110,14 +97,12 @@ CATALYST_RULES = {
         "resigns",
         "management change",
     ],
-
     CatalystCategory.ANALYST_REPORT: [
         "analyst upgrade",
         "analyst downgrade",
         "price target",
         "initiates coverage",
     ],
-
     CatalystCategory.MOMENTUM_HYPE: [
         "stock soars",
         "stock rockets",
@@ -133,9 +118,8 @@ CATALYST_RULES = {
 # Classification
 # =============================================================================
 
-def find_categories(
-    searchable_text: str
-) -> list[CatalystCategory]:
+
+def find_categories(searchable_text: str) -> list[CatalystCategory]:
     """Find catalyst categories within searchable text."""
 
     categories = []
@@ -143,9 +127,7 @@ def find_categories(
     searchable_text = searchable_text.lower()
 
     for category, keywords in CATALYST_RULES.items():
-
         for keyword in keywords:
-
             if keyword in searchable_text:
                 categories.append(category)
                 break
@@ -153,18 +135,12 @@ def find_categories(
     return categories
 
 
-def classify_article(
-    article: NewsArticle
-) -> list[CatalystCategory]:
+def classify_article(article: NewsArticle) -> list[CatalystCategory]:
     """Classify an article using its title and summary."""
 
-    categories = find_categories(
-        article.title
-    )
+    categories = find_categories(article.title)
 
-    summary_categories = find_categories(
-        article.summary
-    )
+    summary_categories = find_categories(article.summary)
 
     for category in summary_categories:
         if category not in categories:
@@ -173,6 +149,4 @@ def classify_article(
     if categories:
         return categories
 
-    return [
-        CatalystCategory.UNKNOWN
-    ]
+    return [CatalystCategory.UNKNOWN]

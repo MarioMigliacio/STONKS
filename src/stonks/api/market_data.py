@@ -5,8 +5,7 @@
 
 import requests
 
-from stonks.config.settings import API_KEY
-
+from stonks.config import settings
 
 BASE_URL = "https://www.alphavantage.co/query"
 
@@ -28,22 +27,21 @@ BASE_URL = "https://www.alphavantage.co/query"
 """
 
 
-def get_quote(
-    symbol: str
-):
+def require_api_key() -> str:
+    """Return the configured API key or raise a clear configuration error."""
+
+    if not settings.API_KEY:
+        raise RuntimeError("Missing STONKS_API_KEY. Create a .env file in the project root.")
+
+    return settings.API_KEY
+
+
+def get_quote(symbol: str):
     """Fetch the latest quote data for a stock symbol."""
 
-    params = {
-        "function": "GLOBAL_QUOTE",
-        "symbol": symbol,
-        "apikey": API_KEY
-    }
+    params = {"function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": require_api_key()}
 
-    response = requests.get(
-        BASE_URL,
-        params=params,
-        timeout=15
-    )
+    response = requests.get(BASE_URL, params=params, timeout=15)
 
     if response.status_code != 200:
         print(f"Request failed for {symbol}")
@@ -51,22 +49,13 @@ def get_quote(
 
     return response.json()
 
-def get_daily_time_series(
-    symbol: str
-):
+
+def get_daily_time_series(symbol: str):
     """Fetch daily historical data for a stock symbol."""
 
-    params = {
-        "function": "TIME_SERIES_DAILY",
-        "symbol": symbol,
-        "apikey": API_KEY
-    }
+    params = {"function": "TIME_SERIES_DAILY", "symbol": symbol, "apikey": require_api_key()}
 
-    response = requests.get(
-        BASE_URL,
-        params=params,
-        timeout=15
-    )
+    response = requests.get(BASE_URL, params=params, timeout=15)
 
     if response.status_code != 200:
         print(f"Request failed for {symbol}")
@@ -74,10 +63,8 @@ def get_daily_time_series(
 
     return response.json()
 
-def get_news_sentiment(
-    symbol: str,
-    limit: int = 10
-):
+
+def get_news_sentiment(symbol: str, limit: int = 10):
     """Fetch recent news and sentiment data for a stock symbol."""
 
     params = {
@@ -85,20 +72,13 @@ def get_news_sentiment(
         "tickers": symbol.upper(),
         "sort": "LATEST",
         "limit": limit,
-        "apikey": API_KEY
+        "apikey": require_api_key(),
     }
 
-    response = requests.get(
-        BASE_URL,
-        params=params,
-        timeout=15
-    )
+    response = requests.get(BASE_URL, params=params, timeout=15)
 
     if response.status_code != 200:
-        print(
-            f"News request failed for {symbol.upper()} "
-            f"with status {response.status_code}."
-        )
+        print(f"News request failed for {symbol.upper()} with status {response.status_code}.")
         return None
 
     return response.json()

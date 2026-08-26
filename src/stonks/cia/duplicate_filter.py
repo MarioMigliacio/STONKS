@@ -17,9 +17,7 @@ def normalize_title(title: str) -> str:
     return title.strip().lower()
 
 
-def filter_duplicate_articles(
-    articles: list[NewsArticle]
-) -> list[NewsArticle]:
+def filter_duplicate_articles(articles: list[NewsArticle]) -> list[NewsArticle]:
     """Return news articles with duplicate titles or URLs removed."""
 
     unique_articles: list[NewsArticle] = []
@@ -28,9 +26,7 @@ def filter_duplicate_articles(
     seen_urls: set[str] = set()
 
     for article in articles:
-        normalized_title = normalize_title(
-            article.title
-        )
+        normalized_title = normalize_title(article.title)
 
         if normalized_title in seen_titles:
             continue

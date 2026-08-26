@@ -37,15 +37,10 @@ def test_parse_news_articles_keeps_primary_ticker() -> None:
         ]
     }
 
-    articles = parse_news_articles(
-        data,
-        "TSLA"
-    )
+    articles = parse_news_articles(data, "TSLA")
 
     assert len(articles) == 1
-    assert articles[0].title == (
-        "Tesla Controls 59% of the U.S. EV Market"
-    )
+    assert articles[0].title == ("Tesla Controls 59% of the U.S. EV Market")
     assert articles[0].sentiment_score == 0.289720
     assert articles[0].sentiment_label == "Somewhat-Bullish"
 
@@ -59,10 +54,7 @@ def test_parse_news_articles_rejects_secondary_ticker() -> None:
                 "title": "Portfolio Design Labs Purchases Uber",
                 "source": "MarketBeat",
                 "time_published": "20260821T102242",
-                "summary": (
-                    "Uber expands robotaxi operations with Tesla mentioned "
-                    "as a competitor."
-                ),
+                "summary": ("Uber expands robotaxi operations with Tesla mentioned as a competitor."),
                 "url": "https://example.com/uber",
                 "ticker_sentiment": [
                     {
@@ -82,10 +74,7 @@ def test_parse_news_articles_rejects_secondary_ticker() -> None:
         ]
     }
 
-    articles = parse_news_articles(
-        data,
-        "TSLA"
-    )
+    articles = parse_news_articles(data, "TSLA")
 
     assert articles == []
 
@@ -104,11 +93,9 @@ def test_parse_news_articles_uses_ticker_specific_sentiment() -> None:
                 "time_published": "20260821T120000",
                 "summary": "Tesla discusses future AI investments.",
                 "url": "https://example.com/tesla-ai",
-
                 # Deliberately different from TSLA-specific sentiment.
                 "overall_sentiment_score": "0.750000",
                 "overall_sentiment_label": "Bullish",
-
                 "ticker_sentiment": [
                     {
                         "ticker": "TSLA",
@@ -127,10 +114,7 @@ def test_parse_news_articles_uses_ticker_specific_sentiment() -> None:
         ]
     }
 
-    articles = parse_news_articles(
-        data,
-        "TSLA"
-    )
+    articles = parse_news_articles(data, "TSLA")
 
     assert len(articles) == 1
 
@@ -163,10 +147,7 @@ def test_parse_news_articles_creates_utc_timestamp() -> None:
         ]
     }
 
-    articles = parse_news_articles(
-        data,
-        "TSLA"
-    )
+    articles = parse_news_articles(data, "TSLA")
 
     assert len(articles) == 1
 
@@ -202,10 +183,7 @@ def test_parse_news_articles_skips_missing_publication_time() -> None:
         ]
     }
 
-    articles = parse_news_articles(
-        data,
-        "TSLA"
-    )
+    articles = parse_news_articles(data, "TSLA")
 
     assert articles == []
 
@@ -213,9 +191,6 @@ def test_parse_news_articles_skips_missing_publication_time() -> None:
 def test_parse_news_articles_returns_empty_when_feed_missing() -> None:
     """Return no articles when the provider response has no news feed."""
 
-    articles = parse_news_articles(
-        {},
-        "TSLA"
-    )
+    articles = parse_news_articles({}, "TSLA")
 
     assert articles == []

@@ -6,6 +6,7 @@
 from stonks.cache.historical_cache_service import get_historical_data
 from stonks.scanner.historical_volume_parser import parse_historical_volumes
 
+
 def main():
     """Run the cache CLI."""
 
@@ -18,10 +19,7 @@ def main():
     refresh_choice = input("Force refresh from API? (Y/N): ").strip().lower()
     force_refresh = refresh_choice == "y"
 
-    data = get_historical_data(
-        symbol,
-        force_refresh=force_refresh
-    )
+    data = get_historical_data(symbol, force_refresh=force_refresh)
 
     if not data:
         print("No data returned.")
@@ -37,6 +35,7 @@ def main():
 
     print("")
     print(f"Historical data ready for {symbol}.")
+
 
 if __name__ == "__main__":
     main()

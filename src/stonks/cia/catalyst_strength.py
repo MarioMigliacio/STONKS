@@ -19,31 +19,22 @@ class CatalystStrength(Enum):
 
 
 def calculate_catalyst_strength(
-    active_categories: list[CatalystCategory],
-    freshness: CatalystFreshness
+    active_categories: list[CatalystCategory], freshness: CatalystFreshness
 ) -> CatalystStrength:
     """Calculate catalyst strength using active intelligence only."""
 
     if not active_categories:
         return CatalystStrength.WEAK
 
-    category_count = len(
-        active_categories
-    )
+    category_count = len(active_categories)
 
-    if (
-        freshness == CatalystFreshness.BREAKING
-        and category_count >= 2
-    ):
+    if freshness == CatalystFreshness.BREAKING and category_count >= 2:
         return CatalystStrength.STRONG
 
     if freshness == CatalystFreshness.BREAKING:
         return CatalystStrength.MODERATE
 
-    if (
-        freshness == CatalystFreshness.FRESH
-        and category_count >= 2
-    ):
+    if freshness == CatalystFreshness.FRESH and category_count >= 2:
         return CatalystStrength.STRONG
 
     if freshness == CatalystFreshness.FRESH:
