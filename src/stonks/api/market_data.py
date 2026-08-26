@@ -5,7 +5,7 @@
 
 import requests
 
-from stonks.config.settings import API_KEY
+from stonks.config import settings
 
 BASE_URL = "https://www.alphavantage.co/query"
 
@@ -27,10 +27,19 @@ BASE_URL = "https://www.alphavantage.co/query"
 """
 
 
+def require_api_key() -> str:
+    """Return the configured API key or raise a clear configuration error."""
+
+    if not settings.API_KEY:
+        raise RuntimeError("Missing STONKS_API_KEY. Create a .env file in the project root.")
+
+    return settings.API_KEY
+
+
 def get_quote(symbol: str):
     """Fetch the latest quote data for a stock symbol."""
 
-    params = {"function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": API_KEY}
+    params = {"function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": require_api_key()}
 
     response = requests.get(BASE_URL, params=params, timeout=15)
 
@@ -44,7 +53,7 @@ def get_quote(symbol: str):
 def get_daily_time_series(symbol: str):
     """Fetch daily historical data for a stock symbol."""
 
-    params = {"function": "TIME_SERIES_DAILY", "symbol": symbol, "apikey": API_KEY}
+    params = {"function": "TIME_SERIES_DAILY", "symbol": symbol, "apikey": require_api_key()}
 
     response = requests.get(BASE_URL, params=params, timeout=15)
 
@@ -63,7 +72,7 @@ def get_news_sentiment(symbol: str, limit: int = 10):
         "tickers": symbol.upper(),
         "sort": "LATEST",
         "limit": limit,
-        "apikey": API_KEY,
+        "apikey": require_api_key(),
     }
 
     response = requests.get(BASE_URL, params=params, timeout=15)
