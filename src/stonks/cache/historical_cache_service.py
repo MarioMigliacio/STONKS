@@ -22,22 +22,24 @@ def get_historical_data(symbol: str, force_refresh: bool = False):
 
     ensure_cache_directories_exist()
 
-    cache_file = HISTORICAL_CACHE_DIRECTORY / f"{symbol.upper()}_daily.json"
+    symbol = symbol.upper()
+
+    cache_file = HISTORICAL_CACHE_DIRECTORY / f"{symbol}_daily.json"
 
     if USE_CACHE and not force_refresh:
         cached_data = read_json(cache_file)
 
         if cached_data:
-            print(f"Using cached historical data for {symbol.upper()}")
+            print(f"Using cached historical data for {symbol}")
             return cached_data
 
     if not ALLOW_API_CALLS:
-        print(f"API calls disabled and no cache found for {symbol.upper()}.")
+        print(f"API calls disabled and no cache found for {symbol}.")
         return None
 
-    print(f"Fetching historical data for {symbol.upper()} from API...")
+    print(f"Fetching historical data for {symbol} from API...")
 
-    data = get_daily_time_series(symbol.upper())
+    data = get_daily_time_series(symbol)
 
     if data and USE_CACHE:
         write_json(cache_file, data)
