@@ -27,8 +27,9 @@ ALLOW_API_CALLS = True
 # Historical data lookback used for relative volume calculations.
 RELATIVE_VOLUME_LOOKBACK_DAYS = 30
 
-# Logging level
-LOG_LEVEL = "DEBUG"
+# Logging levels
+CONSOLE_LOG_LEVEL = "INFO"
+FILE_LOG_LEVEL = "DEBUG"
 
 
 # =============================================================================

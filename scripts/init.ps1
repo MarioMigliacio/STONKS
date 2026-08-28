@@ -35,7 +35,7 @@ try {
     Write-Host ""
     Write-Host "STONKS initialization complete."
     Write-Host ""
-    Write-Host "Run venv\Scripts\activate to begin development."
+    Write-Host "Run .\scripts\activate to begin development."
     Write-Host "Add your STONKS_API_KEY to .env if it has not been configured."
 }
 finally {
