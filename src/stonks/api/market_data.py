@@ -56,7 +56,7 @@ def get_quote(symbol: str):
 
     if response.status_code != 200:
         logger.error(
-            "Quote request failed for %s with status %d",
+            "Request failed for %s with status %d",
             symbol,
             response.status_code,
         )
@@ -128,5 +128,10 @@ def get_news_sentiment(symbol: str, limit: int = 10):
             response.status_code,
         )
         return None
+
+    logger.debug(
+        "News request completed for %s",
+        symbol,
+    )
 
     return response.json()

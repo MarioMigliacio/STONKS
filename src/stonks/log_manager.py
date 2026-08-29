@@ -37,7 +37,7 @@ def configure_logging() -> None:
     stonks_logger.setLevel(logging.DEBUG)
     stonks_logger.propagate = False
 
-    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s.%(funcName)s | %(message)s")
 
     console_handler = logging.StreamHandler()
     console_handler.setLevel(console_log_level)

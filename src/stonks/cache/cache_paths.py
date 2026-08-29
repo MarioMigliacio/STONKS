@@ -3,7 +3,11 @@
 # Purpose: Defines local cache paths used by STONKS.
 # =============================================================================
 
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
 
 CACHE_DIRECTORY = Path("data/cache")
 QUOTE_CACHE_DIRECTORY = CACHE_DIRECTORY / "quotes"
@@ -12,6 +16,8 @@ HISTORICAL_CACHE_DIRECTORY = CACHE_DIRECTORY / "historical"
 
 def ensure_cache_directories_exist():
     """Create cache directories if they do not already exist."""
+
+    logger.debug("Ensuring cache directories exist")
 
     QUOTE_CACHE_DIRECTORY.mkdir(parents=True, exist_ok=True)
 
