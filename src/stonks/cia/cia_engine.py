@@ -9,6 +9,7 @@
 # - Does not perform presentation or CLI formatting.
 # =============================================================================
 
+import logging
 from datetime import datetime
 
 from stonks.cia.catalyst_category import CatalystCategory
@@ -23,6 +24,8 @@ from stonks.cia.catalyst_report import CatalystReport
 from stonks.cia.catalyst_strength import calculate_catalyst_strength
 from stonks.config import settings
 from stonks.models.news_article import NewsArticle
+
+logger = logging.getLogger(__name__)
 
 
 def add_unique_categories(destination: list[CatalystCategory], categories: list[CatalystCategory]) -> None:
@@ -159,7 +162,20 @@ def build_catalyst_report(
 ) -> CatalystReport:
     """Build a complete C.I.A. CatalystReport."""
 
+    logger.debug(
+        "Building catalyst report for %s from %d unique articles",
+        ticker,
+        len(articles),
+    )
+
     (active_categories, historical_categories) = collect_catalyst_categories(articles, current_time)
+
+    logger.debug(
+        "Collected %d active and %d historical catalyst categories for %s",
+        len(active_categories),
+        len(historical_categories),
+        ticker,
+    )
 
     newest_catalyst = find_newest_catalyst_article(articles)
 
@@ -169,10 +185,22 @@ def build_catalyst_report(
         freshness = calculate_freshness(news_age_minutes)
 
         newest_article_time = newest_catalyst.published_at
+
+        logger.debug(
+            "Newest catalyst for %s classified as %s at %d minutes old",
+            ticker,
+            freshness.value,
+            news_age_minutes,
+        )
     else:
         news_age_minutes = 0
         freshness = CatalystFreshness.UNKNOWN
         newest_article_time = None
+
+        logger.debug(
+            "No recognized catalyst articles found for %s",
+            ticker,
+        )
 
     catalyst_strength = calculate_catalyst_strength(active_categories, freshness)
 
@@ -185,6 +213,14 @@ def build_catalyst_report(
     summary = build_summary(ticker, active_categories, historical_categories, freshness)
 
     duplicate_articles_removed = original_article_count - len(articles)
+
+    logger.debug(
+        "Catalyst report for %s: strength=%s, sentiment=%s, confidence=%.2f",
+        ticker,
+        catalyst_strength.value,
+        overall_sentiment,
+        confidence,
+    )
 
     return CatalystReport(
         ticker=ticker,
