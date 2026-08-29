@@ -43,7 +43,7 @@ def configure_logging() -> None:
     console_handler.setLevel(console_log_level)
     console_handler.setFormatter(formatter)
 
-    file_handler = logging.FileHandler(LOG_FILE, mode="w", encoding="utf-8")
+    file_handler = logging.FileHandler(LOG_FILE, mode="a", encoding="utf-8")
     file_handler.setLevel(file_log_level)
     file_handler.setFormatter(formatter)
 

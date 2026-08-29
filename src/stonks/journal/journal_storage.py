@@ -10,10 +10,13 @@
 # =============================================================================
 
 import csv
+import logging
 from pathlib import Path
 
 from stonks.journal.account_snapshot import AccountSnapshot
 from stonks.journal.trade_order import TradeOrder
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # Journal Data Paths
@@ -48,6 +51,12 @@ def save_order(order: TradeOrder):
     """
 
     ensure_journal_directory_exists()
+
+    logger.debug(
+        "Saving trade order %d for %s",
+        order.order_id,
+        order.ticker,
+    )
 
     file_has_content = ORDERS_FILE.exists() and ORDERS_FILE.stat().st_size > 0
 
@@ -85,6 +94,12 @@ def save_order(order: TradeOrder):
             ]
         )
 
+        logger.debug(
+            "Trade order %d saved to %s",
+            order.order_id,
+            ORDERS_FILE,
+        )
+
 
 def load_orders() -> list[TradeOrder]:
     """
@@ -92,6 +107,11 @@ def load_orders() -> list[TradeOrder]:
     """
 
     if not ORDERS_FILE.exists():
+        logger.debug(
+            "Trade orders file does not exist: %s",
+            ORDERS_FILE,
+        )
+
         return []
 
     orders = []
@@ -115,6 +135,12 @@ def load_orders() -> list[TradeOrder]:
                 )
             )
 
+        logger.debug(
+            "Loaded %d trade orders from %s",
+            len(orders),
+            ORDERS_FILE,
+        )
+
     return orders
 
 
@@ -129,6 +155,11 @@ def save_snapshot(snapshot: AccountSnapshot):
     """
 
     ensure_journal_directory_exists()
+
+    logger.debug(
+        "Saving account snapshot for %s",
+        snapshot.snapshot_date,
+    )
 
     file_has_content = SNAPSHOTS_FILE.exists() and SNAPSHOTS_FILE.stat().st_size > 0
 
@@ -154,6 +185,11 @@ def save_snapshot(snapshot: AccountSnapshot):
             ]
         )
 
+        logger.debug(
+            "Account snapshot saved to %s",
+            SNAPSHOTS_FILE,
+        )
+
 
 def load_snapshots() -> list[AccountSnapshot]:
     """
@@ -177,5 +213,11 @@ def load_snapshots() -> list[AccountSnapshot]:
                     notes=row["notes"],
                 )
             )
+
+        logger.debug(
+            "Loaded %d account snapshots from %s",
+            len(snapshots),
+            SNAPSHOTS_FILE,
+        )
 
     return snapshots
