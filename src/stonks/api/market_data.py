@@ -3,9 +3,13 @@
 # Purpose: Handles market data API requests.
 # =============================================================================
 
+import logging
+
 import requests
 
 from stonks.config import settings
+
+logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.alphavantage.co/query"
 
@@ -39,13 +43,29 @@ def require_api_key() -> str:
 def get_quote(symbol: str):
     """Fetch the latest quote data for a stock symbol."""
 
+    symbol = symbol.upper()
+
+    logger.debug(
+        "Requesting latest quote for %s",
+        symbol,
+    )
+
     params = {"function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": require_api_key()}
 
     response = requests.get(BASE_URL, params=params, timeout=15)
 
     if response.status_code != 200:
-        print(f"Request failed for {symbol}")
+        logger.error(
+            "Request failed for %s with status %d",
+            symbol,
+            response.status_code,
+        )
         return None
+
+    logger.debug(
+        "Quote request completed for %s",
+        symbol,
+    )
 
     return response.json()
 
@@ -53,13 +73,29 @@ def get_quote(symbol: str):
 def get_daily_time_series(symbol: str):
     """Fetch daily historical data for a stock symbol."""
 
+    symbol = symbol.upper()
+
+    logger.debug(
+        "Requesting daily time series for %s",
+        symbol,
+    )
+
     params = {"function": "TIME_SERIES_DAILY", "symbol": symbol, "apikey": require_api_key()}
 
     response = requests.get(BASE_URL, params=params, timeout=15)
 
     if response.status_code != 200:
-        print(f"Request failed for {symbol}")
+        logger.error(
+            "Daily time series request failed for %s with status %d",
+            symbol,
+            response.status_code,
+        )
         return None
+
+    logger.debug(
+        "Daily time series request completed for %s",
+        symbol,
+    )
 
     return response.json()
 
@@ -67,9 +103,17 @@ def get_daily_time_series(symbol: str):
 def get_news_sentiment(symbol: str, limit: int = 10):
     """Fetch recent news and sentiment data for a stock symbol."""
 
+    symbol = symbol.upper()
+
+    logger.debug(
+        "Requesting up to %d news articles for %s",
+        limit,
+        symbol,
+    )
+
     params = {
         "function": "NEWS_SENTIMENT",
-        "tickers": symbol.upper(),
+        "tickers": symbol,
         "sort": "LATEST",
         "limit": limit,
         "apikey": require_api_key(),
@@ -78,7 +122,16 @@ def get_news_sentiment(symbol: str, limit: int = 10):
     response = requests.get(BASE_URL, params=params, timeout=15)
 
     if response.status_code != 200:
-        print(f"News request failed for {symbol.upper()} with status {response.status_code}.")
+        logger.error(
+            "News request failed for %s with status %d",
+            symbol,
+            response.status_code,
+        )
         return None
+
+    logger.debug(
+        "News request completed for %s",
+        symbol,
+    )
 
     return response.json()

@@ -8,7 +8,11 @@
 # - This layer should remain independent of catalyst classification.
 # =============================================================================
 
+import logging
+
 from stonks.models.news_article import NewsArticle
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_title(title: str) -> str:
@@ -40,5 +44,13 @@ def filter_duplicate_articles(articles: list[NewsArticle]) -> list[NewsArticle]:
 
         if article.url:
             seen_urls.add(article.url)
+
+    duplicates_removed = len(articles) - len(unique_articles)
+    logger.debug(
+        "Filtered %d articles down to %d unique articles; removed %d duplicates",
+        len(articles),
+        len(unique_articles),
+        duplicates_removed,
+    )
 
     return unique_articles

@@ -3,11 +3,14 @@
 # Purpose: Entry point for running STONKS as a Python module.
 # =============================================================================
 
+from stonks.log_manager import configure_logging
 from stonks.scanner.filters import scan_stocks
 
 
-def main():
+def main() -> None:
     """Run the STONKS scanner."""
+
+    configure_logging()
 
     print("=== STONKS Scanner ===")
 

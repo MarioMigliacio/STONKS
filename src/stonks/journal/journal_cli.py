@@ -13,6 +13,7 @@ from datetime import date, datetime
 from stonks.journal.account_snapshot import AccountSnapshot
 from stonks.journal.journal_storage import save_order, save_snapshot
 from stonks.journal.trade_order import TradeOrder
+from stonks.log_manager import configure_logging
 
 # =============================================================================
 # Input Helpers
@@ -166,6 +167,8 @@ def add_account_snapshot():
 
 def main():
     """Run the journal command-line interface."""
+
+    configure_logging()
 
     print("")
     print("=== STONKS Journal ===")

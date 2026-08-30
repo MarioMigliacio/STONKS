@@ -3,9 +3,12 @@
 # Purpose: Normalizes provider news responses into NewsArticle models.
 # =============================================================================
 
+import logging
 from datetime import datetime, timezone
 
 from stonks.models.news_article import NewsArticle
+
+logger = logging.getLogger(__name__)
 
 
 def parse_published_time(value: str) -> datetime:
@@ -74,5 +77,7 @@ def parse_news_articles(data, symbol: str) -> list[NewsArticle]:
                 sentiment_label=sentiment_label,
             )
         )
+
+    logger.debug("Parsed %d relevant news articles for %s from %d feed entries", len(articles), symbol, len(feed))
 
     return articles

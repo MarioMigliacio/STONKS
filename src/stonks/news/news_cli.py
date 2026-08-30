@@ -10,11 +10,14 @@ from stonks.cia.catalyst_classifier import classify_article
 from stonks.cia.cia_engine import build_catalyst_report
 from stonks.cia.duplicate_filter import filter_duplicate_articles
 from stonks.cia.mission_brief import build_mission_brief
+from stonks.log_manager import configure_logging
 from stonks.scanner.news_parser import parse_news_articles
 
 
 def main() -> None:
     """Run the STONKS news and C.I.A. command-line interface."""
+
+    configure_logging()
 
     symbol = input("Ticker to search for news: ").strip().upper()
 
