@@ -106,6 +106,12 @@ STONKS/
 .\scripts\run.ps1
 ```
 
+### Clean Artifacts
+
+```powershell
+.\scripts\clean.ps1
+```
+
 ### Journal CLI
 
 ```powershell
