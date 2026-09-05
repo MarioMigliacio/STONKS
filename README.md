@@ -92,6 +92,8 @@ STONKS/
 - run ".\scripts\init.ps1"
 - run ".\scripts\activate.ps1"
 - visit https://www.alphavantage.co/support/# 'Claim your API key' and update .env file as described in init.ps1
+- Optionally, Add your STONKS_MASSIVE_API_KEY to .env and update ENABLE_FLOAT_DATA in settings.config.
+- visit https://www.massive.com -> 'Create API Key'.
 - . . .
 - profit
 ```
@@ -155,6 +157,24 @@ STONKS/
 ```
 
 ---
+
+## Configuration
+
+```
+Required API Keys
+
+STONKS_API_KEY
+Alpha Vantage API key used for market and news data.
+
+
+Optional API Keys
+
+STONKS_MASSIVE_API_KEY
+Massive API key used to enable public-float data.
+
+Float data is optional. STONKS continues to operate normally
+when this key is not configured.
+```
 
 ## Documentation
 

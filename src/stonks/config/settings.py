@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_KEY = os.getenv("STONKS_API_KEY")
+MASSIVE_API_KEY = os.getenv("STONKS_MASSIVE_API_KEY")
 
 # Initial hardcoded watchlist used by the scanner.
 WATCHLIST = ["AAPL", "SPCX"]
@@ -18,16 +19,19 @@ WATCHLIST = ["AAPL", "SPCX"]
 # Minimum daily volume required for a stock to appear in results.
 MIN_VOLUME = 1000
 
-# Cache behavior
+# Cache behavior.
 USE_CACHE = True
 
 # Safety switch.
 ALLOW_API_CALLS = True
 
+# Float data point usage enabled state.
+ENABLE_FLOAT_DATA = False
+
 # Historical data lookback used for relative volume calculations.
 RELATIVE_VOLUME_LOOKBACK_DAYS = 30
 
-# Logging levels
+# Logging levels.
 CONSOLE_LOG_LEVEL = "INFO"
 FILE_LOG_LEVEL = "DEBUG"
 

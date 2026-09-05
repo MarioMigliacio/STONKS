@@ -37,6 +37,7 @@ try {
     Write-Host ""
     Write-Host "Run .\scripts\activate to begin development."
     Write-Host "Add your STONKS_API_KEY to .env if it has not been configured."
+    Write-Host "Optionally, Add your STONKS_MASSIVE_API_KEY to .env and update ENABLE_FLOAT_DATA in settings.config."
 }
 finally {
     Pop-Location
