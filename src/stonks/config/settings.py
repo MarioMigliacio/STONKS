@@ -25,7 +25,7 @@ USE_CACHE = True
 # Safety switch.
 ALLOW_API_CALLS = True
 
-# Float data point usage enabled state.
+# Enable optional public-float data support.
 ENABLE_FLOAT_DATA = False
 
 # Historical data lookback used for relative volume calculations.
