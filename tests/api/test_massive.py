@@ -14,6 +14,8 @@ from stonks.api.massive import get_float, require_api_key
 @patch("stonks.api.massive.settings.MASSIVE_API_KEY", "test-api-key")
 @patch("stonks.api.massive.requests.get")
 def test_get_float_returns_float_data(mock_get):
+    """Verify a valid Massive response is converted into FloatData."""
+
     response = Mock()
     response.status_code = 200
     response.json.return_value = {
@@ -52,6 +54,8 @@ def test_get_float_returns_float_data(mock_get):
 @patch("stonks.api.massive.settings.MASSIVE_API_KEY", "test-api-key")
 @patch("stonks.api.massive.requests.get")
 def test_get_float_returns_none_when_results_are_empty(mock_get):
+    """Verify missing Massive float results return None."""
+
     response = Mock()
     response.status_code = 200
     response.json.return_value = {
@@ -67,6 +71,8 @@ def test_get_float_returns_none_when_results_are_empty(mock_get):
 @patch("stonks.api.massive.settings.MASSIVE_API_KEY", "test-api-key")
 @patch("stonks.api.massive.requests.get")
 def test_get_float_returns_none_when_request_fails(mock_get):
+    """Verify a failed Massive request returns None."""
+
     response = Mock()
     response.status_code = 500
 
@@ -77,5 +83,7 @@ def test_get_float_returns_none_when_request_fails(mock_get):
 
 @patch("stonks.api.massive.settings.MASSIVE_API_KEY", None)
 def test_require_api_key_raises_when_key_is_missing():
+    """Verify float requests require a configured Massive API key."""
+
     with pytest.raises(RuntimeError):
         require_api_key()

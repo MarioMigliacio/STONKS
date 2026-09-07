@@ -31,6 +31,9 @@ ENABLE_FLOAT_DATA = False
 # Historical data lookback used for relative volume calculations.
 RELATIVE_VOLUME_LOOKBACK_DAYS = 30
 
+# Maximum age of cached float data before it is refreshed.
+FLOAT_CACHE_MAX_AGE_DAYS = 7
+
 # Logging levels.
 CONSOLE_LOG_LEVEL = "INFO"
 FILE_LOG_LEVEL = "DEBUG"

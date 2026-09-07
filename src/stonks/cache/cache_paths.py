@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 CACHE_DIRECTORY = Path("data/cache")
 QUOTE_CACHE_DIRECTORY = CACHE_DIRECTORY / "quotes"
 HISTORICAL_CACHE_DIRECTORY = CACHE_DIRECTORY / "historical"
+FLOAT_CACHE_DIRECTORY = CACHE_DIRECTORY / "float"
 
 
 def ensure_cache_directories_exist():
@@ -20,5 +21,5 @@ def ensure_cache_directories_exist():
     logger.debug("Ensuring cache directories exist")
 
     QUOTE_CACHE_DIRECTORY.mkdir(parents=True, exist_ok=True)
-
     HISTORICAL_CACHE_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    FLOAT_CACHE_DIRECTORY.mkdir(parents=True, exist_ok=True)
