@@ -8,9 +8,11 @@ import time
 from typing import Optional
 
 from stonks.api.market_data import get_quote
+from stonks.cache.float_cache_service import get_float_data
 from stonks.cache.historical_cache_service import get_historical_data
 from stonks.config.settings import MIN_VOLUME, RELATIVE_VOLUME_LOOKBACK_DAYS, WATCHLIST
 from stonks.models.quote_data import QuoteData
+from stonks.models.scanner_candidate import ScannerCandidate
 from stonks.scanner.historical_volume_parser import parse_historical_volumes
 from stonks.scanner.relative_volume import (
     calculate_average_volume,
@@ -50,7 +52,7 @@ def parse_latest(data: dict) -> Optional[QuoteData]:
     )
 
 
-def scan_stocks() -> list[QuoteData]:
+def scan_stocks() -> list[ScannerCandidate]:
     """Scan the watchlist and return stocks matching configured filters."""
 
     results = []
@@ -96,7 +98,10 @@ def scan_stocks() -> list[QuoteData]:
             quote_data.latest_trading_day,
         )
 
-        relative_volume = calculate_relative_volume(quote_data.volume, average_volume)
+        relative_volume = calculate_relative_volume(
+            quote_data.volume,
+            average_volume,
+        )
 
         quote_data.average_volume = average_volume
         quote_data.relative_volume = relative_volume
@@ -119,7 +124,15 @@ def scan_stocks() -> list[QuoteData]:
                 quote_data.volume,
                 MIN_VOLUME,
             )
-            results.append(quote_data)
+
+            float_data = get_float_data(quote_data.symbol)
+
+            results.append(
+                ScannerCandidate(
+                    quote_data=quote_data,
+                    float_data=float_data,
+                )
+            )
         else:
             logger.debug(
                 "%s failed minimum volume filter: %d < %d",
