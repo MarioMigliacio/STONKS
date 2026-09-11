@@ -26,7 +26,7 @@ USE_CACHE = True
 ALLOW_API_CALLS = True
 
 # Enable optional public-float data support.
-ENABLE_FLOAT_DATA = False
+ENABLE_FLOAT_DATA = True
 
 # Historical data lookback used for relative volume calculations.
 RELATIVE_VOLUME_LOOKBACK_DAYS = 30

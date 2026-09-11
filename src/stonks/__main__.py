@@ -22,8 +22,8 @@ def main() -> None:
         print("No matching stocks found.")
         return
 
-    for quote in results:
-        print(quote)
+    for candidate in results:
+        print(candidate)
 
 
 if __name__ == "__main__":

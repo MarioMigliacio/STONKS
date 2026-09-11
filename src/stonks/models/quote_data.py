@@ -51,7 +51,7 @@ class QuoteData:
     relative_volume: float = 0.0
     average_volume: float = 0.0
 
-    def __repr__(self):
+    def __str__(self) -> str:
         return (
             f"{self.symbol} | "
             f"Price: ${self.price:.2f} | "

@@ -12,7 +12,22 @@ from stonks.models.quote_data import QuoteData
 
 @dataclass
 class ScannerCandidate:
-    """Represents scanner market data assembled for a stock."""
+    """
+    Represents scanner market data assembled for a stock.
+
+    Attributes:
+        quote_data:
+            Normalized market quote data retrieved from a provider API.
+
+        float_data:
+            Reported public-float data for a stock.
+    """
 
     quote_data: QuoteData
     float_data: Optional[FloatData]
+
+    def __str__(self) -> str:
+        if self.float_data:
+            return f"{self.quote_data}\n{self.float_data}"
+
+        return f"{self.quote_data}\nFloat: Unavailable"
