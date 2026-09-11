@@ -20,7 +20,8 @@ class FloatData:
             Physical count of shares as reported by API.
 
         float_percent:
-            Percentage of market float as reported by API.
+            Percentage of the company's total shares outstanding, considered freely tradable by the public as
+            reported by API.
 
         effective_date:
             From the date of which the Float data was reported at.
