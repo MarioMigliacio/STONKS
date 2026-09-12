@@ -41,6 +41,7 @@ def build_float_data() -> FloatData:
 @patch("stonks.scanner.filters.WATCHLIST", ["BIVI"])
 @patch("stonks.scanner.filters.MIN_VOLUME", 1_000)
 @patch("stonks.scanner.filters.time.sleep")
+@patch("stonks.scanner.filters.calculate_float_turnover")
 @patch("stonks.scanner.filters.calculate_relative_volume")
 @patch("stonks.scanner.filters.calculate_average_volume")
 @patch("stonks.scanner.filters.parse_historical_volumes")
@@ -54,9 +55,10 @@ def test_scan_stocks_adds_float_data_to_candidate(
     mock_parse_historical_volumes,
     mock_calculate_average_volume,
     mock_calculate_relative_volume,
+    mock_calculate_float_turnover,
     mock_sleep,
 ):
-    """Verify a qualifying stock is returned with available float data."""
+    """Verify a qualifying stock is returned with float data and turnover."""
 
     float_data = build_float_data()
 
@@ -66,6 +68,7 @@ def test_scan_stocks_adds_float_data_to_candidate(
     mock_calculate_average_volume.return_value = 2_500.0
     mock_calculate_relative_volume.return_value = 2.0
     mock_get_float_data.return_value = float_data
+    mock_calculate_float_turnover.return_value = 0.25
 
     results = scan_stocks()
 
@@ -78,13 +81,19 @@ def test_scan_stocks_adds_float_data_to_candidate(
     assert candidate.quote_data.average_volume == 2_500.0
     assert candidate.quote_data.relative_volume == 2.0
     assert candidate.float_data == float_data
+    assert candidate.float_turnover == 0.25
 
     mock_get_float_data.assert_called_once_with("BIVI")
+    mock_calculate_float_turnover.assert_called_once_with(
+        5_000,
+        7_500_000,
+    )
 
 
 @patch("stonks.scanner.filters.WATCHLIST", ["BIVI"])
 @patch("stonks.scanner.filters.MIN_VOLUME", 1_000)
 @patch("stonks.scanner.filters.time.sleep")
+@patch("stonks.scanner.filters.calculate_float_turnover")
 @patch("stonks.scanner.filters.calculate_relative_volume")
 @patch("stonks.scanner.filters.calculate_average_volume")
 @patch("stonks.scanner.filters.parse_historical_volumes")
@@ -98,6 +107,7 @@ def test_scan_stocks_keeps_candidate_when_float_data_unavailable(
     mock_parse_historical_volumes,
     mock_calculate_average_volume,
     mock_calculate_relative_volume,
+    mock_calculate_float_turnover,
     mock_sleep,
 ):
     """Verify unavailable float data does not remove a qualifying stock."""
@@ -117,8 +127,10 @@ def test_scan_stocks_keeps_candidate_when_float_data_unavailable(
 
     assert candidate.quote_data.symbol == "BIVI"
     assert candidate.float_data is None
+    assert candidate.float_turnover is None
 
     mock_get_float_data.assert_called_once_with("BIVI")
+    mock_calculate_float_turnover.assert_not_called()
 
 
 @patch("stonks.scanner.filters.WATCHLIST", ["BIVI"])

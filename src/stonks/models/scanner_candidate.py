@@ -25,9 +25,17 @@ class ScannerCandidate:
 
     quote_data: QuoteData
     float_data: Optional[FloatData]
+    float_turnover: Optional[float] = None
 
     def __str__(self) -> str:
-        if self.float_data:
-            return f"{self.quote_data}\n{self.float_data}"
+        result = str(self.quote_data)
 
-        return f"{self.quote_data}\nFloat: Unavailable"
+        if not self.float_data:
+            return f"{result}\nFloat: Unavailable"
+
+        result += f"\n{self.float_data}"
+
+        if self.float_turnover is not None:
+            result += f" | Float Turnover: {self.float_turnover:.2%}"
+
+        return result
