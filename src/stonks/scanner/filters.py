@@ -13,6 +13,7 @@ from stonks.cache.historical_cache_service import get_historical_data
 from stonks.config.settings import MIN_VOLUME, RELATIVE_VOLUME_LOOKBACK_DAYS, WATCHLIST
 from stonks.models.quote_data import QuoteData
 from stonks.models.scanner_candidate import ScannerCandidate
+from stonks.scanner.float_classification import FloatClassification, classify_float_size
 from stonks.scanner.float_metrics import calculate_float_turnover
 from stonks.scanner.historical_volume_parser import parse_historical_volumes
 from stonks.scanner.relative_volume import (
@@ -129,10 +130,15 @@ def scan_stocks() -> list[ScannerCandidate]:
             float_data = get_float_data(quote_data.symbol)
 
             float_turnover = None
+            float_classification = FloatClassification.UNKNOWN
 
             if float_data:
                 float_turnover = calculate_float_turnover(
                     quote_data.volume,
+                    float_data.float_shares,
+                )
+
+                float_classification = classify_float_size(
                     float_data.float_shares,
                 )
 
@@ -141,6 +147,7 @@ def scan_stocks() -> list[ScannerCandidate]:
                     quote_data=quote_data,
                     float_data=float_data,
                     float_turnover=float_turnover,
+                    float_classification=float_classification,
                 )
             )
         else:
