@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from stonks.models.float_data import FloatData
 from stonks.scanner.filters import scan_stocks
+from stonks.scanner.float_classification import FloatClassification
 
 
 def build_quote_response(volume: int) -> dict:
@@ -41,6 +42,7 @@ def build_float_data() -> FloatData:
 @patch("stonks.scanner.filters.WATCHLIST", ["BIVI"])
 @patch("stonks.scanner.filters.MIN_VOLUME", 1_000)
 @patch("stonks.scanner.filters.time.sleep")
+@patch("stonks.scanner.filters.classify_float_size")
 @patch("stonks.scanner.filters.calculate_float_turnover")
 @patch("stonks.scanner.filters.calculate_relative_volume")
 @patch("stonks.scanner.filters.calculate_average_volume")
@@ -56,9 +58,10 @@ def test_scan_stocks_adds_float_data_to_candidate(
     mock_calculate_average_volume,
     mock_calculate_relative_volume,
     mock_calculate_float_turnover,
+    mock_classify_float_size,
     mock_sleep,
 ):
-    """Verify a qualifying stock is returned with float data and turnover."""
+    """Verify a qualifying stock is returned with float scanner metrics."""
 
     float_data = build_float_data()
 
@@ -69,6 +72,7 @@ def test_scan_stocks_adds_float_data_to_candidate(
     mock_calculate_relative_volume.return_value = 2.0
     mock_get_float_data.return_value = float_data
     mock_calculate_float_turnover.return_value = 0.25
+    mock_classify_float_size.return_value = FloatClassification.LOW
 
     results = scan_stocks()
 
@@ -82,10 +86,16 @@ def test_scan_stocks_adds_float_data_to_candidate(
     assert candidate.quote_data.relative_volume == 2.0
     assert candidate.float_data == float_data
     assert candidate.float_turnover == 0.25
+    assert candidate.float_classification == FloatClassification.LOW
 
     mock_get_float_data.assert_called_once_with("BIVI")
+
     mock_calculate_float_turnover.assert_called_once_with(
         5_000,
+        7_500_000,
+    )
+
+    mock_classify_float_size.assert_called_once_with(
         7_500_000,
     )
 
@@ -93,6 +103,7 @@ def test_scan_stocks_adds_float_data_to_candidate(
 @patch("stonks.scanner.filters.WATCHLIST", ["BIVI"])
 @patch("stonks.scanner.filters.MIN_VOLUME", 1_000)
 @patch("stonks.scanner.filters.time.sleep")
+@patch("stonks.scanner.filters.classify_float_size")
 @patch("stonks.scanner.filters.calculate_float_turnover")
 @patch("stonks.scanner.filters.calculate_relative_volume")
 @patch("stonks.scanner.filters.calculate_average_volume")
@@ -108,6 +119,7 @@ def test_scan_stocks_keeps_candidate_when_float_data_unavailable(
     mock_calculate_average_volume,
     mock_calculate_relative_volume,
     mock_calculate_float_turnover,
+    mock_classify_float_size,
     mock_sleep,
 ):
     """Verify unavailable float data does not remove a qualifying stock."""
@@ -128,9 +140,11 @@ def test_scan_stocks_keeps_candidate_when_float_data_unavailable(
     assert candidate.quote_data.symbol == "BIVI"
     assert candidate.float_data is None
     assert candidate.float_turnover is None
+    assert candidate.float_classification == FloatClassification.UNKNOWN
 
     mock_get_float_data.assert_called_once_with("BIVI")
     mock_calculate_float_turnover.assert_not_called()
+    mock_classify_float_size.assert_not_called()
 
 
 @patch("stonks.scanner.filters.WATCHLIST", ["BIVI"])
