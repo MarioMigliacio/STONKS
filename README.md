@@ -1,17 +1,21 @@
 # STONKS 🚀
 
+```
+   _____ _______ ____  _   _ _  __ _____
+  / ____|__   __/ __ \| \ | | |/ // ____|
+ | (___    | | | |  | |  \| | ' /| (___
+  \___ \   | | | |  | | . ` |  <  \___ \
+  ____) |  | | | |__| | |\  | . \ ____) |
+ |_____/   |_|  \____/|_| \_|_|\_\|____/
+
+    T H E  C I A  I S  W A T C H I N G  Y O U
+```
+
 Author: Mario Migliacio, 2026
 
 STONKS is a Python-based stock scanner and trading journal built as both a learning project and a practical trading tool.
 
-The project focuses on:
-
-- Market data collection
-- Stock scanner development
-- Trade journaling
-- Performance analytics
-- Historical data caching
-- Trading discipline through data-driven decision making
+The project combines market scanning, public-float analysis, catalyst intelligence, historical data caching, and trade journaling to support data-driven trading decisions.
 
 ---
 
@@ -20,13 +24,43 @@ The project focuses on:
 ### Scanner
 
 - Live quote retrieval
-- Change % scanner
-- Gap % scanner
-- Relative Volume scanner
-- Historical data cache subsystem
-- Ticker-specific financial news retrieval
-- Provider-generated news sentiment
-- C.I.A. catalyst intelligence foundation
+- Change % and Gap % calculations
+- Relative Volume (RVOL)
+- Historical volume analysis
+- Public-float data enrichment
+- Float turnover calculation
+- Float size classification
+- Scanner candidate model
+- Configurable volume filtering
+
+### Float Data
+
+- Public-float data provided by Massive
+- Float share and float percentage reporting
+- Effective-date tracking
+- Local float-data caching
+- Configurable cache expiration
+- Float turnover (`volume / float_shares`)
+- Very Low, Low, Medium, High, and Unknown float classifications
+- Graceful fallback when float data is disabled or unavailable
+
+See [Float Data](docs/float_data.md) for details.
+
+### C.I.A.
+
+**Catalyst Intelligence Analysis**
+
+- Financial news retrieval
+- Duplicate article filtering
+- Catalyst classification
+- Catalyst freshness detection
+- Catalyst strength analysis
+- Confidence scoring
+- Aggregated sentiment analysis
+- Active and historical catalyst separation
+- Mission brief reporting
+
+See [C.I.A. News Subsystem](docs/cia.md) for details.
 
 ### Journal
 
@@ -35,15 +69,25 @@ The project focuses on:
 - CSV-based persistence
 - Journal backup utility
 
-### C.I.A.
+See [Journal Subsystem](docs/journal.md) for details.
 
-- Financial news retrieval
-- Duplicate article filtering
-- Catalyst classification
-- Breaking-news freshness detection
-- Catalyst strength and confidence
-- Aggregated sentiment analysis
-- Mission brief reporting
+### Caching
+
+- Historical market-data caching
+- Public-float caching
+- Configurable cache expiration
+- Cache-first API access
+
+See [Historical Cache](docs/cache.md) and [Float Data](docs/float_data.md) for details.
+
+### Development & Quality
+
+- Pytest test suite
+- Ruff linting and formatting
+- PowerShell development scripts
+- GitHub Actions quality checks
+- Environment-based API key configuration
+- Structured application logging
 
 ---
 
@@ -53,9 +97,10 @@ The project focuses on:
 STONKS/
 ├── backups/
 ├── data/
-|   ├── cache/
-|   |   ├── historical/
-|   |   └── quotes/
+│   ├── cache/
+│   │   ├── float/
+│   │   ├── historical/
+│   │   └── quotes/
 │   └── journal/
 │       └── templates/
 ├── docs/
@@ -63,56 +108,75 @@ STONKS/
 ├── src/
 │   └── stonks/
 │       ├── api/
-|       ├── cache/
-|       ├── cia/
-|       ├── config/
+│       ├── cache/
+│       ├── cia/
+│       ├── config/
 │       ├── journal/
-|       ├── models/
-|       ├── news/
-|       └── scanner/
+│       ├── models/
+│       ├── news/
+│       └── scanner/
 ├── tests/
+│   ├── api/
+│   ├── cache/
 │   ├── cia/
 │   └── scanner/
-├── venv/
-├── .env (secret)
-├── pyproject.toml (for pytest path consistency)
+├── .env
+├── pyproject.toml
 ├── README.md
-└── requirements.txt (dependencies)
-
+└── requirements.txt
 ```
+
+Generated cache, log, backup, virtual-environment, and other runtime files may also exist locally.
 
 ---
 
-## How To Get started
+## Getting Started
 
+Clone the repository:
+
+```powershell
+git clone https://github.com/MarioMigliacio/STONKS.git
+cd STONKS
 ```
-- on a terminal, create and cd into a directory to house the repo.
-- run git clone https://github.com/MarioMigliacio/STONKS.git
-- cd into STONKS/
-- run ".\scripts\init.ps1"
-- run ".\scripts\activate.ps1"
-- visit https://www.alphavantage.co/support/# 'Claim your API key' and update .env file as described in init.ps1
-- Optionally, visit https://www.massive.com and create an API key.
-- Add STONKS_MASSIVE_API_KEY to your .env file.
-- Set ENABLE_FLOAT_DATA = True in settings.py.
-- . . .
-- profit
+
+Initialize the project:
+
+```powershell
+.\scripts\init.ps1
+```
+
+Activate the virtual environment:
+
+```powershell
+.\scripts\activate.ps1
+```
+
+Create an Alpha Vantage API key and configure the generated `.env` file:
+
+```text
+STONKS_API_KEY=your_api_key
+```
+
+Public-float support is optional. To enable it, create a Massive API key and add:
+
+```text
+STONKS_MASSIVE_API_KEY=your_api_key
+```
+
+Then enable float support in `settings.py`:
+
+```python
+ENABLE_FLOAT_DATA = True
 ```
 
 ---
 
 ## Usage
 
-### Run Scanner
+### Scanner
 
 ```powershell
 .\scripts\run.ps1
-```
-
-### Clean Artifacts
-
-```powershell
-.\scripts\clean.ps1
 ```
 
 ### Journal CLI
@@ -127,73 +191,95 @@ STONKS/
 .\scripts\cache.ps1
 ```
 
+### News C.I.A. CLI
+
+```powershell
+.\scripts\news.ps1
+```
+
 ### Backup Journal Data
 
 ```powershell
 .\scripts\backup_journal.ps1
 ```
 
-### News C.I.A CLI
-
-```powershell
-.\scripts\news.ps1
-```
-
-### Test Framework
+### Run Tests
 
 ```powershell
 .\scripts\test.ps1
 ```
 
-### Lint format checking (non mutative)
+### Check Formatting and Linting
 
 ```powershell
 .\scripts\lint.ps1
 ```
 
-### Fix Linting Format (mutative)
+### Apply Formatting Fixes
 
 ```powershell
 .\scripts\format.ps1
+```
+
+### Clean Generated Artifacts
+
+```powershell
+.\scripts\clean.ps1
 ```
 
 ---
 
 ## Configuration
 
-```
-Required API Keys
+### Required API Keys
 
-STONKS_API_KEY
+`STONKS_API_KEY`
 
 Alpha Vantage API key used for market and news data.
 
+### Optional API Keys
 
-Optional API Keys
+`STONKS_MASSIVE_API_KEY`
 
-STONKS_MASSIVE_API_KEY
+Massive API key used for public-float data.
 
-Massive API key used to enable public-float data.
+Float data is optional. STONKS continues to operate normally when float support is disabled or its provider data is unavailable.
 
-Float data is optional. STONKS continues to operate normally
-when this key is not configured.
+### Optional Features
 
+`ENABLE_FLOAT_DATA`
 
-Optional Features
+Controls whether Massive public-float support is enabled.
 
-ENABLE_FLOAT_DATA
+Defaults to `False`.
 
-Controls whether Massive public-float data support is enabled.
-Defaults to False.
+---
+
+## Testing & Code Quality
+
+STONKS uses **Pytest** for automated testing and **Ruff** for linting and formatting.
+
+The test suite covers scanner calculations and integration behavior, cache services, API response handling, float-data processing, and C.I.A. catalyst analysis.
+
+The repository also uses GitHub Actions as a quality gate for automated test and Ruff checks.
+
+Run the local quality checks before submitting changes:
+
+```powershell
+.\scripts\lint.ps1
+.\scripts\test.ps1
 ```
+
+---
 
 ## Documentation
 
-### Subsystems
+Detailed subsystem documentation is available under `docs/`:
 
 - [Journal Subsystem](docs/journal.md)
 - [Historical Cache](docs/cache.md)
 - [C.I.A. News Subsystem](docs/cia.md)
+- [Float Data](docs/float_data.md)
 
 ---
 
@@ -201,5 +287,6 @@ Defaults to False.
 
 ```text
 Personal educational project.
-Acknowledgement Appreciated, but open source.
+
+Acknowledgement appreciated, but open source.
 ```

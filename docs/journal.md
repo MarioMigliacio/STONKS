@@ -2,30 +2,30 @@
 
 [← Back to Main README](../README.md)
 
-The STONKS Journal subsystem is designed to track real and paper trades in a structured format for later analysis and reporting.
+The STONKS Journal subsystem records real and paper trading activity in a structured format for later review and analysis.
 
 ---
 
 ## Purpose
 
-The Journal subsystem was created to help traders collect objective performance data, identify strengths and weaknesses, and make decisions based on measurable results rather than emotions or memory.
+The Journal provides persistent trading records for individual orders and account value snapshots, keeping trading history separate from application source code.
 
 ---
 
 ## Features
 
-- Record individual trade orders
-- Record account value snapshots
-- CSV-based storage for simplicity and transparency
-- Automatic data validation through the Journal CLI
-- Backup and recovery support through ZIP archives
-- Foundation for future analytics and reporting
+- Trade order tracking
+- Position-based order grouping
+- Account value snapshots
+- CSV-based persistence
+- Journal CLI input and validation
+- ZIP backup support
 
 ---
 
-## Journal Data Storage
+## Journal Data
 
-Journal data is stored outside of source code to keep runtime data separate from application logic.
+Journal data is stored under:
 
 ```text
 data/
@@ -34,13 +34,13 @@ data/
     └── account_snapshots.csv
 ```
 
-Journal files are intentionally excluded from Git version control.
+Journal data is stored outside the application source tree and is excluded from Git version control.
 
 ---
 
-## Adding Trade Orders
+## Trade Orders
 
-Launch the journal CLI:
+Launch the Journal CLI:
 
 ```powershell
 .\scripts\journal.ps1
@@ -52,7 +52,7 @@ Select:
 1. Add Trade Order
 ```
 
-Example:
+A trade order records information such as:
 
 ```text
 Order ID: 1
@@ -65,7 +65,7 @@ Time Issued: 06:42
 Notes: Opening position
 ```
 
-Generated CSV:
+The resulting record is stored in CSV format:
 
 ```csv
 order_id,position_id,trade_date,ticker,order_type,fill_price,shares,order_total,time_issued,notes
@@ -76,90 +76,64 @@ order_id,position_id,trade_date,ticker,order_type,fill_price,shares,order_total,
 
 ## Position Tracking
 
-A position may contain multiple orders.
+Orders sharing the same `position_id` belong to the same trading position.
 
-Example:
+For example:
 
 ```text
 Position #1
 
-BUY  100 shares
-BUY   50 shares
-SELL  75 shares
-SELL  75 shares
+BUY   100 shares
+BUY    50 shares
+SELL   75 shares
+SELL   75 shares
 ```
 
-This allows STONKS to support:
-
-- Scaling into positions
-- Scaling out of positions
-- Average entry calculations
-- Average exit calculations
-- Position-level profit and loss
+This allows multiple entries and exits to be associated with a single position and preserves scaling activity within the journal data.
 
 ---
 
 ## Account Snapshots
 
-Account snapshots track account growth over time.
+Account snapshots record changes in account value over time.
 
-Select:
+From the Journal CLI, select:
 
 ```text
 2. Add Account Snapshot
 ```
 
-Example CSV:
+Example:
 
 ```csv
 snapshot_date,account_value_before,account_value_after,notes
 2026-06-21,1000.00,1048.25,Good discipline
 ```
 
-Future analytics can calculate:
-
-- Daily account growth
-- Account equity curves
-- Percentage returns
-- Performance trends
+Account snapshots provide a historical record of account value independent of individual trade orders.
 
 ---
 
 ## Journal Backups
 
-Create a backup:
+Create a journal backup with:
 
 ```powershell
 .\scripts\backup_journal.ps1
 ```
 
-Result:
+Backups are written to:
 
 ```text
 backups/
 └── stonks_journal_2026-06-21_19-14-33.zip
 ```
 
-Backup archives contain:
+The archive contains the journal CSV data:
 
 ```text
 orders.csv
 account_snapshots.csv
 ```
 
-This protects trading history and journal data from accidental loss.
-
----
-
-## Future Roadmap
-
-Planned journal enhancements:
-
-- Position profit/loss calculations
-- Win/loss statistics
-- Average hold time analysis
-- Best and worst ticker reports
-- Profit factor calculations
-- Journal analytics dashboard
-- GUI integration
-- Optional SQLite backend
+This provides a portable copy of the journal's persistent trading records.

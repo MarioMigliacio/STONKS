@@ -2,74 +2,41 @@
 
 [← Back to Main README](../README.md)
 
-The STONKS Historical Data Cache subsystem exists to reduce API usage, improve development speed, and provide a foundation for advanced scanner features.
+The STONKS Historical Data Cache stores daily market history locally to reduce API usage and provide reusable data for scanner calculations.
 
 ---
 
 ## Purpose
 
-Many scanner features require access to historical market data.
+Scanner calculations such as Relative Volume (RVOL) and Average Volume require historical market data.
 
-Examples:
+Rather than repeatedly requesting the same history from Alpha Vantage, STONKS stores historical responses locally and reuses them when available.
 
-- Relative Volume
-- Average Daily Volume
-- Moving Averages
-- Gap Analysis
-- Trend Analysis
-- Backtesting
-
-Rather than repeatedly requesting the same data from external APIs, STONKS stores historical market data locally and reuses it whenever possible.
-
----
-
-## Benefits
-
-### Reduced API Usage
-
-Historical data is downloaded once and reused many times.
-
-Example:
-
-```text
-AAPL Daily History
-
-1 API Request
-    ↓
-100+ Trading Days Returned
-    ↓
-Unlimited Local Reads
+```mermaid
+flowchart TD
+    A[Alpha Vantage] --> B[Historical Cache Service]
+    B --> C[Local JSON Cache]
+    C --> D[Scanner Calculations]
 ```
 
-This dramatically reduces API consumption and helps stay within free-tier request limits.
+This reduces API usage while keeping historical scanner data readily available.
 
 ---
 
-### Faster Development
+## Features
 
-During development, STONKS can operate entirely from cached data.
-
-This allows:
-
-- Faster testing
-- Offline development
-- No accidental API usage
-- Consistent test results
+- Cache-first historical data retrieval
+- Local JSON persistence
+- Manual cache population
+- Forced API refresh
+- API-call disabling for local development
+- Historical volume data for RVOL and Average Volume calculations
 
 ---
 
 ## Directory Structure
 
-Historical data is stored under:
-
-```text
-data/
-└── cache/
-    ├── quotes/
-    └── historical/
-```
-
-Example:
+Historical cache data is stored under:
 
 ```text
 data/
@@ -80,83 +47,63 @@ data/
         └── AMD_daily.json
 ```
 
+Other STONKS cache directories may exist alongside `historical/`, but historical market data is isolated within this directory.
+
 ---
 
-## Cache Settings
+## Configuration
 
-The cache subsystem is controlled through configuration flags.
+Historical cache behavior is controlled through:
 
 ```python
 USE_CACHE = True
-
 ALLOW_API_CALLS = True
 ```
 
-### USE_CACHE
+### `USE_CACHE`
 
-When enabled:
+When enabled, STONKS attempts to use locally cached historical data before requesting it from the provider.
 
-```text
-True
-```
+When disabled, cached historical data is bypassed.
 
-STONKS will attempt to load cached data before making API requests.
+### `ALLOW_API_CALLS`
 
----
+When enabled, STONKS may request historical data from Alpha Vantage when required.
 
-### ALLOW_API_CALLS
+When disabled, STONKS will not make the external request.
 
-When enabled:
-
-```text
-True
-```
-
-STONKS may fetch missing data from external APIs.
-
-When disabled:
-
-```text
-False
-```
-
-STONKS will only use locally cached data.
-
-This is useful when developing features without consuming API requests.
+This allows scanner and development workflows to operate from existing local data without consuming additional API requests.
 
 ---
 
 ## Cache Workflow
 
-```text
-Scanner
-    ↓
-Historical Cache Service
-    ↓
-Cache Exists?
-    ↓
-YES ──► Load Local Data
-    ↓
- NO
-    ↓
-API Calls Allowed?
-    ↓
-YES ──► Fetch From API
-    ↓
-Save To Cache
-    ↓
-Return Data
+Normal historical-data retrieval follows:
 
-NO ──► Return No Data
+```mermaid
+flowchart TD
+    A[Historical Data Requested] --> B{USE_CACHE?}
+
+    B -->|Yes| C{Cache Exists?}
+    B -->|No| D{API Calls Allowed?}
+
+    C -->|Yes| E[Return Cached Data]
+    C -->|No| D
+
+    D -->|Yes| F[Fetch From Alpha Vantage]
+    D -->|No| G[Return No Data]
+
+    F --> H[Save To Cache]
+    H --> I[Return Historical Data]
 ```
+
+When cached data is available and cache use is enabled, no historical API request is required.
 
 ---
 
-## Creating Historical Cache Data
+## Historical Cache CLI
 
-Launch the cache CLI:
-
-- New update will ask if you want to force a refresh (this is useful if the cache file existed but is out of date)
+Historical data can be cached manually with:
 
 ```powershell
 .\scripts\cache.ps1
@@ -169,63 +116,83 @@ Symbol to cache: AAPL
 Force refresh from API? (Y/N): n
 ```
 
-First run:
-
-```text
-Fetching historical data for AAPL from API...
-Historical data ready for AAPL.
-```
-
-Subsequent runs:
+If cached data is already available, it can be reused:
 
 ```text
 Using cached historical data for AAPL
+
 Historical data ready for AAPL.
 ```
 
-Forced Cache refresh option:
+If the data must be retrieved from the provider:
 
 ```text
-Symbol to cache: aapl
-Force refresh from API? (Y/N): y
 Fetching historical data for AAPL from API...
 
-Parsed 100 historical volume records.
-HistoricalVolumeData(trade_date='2026-06-24', volume=53081859)
+Historical data ready for AAPL.
 ```
+
+### Force Refresh
+
+The CLI can bypass an existing cached record and request fresh historical data:
+
+```text
+Symbol to cache: AAPL
+Force refresh from API? (Y/N): y
+```
+
+A forced refresh retrieves the historical data from the provider and replaces the locally cached response.
 
 ---
 
-## Git Strategy
+## Scanner Usage
 
-Cache files are intentionally excluded from Git version control.
+The scanner uses historical market data to calculate Average Volume and Relative Volume.
 
-Tracked:
-
-```text
-data/cache/quotes/.gitkeep
-data/cache/historical/.gitkeep
+```mermaid
+flowchart TD
+    A[Historical Daily Data] --> B[Historical Volumes]
+    B --> C[Average Volume]
+    C --> D[Current Volume]
+    D --> E[Relative Volume RVOL]
 ```
 
-Ignored:
+Relative Volume compares current trading volume against the stock's historical average:
 
 ```text
-*.json
+RVOL = Current Volume / Average Volume
 ```
 
-This ensures repository size remains small while preserving project structure.
+For example:
+
+```text
+Current Volume:  5,000,000
+Average Volume:  2,500,000
+
+RVOL: 2.00
+```
+
+An RVOL of `2.00` means current volume is approximately twice the historical average used by the scanner.
+
+The number of historical trading days used in the average is controlled by the scanner configuration.
 
 ---
 
-## Future Roadmap
+## Git Tracking
 
-Planned features using historical cache data:
+Runtime cache data is intentionally excluded from Git version control.
 
-- Relative Volume Scanner
-- Average Daily Volume
-- Moving Averages
-- Gap Analysis
-- Trend Detection
-- Historical Price Statistics
-- Backtesting
-- Additional Market Data Providers
+The cache directory structure is preserved with `.gitkeep` files while generated JSON data remains untracked.
+
+```text
+data/
+└── cache/
+    ├── float/
+    │   └── .gitkeep
+    ├── historical/
+    │   └── .gitkeep
+    └── quotes/
+        └── .gitkeep
+```
+
+This keeps generated market data out of the repository while preserving the expected cache directories.
