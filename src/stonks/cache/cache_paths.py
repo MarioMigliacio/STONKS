@@ -13,6 +13,7 @@ CACHE_DIRECTORY = Path("data/cache")
 QUOTE_CACHE_DIRECTORY = CACHE_DIRECTORY / "quotes"
 HISTORICAL_CACHE_DIRECTORY = CACHE_DIRECTORY / "historical"
 FLOAT_CACHE_DIRECTORY = CACHE_DIRECTORY / "float"
+INTRADAY_CACHE_DIRECTORY = CACHE_DIRECTORY / "intraday"
 
 
 def ensure_cache_directories_exist():
@@ -23,3 +24,4 @@ def ensure_cache_directories_exist():
     QUOTE_CACHE_DIRECTORY.mkdir(parents=True, exist_ok=True)
     HISTORICAL_CACHE_DIRECTORY.mkdir(parents=True, exist_ok=True)
     FLOAT_CACHE_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    INTRADAY_CACHE_DIRECTORY.mkdir(parents=True, exist_ok=True)

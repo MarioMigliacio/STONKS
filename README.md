@@ -225,6 +225,10 @@ ENABLE_FLOAT_DATA = True
 
 ```powershell
 .\scripts\clean.ps1
+
+OR cache related files:
+
+.\scripts\clear-cache.ps1
 ```
 
 ---
