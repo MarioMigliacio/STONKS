@@ -7,9 +7,7 @@ from stonks.models.historical_volume_data import HistoricalVolumeData
 
 
 def parse_historical_volumes(data) -> list[HistoricalVolumeData]:
-    """
-    Parse Alpha Vantage daily time series data into historical volume records.
-    """
+    """Parse Alpha Vantage daily time series data into historical volume records."""
 
     if not data:
         return []
