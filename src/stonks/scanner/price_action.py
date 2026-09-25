@@ -6,6 +6,7 @@
 from typing import Optional
 
 from stonks.models.candle_data import CandleData
+from stonks.models.price_action_data import PriceActionData
 
 
 def calculate_period_change(candles: list[CandleData]) -> Optional[float]:
@@ -58,3 +59,16 @@ def calculate_period_range(
         return None
 
     return ((period_high - period_low) / period_low) * 100
+
+
+def build_price_action_data(
+    candles: list[CandleData],
+) -> PriceActionData:
+    """Build calculated price-action data from the supplied candles."""
+
+    return PriceActionData(
+        change_percent=calculate_period_change(candles),
+        high_price=calculate_period_high(candles),
+        low_price=calculate_period_low(candles),
+        range_percent=calculate_period_range(candles),
+    )
