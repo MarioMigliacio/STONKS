@@ -8,7 +8,9 @@ from datetime import datetime, timezone
 import pytest
 
 from stonks.models.candle_data import CandleData
+from stonks.models.price_action_data import PriceActionData
 from stonks.scanner.price_action import (
+    build_price_action_data,
     calculate_period_change,
     calculate_period_high,
     calculate_period_low,
@@ -161,3 +163,31 @@ def test_calculate_period_range_returns_none_for_zero_period_low():
     candles[0].low_price = 0.0
 
     assert calculate_period_range(candles) is None
+
+
+def test_build_price_action_data_composes_calculated_metrics():
+    """Verify candle metrics are composed into price-action data."""
+
+    candles = build_candles()
+
+    result = build_price_action_data(candles)
+
+    assert result == PriceActionData(
+        change_percent=pytest.approx(10.0),
+        high_price=pytest.approx(12.00),
+        low_price=pytest.approx(9.50),
+        range_percent=pytest.approx(((12.00 - 9.50) / 9.50) * 100),
+    )
+
+
+def test_build_price_action_data_handles_empty_candles():
+    """Verify empty candle input produces unavailable metrics."""
+
+    result = build_price_action_data([])
+
+    assert result == PriceActionData(
+        change_percent=None,
+        high_price=None,
+        low_price=None,
+        range_percent=None,
+    )
