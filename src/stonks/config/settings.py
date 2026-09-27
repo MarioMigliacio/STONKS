@@ -34,6 +34,9 @@ RELATIVE_VOLUME_LOOKBACK_DAYS = 30
 # Maximum age of cached float data before it is refreshed.
 FLOAT_CACHE_MAX_AGE_DAYS = 7
 
+# Useful lookbacks used for intraday price candle action.
+PRICE_ACTION_LOOKBACKS = [1, 5, 10]
+
 # Logging levels.
 CONSOLE_LOG_LEVEL = "INFO"
 FILE_LOG_LEVEL = "DEBUG"

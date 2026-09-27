@@ -50,3 +50,15 @@ def _get_session_bounds(
         return REGULAR_MARKET_CLOSE, AFTER_HOURS_CLOSE
 
     raise ValueError(f"Unsupported market session: {session}")
+
+
+def get_recent_candles(
+    candles: list[CandleData],
+    count: int,
+) -> list[CandleData]:
+    """Return the requested number of most recent candles."""
+
+    if count <= 0:
+        raise ValueError("Candle count must be greater than zero.")
+
+    return candles[-count:]

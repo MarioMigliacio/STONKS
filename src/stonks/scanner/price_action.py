@@ -6,7 +6,10 @@
 from typing import Optional
 
 from stonks.models.candle_data import CandleData
+from stonks.models.market_session import MarketSession
 from stonks.models.price_action_data import PriceActionData
+from stonks.models.price_action_summary import PriceActionSummary
+from stonks.scanner.candle_selection import get_recent_candles, get_session_candles
 
 
 def calculate_period_change(candles: list[CandleData]) -> Optional[float]:
@@ -71,4 +74,35 @@ def build_price_action_data(
         high_price=calculate_period_high(candles),
         low_price=calculate_period_low(candles),
         range_percent=calculate_period_range(candles),
+    )
+
+
+def build_price_action_summary(
+    candles: list[CandleData],
+    session: MarketSession,
+    lookbacks: list[int],
+) -> PriceActionSummary:
+    """Build price-action analysis for a market session and its lookbacks."""
+
+    session_candles = get_session_candles(
+        candles,
+        session,
+    )
+
+    session_data = build_price_action_data(session_candles)
+
+    lookback_data: dict[int, PriceActionData] = {}
+
+    for lookback in lookbacks:
+        recent_candles = get_recent_candles(
+            session_candles,
+            count=lookback,
+        )
+
+        lookback_data[lookback] = build_price_action_data(recent_candles)
+
+    return PriceActionSummary(
+        session=session,
+        session_data=session_data,
+        lookbacks=lookback_data,
     )
