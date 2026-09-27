@@ -5,17 +5,30 @@
 
 import logging
 import time
+from datetime import date
 from typing import Optional
 
 from stonks.api.market_data import get_quote
 from stonks.cache.float_cache_service import get_float_data
 from stonks.cache.historical_cache_service import get_historical_data
-from stonks.config.settings import MIN_VOLUME, RELATIVE_VOLUME_LOOKBACK_DAYS, WATCHLIST
+from stonks.cache.intraday_cache_service import get_intraday_data
+from stonks.config.settings import (
+    MIN_VOLUME,
+    PRICE_ACTION_LOOKBACKS,
+    RELATIVE_VOLUME_LOOKBACK_DAYS,
+    WATCHLIST,
+)
+from stonks.models.market_session import MarketSession
 from stonks.models.quote_data import QuoteData
 from stonks.models.scanner_candidate import ScannerCandidate
-from stonks.scanner.float_classification import FloatClassification, classify_float_size
+from stonks.models.timeframe import Timeframe
+from stonks.scanner.float_classification import (
+    FloatClassification,
+    classify_float_size,
+)
 from stonks.scanner.float_metrics import calculate_float_turnover
 from stonks.scanner.historical_volume_parser import parse_historical_volumes
+from stonks.scanner.price_action import build_price_action_summary
 from stonks.scanner.relative_volume import (
     calculate_average_volume,
     calculate_relative_volume,
@@ -72,7 +85,9 @@ def scan_stocks() -> list[ScannerCandidate]:
 
         data = get_quote(ticker)
 
-        # [TODO: remove at a later time] Please be gentle to the API throttling. 25 total per DAY on free account.
+        # [TODO: remove at a later time]
+        # Please be gentle to the API throttling.
+        # 25 total per DAY on free account.
         time.sleep(2)
 
         quote_data = parse_latest(data)
@@ -119,44 +134,64 @@ def scan_stocks() -> list[ScannerCandidate]:
             quote_data.gap_percent,
         )
 
-        if quote_data.volume >= MIN_VOLUME:
-            logger.debug(
-                "%s passed minimum volume filter: %d >= %d",
-                ticker,
-                quote_data.volume,
-                MIN_VOLUME,
-            )
-
-            float_data = get_float_data(quote_data.symbol)
-
-            float_turnover = None
-            float_classification = FloatClassification.UNKNOWN
-
-            if float_data:
-                float_turnover = calculate_float_turnover(
-                    quote_data.volume,
-                    float_data.float_shares,
-                )
-
-                float_classification = classify_float_size(
-                    float_data.float_shares,
-                )
-
-            results.append(
-                ScannerCandidate(
-                    quote_data=quote_data,
-                    float_data=float_data,
-                    float_turnover=float_turnover,
-                    float_classification=float_classification,
-                )
-            )
-        else:
+        if quote_data.volume < MIN_VOLUME:
             logger.debug(
                 "%s failed minimum volume filter: %d < %d",
                 ticker,
                 quote_data.volume,
                 MIN_VOLUME,
             )
+            continue
+
+        logger.debug(
+            "%s passed minimum volume filter: %d >= %d",
+            ticker,
+            quote_data.volume,
+            MIN_VOLUME,
+        )
+
+        float_data = get_float_data(quote_data.symbol)
+
+        float_turnover = None
+        float_classification = FloatClassification.UNKNOWN
+
+        if float_data:
+            float_turnover = calculate_float_turnover(
+                quote_data.volume,
+                float_data.float_shares,
+            )
+
+            float_classification = classify_float_size(
+                float_data.float_shares,
+            )
+
+        trading_date = date.fromisoformat(quote_data.latest_trading_day)
+
+        intraday_candles = get_intraday_data(
+            symbol=quote_data.symbol,
+            timeframe=Timeframe.ONE_MINUTE,
+            start_date=trading_date,
+            end_date=trading_date,
+        )
+
+        price_action = None
+
+        if intraday_candles:
+            price_action = build_price_action_summary(
+                candles=intraday_candles,
+                session=MarketSession.REGULAR,
+                lookbacks=PRICE_ACTION_LOOKBACKS,
+            )
+
+        results.append(
+            ScannerCandidate(
+                quote_data=quote_data,
+                float_data=float_data,
+                float_turnover=float_turnover,
+                float_classification=float_classification,
+                price_action=price_action,
+            )
+        )
 
     logger.info(
         "Scanner completed with %d matching symbol(s)",

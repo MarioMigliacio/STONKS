@@ -9,7 +9,7 @@ import pytest
 
 from stonks.models.candle_data import CandleData
 from stonks.models.market_session import MarketSession
-from stonks.scanner.candle_selection import get_session_candles
+from stonks.scanner.candle_selection import get_recent_candles, get_session_candles
 
 
 def build_candle(
@@ -181,4 +181,76 @@ def test_get_session_candles_rejects_unsupported_session():
         get_session_candles(
             candles,
             "unsupported",  # type: ignore[arg-type]
+        )
+
+
+def test_get_recent_candles_returns_requested_count():
+    """Verify the requested number of recent candles is returned."""
+
+    candles = [
+        build_candle(datetime(2026, 9, 16, 13, 30, tzinfo=timezone.utc)),
+        build_candle(datetime(2026, 9, 16, 13, 31, tzinfo=timezone.utc)),
+        build_candle(datetime(2026, 9, 16, 13, 32, tzinfo=timezone.utc)),
+        build_candle(datetime(2026, 9, 16, 13, 33, tzinfo=timezone.utc)),
+        build_candle(datetime(2026, 9, 16, 13, 34, tzinfo=timezone.utc)),
+    ]
+
+    result = get_recent_candles(
+        candles,
+        count=3,
+    )
+
+    assert result == candles[-3:]
+
+
+def test_get_recent_candles_returns_all_when_count_exceeds_available():
+    """Verify all candles are returned when fewer than requested exist."""
+
+    candles = [
+        build_candle(datetime(2026, 9, 16, 13, 30, tzinfo=timezone.utc)),
+        build_candle(datetime(2026, 9, 16, 13, 31, tzinfo=timezone.utc)),
+    ]
+
+    result = get_recent_candles(
+        candles,
+        count=5,
+    )
+
+    assert result == candles
+
+
+def test_get_recent_candles_returns_empty_when_no_candles():
+    """Verify empty candle input returns an empty list."""
+
+    result = get_recent_candles(
+        [],
+        count=5,
+    )
+
+    assert result == []
+
+
+def test_get_recent_candles_rejects_zero_count():
+    """Verify a zero candle count is rejected."""
+
+    with pytest.raises(
+        ValueError,
+        match="Candle count must be greater than zero.",
+    ):
+        get_recent_candles(
+            [],
+            count=0,
+        )
+
+
+def test_get_recent_candles_rejects_negative_count():
+    """Verify a negative candle count is rejected."""
+
+    with pytest.raises(
+        ValueError,
+        match="Candle count must be greater than zero.",
+    ):
+        get_recent_candles(
+            [],
+            count=-1,
         )

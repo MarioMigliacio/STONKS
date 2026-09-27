@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from stonks.models.float_data import FloatData
+from stonks.models.price_action_summary import PriceActionSummary
 from stonks.models.quote_data import QuoteData
 from stonks.scanner.float_classification import FloatClassification
 
@@ -27,13 +28,17 @@ class ScannerCandidate:
             Ratio of volume divided by Float to represent moving shares.
 
         float_classification:
-            Human readable representation of Float data classified.
+            Human-readable representation of classified Float data.
+
+        price_action:
+            Price-action analysis for the selected market session.
     """
 
     quote_data: QuoteData
     float_data: Optional[FloatData]
     float_turnover: Optional[float] = None
     float_classification: FloatClassification = FloatClassification.UNKNOWN
+    price_action: Optional[PriceActionSummary] = None
 
     def __str__(self) -> str:
         result = str(self.quote_data)
