@@ -1,5 +1,5 @@
 # =============================================================================
-# File: clear-cache.ps1
+# File: clear_cache.ps1
 # Purpose: Removes cached JSON data while preserving cache directories.
 # =============================================================================
 

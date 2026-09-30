@@ -46,6 +46,19 @@ The project combines market scanning, public-float analysis, catalyst intelligen
 
 See [Float Data](docs/float_data.md) for details.
 
+### Price Action
+
+- Historical intraday candle retrieval through Massive
+- 1-minute, 5-minute, 15-minute, 30-minute, 60-minute, and daily candle timeframes
+- Pre-market, regular-session, and after-hours candle selection
+- Regular-session price change, high, low, and range analysis
+- Configurable recent price-action lookbacks
+- Scanner candidate price-action enrichment when intraday data is available
+- Cache-first historical intraday data access
+- Historical price-action CLI
+
+See [Price Action](docs/price_action.md) for details.
+
 ### C.I.A.
 
 **Catalyst Intelligence Analysis**
@@ -74,11 +87,12 @@ See [Journal Subsystem](docs/journal.md) for details.
 ### Caching
 
 - Historical market-data caching
+- Intraday candle-data caching
 - Public-float caching
-- Configurable cache expiration
+- Configurable cache expiration where applicable
 - Cache-first API access
 
-See [Historical Cache](docs/cache.md) and [Float Data](docs/float_data.md) for details.
+See [Historical Cache](docs/cache.md), [Float Data](docs/float_data.md), and [Price Action](docs/price_action.md) for details.
 
 ### Development & Quality
 
@@ -100,6 +114,7 @@ STONKS/
 │   ├── cache/
 │   │   ├── float/
 │   │   ├── historical/
+│   │   ├── intraday/
 │   │   └── quotes/
 │   └── journal/
 │       └── templates/
@@ -157,13 +172,13 @@ Create an Alpha Vantage API key and configure the generated `.env` file:
 STONKS_API_KEY=your_api_key
 ```
 
-Public-float support is optional. To enable it, create a Massive API key and add:
+Massive provides public-float data and historical aggregate candle data. To use Massive-backed features, create a Massive API key and add:
 
 ```text
 STONKS_MASSIVE_API_KEY=your_api_key
 ```
 
-Then enable float support in `settings.py`:
+Float-data enrichment can be enabled independently in settings.py:
 
 ```python
 ENABLE_FLOAT_DATA = True
@@ -189,6 +204,12 @@ ENABLE_FLOAT_DATA = True
 
 ```powershell
 .\scripts\cache.ps1
+```
+
+### Price Action CLI
+
+```powershell
+.\scripts\price_action.ps1
 ```
 
 ### News C.I.A. CLI
@@ -228,7 +249,7 @@ ENABLE_FLOAT_DATA = True
 
 OR cache related files:
 
-.\scripts\clear-cache.ps1
+.\scripts\clear_cache.ps1
 ```
 
 ---
@@ -245,7 +266,7 @@ Alpha Vantage API key used for market and news data.
 
 `STONKS_MASSIVE_API_KEY`
 
-Massive API key used for public-float data.
+Massive API key used for public-float and aggregate candle data.
 
 Float data is optional. STONKS continues to operate normally when float support is disabled or its provider data is unavailable.
 
@@ -263,7 +284,7 @@ Defaults to `False`.
 
 STONKS uses **Pytest** for automated testing and **Ruff** for linting and formatting.
 
-The test suite covers scanner calculations and integration behavior, cache services, API response handling, float-data processing, and C.I.A. catalyst analysis.
+The test suite covers scanner calculations and integration behavior, cache services, API response handling, float-data processing, market-session selection, price-action analysis, and C.I.A. catalyst analysis.
 
 The repository also uses GitHub Actions as a quality gate for automated test and Ruff checks.
 
@@ -284,6 +305,7 @@ Detailed subsystem documentation is available under `docs/`:
 - [Historical Cache](docs/cache.md)
 - [C.I.A. News Subsystem](docs/cia.md)
 - [Float Data](docs/float_data.md)
+- [Price Action](docs/price_action.md)
 
 ---
 
