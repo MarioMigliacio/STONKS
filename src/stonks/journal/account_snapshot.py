@@ -16,20 +16,32 @@ from dataclasses import dataclass
 @dataclass
 class AccountSnapshot:
     """
-    Represents an account value snapshot.
+    Represents an account value snapshot for a trading session.
+
+    Records account values before and after trading activity.
+    Provides calculated dollar and percentage changes for
+    tracking account performance over time.
+
+    Changes in account value may include deposits, withdrawals,
+    or other adjustments and do not necessarily represent
+    realized trading profit or loss.
 
     Attributes:
         snapshot_date:
-            Date of the snapshot.
+            Date associated with the account snapshot, stored
+            as a string in the journal's existing date format.
 
         account_value_before:
-            Account value before trading activity.
+            Total account value before the trading session,
+            expressed in dollars.
 
         account_value_after:
-            Account value after trading activity.
+            Total account value after the trading session,
+            expressed in dollars.
 
         notes:
             Optional notes about the trading session.
+            Defaults to an empty string.
     """
 
     snapshot_date: str
@@ -39,12 +51,36 @@ class AccountSnapshot:
 
     @property
     def dollar_change(self) -> float:
-        """Calculate account value change in dollars."""
+        """
+        Calculate the change in account value.
+
+        Returns:
+            float:
+                Difference between the account value after
+                and before the trading session, in dollars.
+
+                A positive value represents an increase;
+                a negative value represents a decrease.
+        """
         return self.account_value_after - self.account_value_before
 
     @property
     def percent_change(self) -> float:
-        """Calculate account value change as a percentage."""
+        """
+        Calculate the percentage change in account value.
+
+        Returns:
+            float:
+                Percentage change relative to the account
+                value before the trading session.
+
+                Returns 0.0 if the starting account value
+                is zero.
+
+        Notes:
+            This calculation does not account for deposits,
+            withdrawals, or other external cash movements.
+        """
         if self.account_value_before == 0:
             return 0.0
 

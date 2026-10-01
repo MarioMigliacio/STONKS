@@ -21,7 +21,19 @@ from stonks.log_manager import configure_logging
 
 
 def prompt_string(message: str, allow_empty: bool = False) -> str:
-    """Prompt user for a string value."""
+    """
+    Prompt the user for a string value until valid input is provided.
+
+    Repeats the prompt when the supplied value is empty.
+
+    Args:
+        message:
+            Text displayed to the user when requesting input.
+
+    Returns:
+        str:
+            The string entered by the user.
+    """
 
     while True:
         value = input(message).strip()
@@ -33,7 +45,25 @@ def prompt_string(message: str, allow_empty: bool = False) -> str:
 
 
 def prompt_int(message: str) -> int:
-    """Prompt user for an integer value."""
+    """
+    Prompt the user for an integer until valid input is provided.
+
+    Repeats the prompt when the supplied value cannot be
+    converted to an integer. Does not enforce a positive
+    value or any other numerical constraint.
+
+    Args:
+        message:
+            Text displayed to the user when requesting input.
+
+    Returns:
+        int:
+            The integer entered by the user.
+
+    Raises:
+        ValueError:
+            If a numeric field contains an invalid value.
+    """
 
     while True:
         value = input(message).strip()
@@ -46,7 +76,23 @@ def prompt_int(message: str) -> int:
 
 
 def prompt_float(message: str) -> float:
-    """Prompt user for a floating point value."""
+    """
+    Prompt the user for a float value until valid input is provided.
+
+    Repeats the prompt until proper float value is recognized.
+
+    Args:
+        message:
+            Text displayed to the user when requesting input.
+
+    Returns:
+        float:
+            The float entered by the user.
+
+    Raises:
+        ValueError:
+            If a numeric field contains an invalid value.
+    """
 
     while True:
         value = input(message).strip()
@@ -59,7 +105,15 @@ def prompt_float(message: str) -> float:
 
 
 def prompt_order_type() -> str:
-    """Prompt user for BUY or SELL."""
+    """
+    Prompt the user for a string value of BUY/SELL until valid input is provided.
+
+    Repeats the prompt when the supplied value is not BUY or SELL (lowercase is fine).
+
+    Returns:
+        str:
+            The string entered by the user.
+    """
 
     while True:
         order_type = input("Order Type (BUY/SELL): ").strip().upper()
@@ -75,8 +129,17 @@ def prompt_order_type() -> str:
 # =============================================================================
 
 
-def add_trade_order():
-    """Prompt user for trade order details and save the order."""
+def add_trade_order() -> None:
+    """
+    Prompt the user to create and save a new trade order.
+
+    Collects order identifiers, execution details, and optional
+    notes. Calculates the order total, creates a TradeOrder
+    instance, and saves it through the journal storage layer.
+
+    Returns:
+        None.
+    """
 
     print("")
     print("=== Add Trade Order ===")
@@ -129,8 +192,18 @@ def add_trade_order():
     )
 
 
-def add_account_snapshot():
-    """Prompt user for account snapshot details and save the snapshot."""
+def add_account_snapshot() -> None:
+    """
+    Prompt the user to create and save an account snapshot.
+
+    Collects account values before and after trading, along
+    with the snapshot date and optional notes. Creates an
+    AccountSnapshot instance, saves it through the journal
+    storage layer, and displays the account value changes.
+
+    Returns:
+        None.
+    """
 
     print("")
     print("=== Add Account Snapshot ===")
@@ -165,8 +238,17 @@ def add_account_snapshot():
     )
 
 
-def main():
-    """Run the journal command-line interface."""
+def main() -> None:
+    """
+    Initialize and run the trading journal command-line interface.
+
+    Configures application logging, displays the journal menu,
+    and dispatches the selected operation to the appropriate
+    journal entry workflow.
+
+    Returns:
+        None.
+    """
 
     configure_logging()
 
