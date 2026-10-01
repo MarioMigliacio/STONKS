@@ -47,7 +47,22 @@ def ensure_journal_directory_exists():
 
 def save_order(order: TradeOrder):
     """
-    Append a TradeOrder to orders.csv.
+    Append an executed trade order to the journal's CSV file.
+
+    Creates the journal directory and writes the CSV header
+    when the destination file is missing or empty.
+
+    Args:
+        order:
+            TradeOrder instance containing the executed
+            order's identifying and financial information.
+
+    Returns:
+        None.
+
+    Raises:
+        OSError:
+            If the directory or CSV file cannot be written.
     """
 
     ensure_journal_directory_exists()
@@ -103,7 +118,27 @@ def save_order(order: TradeOrder):
 
 def load_orders() -> list[TradeOrder]:
     """
-    Load all TradeOrder records from orders.csv.
+    Load all recorded trade orders from the journal's CSV file.
+
+    Converts stored CSV values into their corresponding
+    TradeOrder field types. Returns an empty list when the
+    orders file does not exist.
+
+    Returns:
+        list[TradeOrder]:
+            All successfully loaded trade orders in CSV
+            row order, or an empty list if the file is missing
+            or contains no records.
+
+    Raises:
+        OSError:
+            If the existing CSV file cannot be read.
+
+        KeyError:
+            If a required CSV column is missing.
+
+        ValueError:
+            If a numeric field contains an invalid value.
     """
 
     if not ORDERS_FILE.exists():

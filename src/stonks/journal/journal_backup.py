@@ -16,9 +16,22 @@ DATA_DIRECTORY = Path("data/journal")
 BACKUP_DIRECTORY = Path("backups")
 
 
-def create_backup():
+def create_backup() -> None:
     """
-    Create a timestamped ZIP backup of journal data.
+    Create a timestamped ZIP archive of the journal's CSV files.
+
+    Creates the backup directory if necessary, collects all CSV
+    files from the journal data directory, and writes them to
+    a compressed archive. Logs the archive path and the number
+    of files included.
+
+    Returns:
+        None.
+
+    Raises:
+        OSError:
+            If the backup directory or archive cannot be
+            created, or a source file cannot be read.
     """
 
     BACKUP_DIRECTORY.mkdir(parents=True, exist_ok=True)
@@ -40,7 +53,16 @@ def create_backup():
     )
 
 
-def main():
+def main() -> None:
+    """
+    Run the journal backup command-line utility.
+
+    Configures application logging and invokes the journal
+    backup operation.
+
+    Returns:
+        None.
+    """
     configure_logging()
     create_backup()
 

@@ -14,38 +14,45 @@ from dataclasses import dataclass
 @dataclass
 class TradeOrder:
     """
-    Represents a single executed trade order.
+    Represents a single executed buy or sell order within a trading position.
+
+    Multiple orders may share a position_id, allowing a position to
+    contain partial entries, partial exits, and multiple executions.
 
     Attributes:
         order_id:
-            Unique identifier for this order.
+            Unique integer identifier for this executed order.
 
         position_id:
-            Identifier used to group related buy/sell orders into one trade position.
+            Integer identifier grouping orders belonging to the
+            same trading position.
 
         trade_date:
-            Date the order was executed.
+            Execution date, stored as a string in the journal's
+            existing date format.
 
         ticker:
-            Stock ticker symbol.
+            Stock ticker symbol associated with the order.
 
         order_type:
-            BUY or SELL.
+            Order direction, expected to be "BUY" or "SELL".
 
         fill_price:
-            Average filled price per share.
+            Average execution price per share, in dollars.
 
         shares:
-            Number of shares filled.
+            Number of shares executed in this order.
 
         order_total:
-            Total dollar value of the order.
+            Total dollar value of the executed order.
 
         time_issued:
-            Time the order was placed or filled.
+            Time the order was placed or executed, stored as a
+            string in the journal's existing time format.
 
         notes:
-            Optional trade notes.
+            Optional user-provided notes about the order.
+            Defaults to an empty string.
     """
 
     order_id: int
