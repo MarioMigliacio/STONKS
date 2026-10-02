@@ -11,21 +11,17 @@
 
 import csv
 import logging
-from pathlib import Path
 
+from stonks.config.journal_paths import (
+    DATA_DIRECTORY,
+    ORDERS_FILE,
+    SNAPSHOTS_FILE,
+)
 from stonks.journal.account_snapshot import AccountSnapshot
 from stonks.journal.trade_order import TradeOrder
 
 logger = logging.getLogger(__name__)
 
-# =============================================================================
-# Journal Data Paths
-# =============================================================================
-
-DATA_DIRECTORY = Path("data/journal")
-
-ORDERS_FILE = DATA_DIRECTORY / "orders.csv"
-SNAPSHOTS_FILE = DATA_DIRECTORY / "account_snapshots.csv"
 
 # =============================================================================
 # Directory Helpers
