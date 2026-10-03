@@ -11,6 +11,10 @@
 
 import csv
 import logging
+import os
+import tempfile
+from pathlib import Path
+from typing import Optional
 
 from stonks.config.journal_paths import (
     DATA_DIRECTORY,
@@ -34,6 +38,90 @@ def ensure_journal_directory_exists():
     """
 
     DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
+
+
+def atomic_write_csv(
+    file_path: Path,
+    headers: list[str],
+    rows: list[list],
+) -> None:
+    """
+    Atomically replace a CSV file with validated records.
+
+    Writes the complete CSV into a temporary file in the
+    destination directory. Replaces the original file only
+    after the temporary file is successfully written and
+    checked for the expected number of rows and columns.
+
+    Args:
+        file_path:
+            Destination CSV file path.
+
+        headers:
+            Ordered CSV column names.
+
+        rows:
+            Complete collection of records to write.
+
+    Returns:
+        None.
+
+    Raises:
+        ValueError:
+            If headers or row structures are invalid.
+
+        OSError:
+            If writing or replacing the file fails.
+    """
+    if not headers or len(set(headers)) != len(headers):
+        raise ValueError("CSV headers must be unique and nonempty.")
+
+    if any(len(row) != len(headers) for row in rows):
+        raise ValueError("CSV row has an unexpected column count.")
+
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    temporary_path: Optional[Path] = None
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            newline="",
+            encoding="utf-8",
+            dir=file_path.parent,
+            prefix=f".{file_path.stem}_",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+
+            writer = csv.writer(temporary_file)
+            writer.writerow(headers)
+            writer.writerows(rows)
+
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+
+        with temporary_path.open(
+            mode="r",
+            newline="",
+            encoding="utf-8",
+        ) as verification_file:
+            reader = csv.reader(verification_file)
+            written_rows = list(reader)
+
+            if (
+                len(written_rows) != len(rows) + 1
+                or written_rows[0] != headers
+                or any(len(row) != len(headers) for row in written_rows[1:])
+            ):
+                raise ValueError("CSV verification failed.")
+
+        os.replace(temporary_path, file_path)
+
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
 
 
 # =============================================================================
@@ -175,6 +263,49 @@ def load_orders() -> list[TradeOrder]:
     return orders
 
 
+def replace_orders(orders: list[TradeOrder]) -> None:
+    """
+    Atomically replace all stored trade orders.
+
+    Args:
+        orders:
+            Complete collection of orders to persist.
+
+    Returns:
+        None.
+    """
+    headers = [
+        "order_id",
+        "position_id",
+        "trade_date",
+        "ticker",
+        "order_type",
+        "fill_price",
+        "shares",
+        "order_total",
+        "time_issued",
+        "notes",
+    ]
+
+    rows = [
+        [
+            order.order_id,
+            order.position_id,
+            order.trade_date,
+            order.ticker,
+            order.order_type,
+            order.fill_price,
+            order.shares,
+            order.order_total,
+            order.time_issued,
+            order.notes,
+        ]
+        for order in orders
+    ]
+
+    atomic_write_csv(ORDERS_FILE, headers, rows)
+
+
 # =============================================================================
 # Account Snapshot Persistence
 # =============================================================================
@@ -252,3 +383,36 @@ def load_snapshots() -> list[AccountSnapshot]:
         )
 
     return snapshots
+
+
+def replace_snapshots(
+    snapshots: list[AccountSnapshot],
+) -> None:
+    """
+    Atomically replace all stored account snapshots.
+
+    Args:
+        snapshots:
+            Complete collection of snapshots to persist.
+
+    Returns:
+        None.
+    """
+    headers = [
+        "snapshot_date",
+        "account_value_before",
+        "account_value_after",
+        "notes",
+    ]
+
+    rows = [
+        [
+            snapshot.snapshot_date,
+            snapshot.account_value_before,
+            snapshot.account_value_after,
+            snapshot.notes,
+        ]
+        for snapshot in snapshots
+    ]
+
+    atomic_write_csv(SNAPSHOTS_FILE, headers, rows)
