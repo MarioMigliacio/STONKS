@@ -4,7 +4,6 @@
 # =============================================================================
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Optional
 
 
@@ -23,9 +22,6 @@ class Position:
     Attributes:
         ticker:
             Stock symbol associated with the position.
-
-        opened_at:
-            Timestamp when the position was opened.
 
         position_id:
             Unique database identifier. None for positions
@@ -54,7 +50,6 @@ class Position:
     """
 
     ticker: str
-    opened_at: datetime
 
     position_id: Optional[int] = None
 
