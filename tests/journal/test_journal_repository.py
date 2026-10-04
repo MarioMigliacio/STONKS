@@ -54,7 +54,7 @@ def create_test_position() -> Position:
 def create_test_execution(
     position_id: int,
     side: ExecutionSide = ExecutionSide.BUY,
-    shares: int = 10,
+    shares: Decimal = Decimal("10"),
 ) -> TradeExecution:
     """Construct a representative trade execution."""
 
@@ -210,7 +210,7 @@ def test_create_and_get_execution(repository) -> None:
     assert loaded.execution_id == execution_id
     assert loaded.position_id == position_id
     assert loaded.side == ExecutionSide.BUY
-    assert loaded.shares == 10
+    assert loaded.shares == Decimal("10")
     assert loaded.price == Decimal("12.3456")
     assert loaded.fees == Decimal("0.25")
 
@@ -230,7 +230,7 @@ def test_get_position_executions(repository) -> None:
         later = create_test_execution(
             position_id,
             ExecutionSide.SELL,
-            shares=5,
+            shares=Decimal("5"),
         )
         later.executed_at = datetime(
             2026,
@@ -244,7 +244,7 @@ def test_get_position_executions(repository) -> None:
         earlier = create_test_execution(
             position_id,
             ExecutionSide.BUY,
-            shares=10,
+            shares=Decimal("10"),
         )
 
         repository.create_execution(later)
@@ -268,7 +268,7 @@ def test_update_execution(repository) -> None:
         execution_id = repository.create_execution(execution)
 
     execution.execution_id = execution_id
-    execution.shares = 15
+    execution.shares = Decimal("15")
     execution.notes = "Added shares on breakout."
 
     with repository.m_connection:
@@ -278,7 +278,7 @@ def test_update_execution(repository) -> None:
 
     assert updated is True
     assert loaded is not None
-    assert loaded.shares == 15
+    assert loaded.shares == Decimal("15")
     assert loaded.notes == "Added shares on breakout."
 
 
@@ -471,3 +471,24 @@ def test_account_transaction_invalid_type(repository) -> None:
                     "100.00",
                 ),
             )
+
+
+def test_fractional_share_execution(repository) -> None:
+    """Verify fractional shares survive database persistence."""
+
+    with repository.m_connection:
+        position_id = repository.create_position(create_test_position())
+
+        execution = create_test_execution(
+            position_id=position_id,
+            shares=Decimal("1.375"),
+        )
+
+        execution_id = repository.create_execution(execution)
+
+    loaded = repository.get_execution(execution_id)
+
+    assert loaded is not None
+    assert loaded.shares == Decimal("1.375")
+    assert loaded.price == Decimal("12.3456")
+    assert loaded.gross_value == Decimal("16.9752")
