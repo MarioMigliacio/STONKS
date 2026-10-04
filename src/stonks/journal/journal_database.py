@@ -101,8 +101,7 @@ def initialize_database(
 
                     executed_at TEXT NOT NULL,
 
-                    shares INTEGER NOT NULL
-                        CHECK (shares > 0),
+                    shares TEXT NOT NULL,
 
                     price TEXT NOT NULL,
                     fees TEXT NOT NULL DEFAULT '0.00',

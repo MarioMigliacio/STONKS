@@ -86,7 +86,7 @@ def test_invalid_execution_reference(tmp_path) -> None:
                         999,
                         "BUY",
                         "2026-09-30T16:30:00+00:00",
-                        10,
+                        "10",
                         "12.50",
                     ),
                 )
@@ -95,8 +95,8 @@ def test_invalid_execution_reference(tmp_path) -> None:
         connection.close()
 
 
-def test_invalid_share_quantity(tmp_path) -> None:
-    """Verify executions cannot contain zero shares."""
+def test_fractional_share_storage(tmp_path) -> None:
+    """Verify SQLite preserves fractional share quantities."""
 
     database_path = tmp_path / "test_journal.db"
 
@@ -106,35 +106,73 @@ def test_invalid_share_quantity(tmp_path) -> None:
 
     try:
         with connection:
-            connection.execute(
+            cursor = connection.execute(
                 """
                 INSERT INTO positions (ticker)
                 VALUES (?)
                 """,
-                ("NVDA",),
+                ("AMD",),
             )
 
-        with pytest.raises(sqlite3.IntegrityError):
-            with connection:
-                connection.execute(
-                    """
-                    INSERT INTO trade_executions (
-                        position_id,
-                        side,
-                        executed_at,
-                        shares,
-                        price
-                    )
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (
-                        1,
-                        "BUY",
-                        "2026-09-30T16:30:00+00:00",
-                        0,
-                        "12.50",
-                    ),
+            position_id = cursor.lastrowid
+
+            connection.execute(
+                """
+                INSERT INTO trade_executions (
+                    position_id,
+                    side,
+                    executed_at,
+                    shares,
+                    price
                 )
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    position_id,
+                    "BUY",
+                    "2026-09-30T16:30:00+00:00",
+                    "1.375",
+                    "165.50",
+                ),
+            )
+
+        row = connection.execute(
+            """
+            SELECT shares, typeof(shares) AS storage_type
+            FROM trade_executions
+            WHERE position_id = ?
+            """,
+            (position_id,),
+        ).fetchone()
+
+        assert row is not None
+        assert row["shares"] == "1.375"
+        assert row["storage_type"] == "text"
+
+    finally:
+        connection.close()
+
+
+def test_share_column_uses_text(tmp_path) -> None:
+    """Verify share quantities use exact text storage."""
+
+    database_path = tmp_path / "test_journal.db"
+
+    initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        columns = connection.execute(
+            """
+            PRAGMA table_info(trade_executions)
+            """
+        ).fetchall()
+
+        share_column = next(row for row in columns if row["name"] == "shares")
+
+        assert share_column["type"] == "TEXT"
+        assert share_column["notnull"] == 1
 
     finally:
         connection.close()

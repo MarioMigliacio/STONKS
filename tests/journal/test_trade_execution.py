@@ -3,7 +3,7 @@
 # Purpose: Pytest file for test_trade_execution.py.
 # =============================================================================
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -14,7 +14,7 @@ from stonks.journal.trade_execution import TradeExecution
 
 def create_execution(
     side: ExecutionSide,
-    shares: int = 10,
+    shares: Decimal = Decimal("10"),
     price: Decimal = Decimal("12.50"),
     fees: Decimal = Decimal("0.25"),
 ) -> TradeExecution:
@@ -41,7 +41,14 @@ def create_execution(
     return TradeExecution(
         position_id=1,
         side=side,
-        executed_at=datetime(2026, 9, 30, 9, 30),
+        executed_at=datetime(
+            2026,
+            9,
+            30,
+            9,
+            30,
+            tzinfo=timezone.utc,
+        ),
         shares=shares,
         price=price,
         fees=fees,
@@ -56,7 +63,7 @@ def test_create_execution() -> None:
     assert execution.execution_id is None
     assert execution.position_id == 1
     assert execution.side == ExecutionSide.BUY
-    assert execution.shares == 10
+    assert execution.shares == Decimal("10")
     assert execution.price == Decimal("12.50")
     assert execution.notes == ""
 
@@ -90,13 +97,28 @@ def test_execution_preserves_precision() -> None:
 
     execution = create_execution(
         ExecutionSide.BUY,
-        shares=3,
+        shares=Decimal("3"),
         price=Decimal("12.3456"),
         fees=Decimal("0.01"),
     )
 
     assert execution.gross_value == Decimal("37.0368")
     assert execution.net_cash_flow == Decimal("-37.0468")
+
+
+def test_fractional_execution() -> None:
+    """Verify fractional quantities preserve precision."""
+
+    execution = create_execution(
+        ExecutionSide.BUY,
+        shares=Decimal("1.25"),
+        price=Decimal("12.50"),
+        fees=Decimal("0.25"),
+    )
+
+    assert execution.shares == Decimal("1.25")
+    assert execution.gross_value == Decimal("15.6250")
+    assert execution.net_cash_flow == Decimal("-15.8750")
 
 
 def test_invalid_side_cash_flow() -> None:

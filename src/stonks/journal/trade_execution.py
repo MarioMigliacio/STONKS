@@ -33,7 +33,7 @@ class TradeExecution:
             Timestamp when the execution occurred.
 
         shares:
-            Number of shares executed.
+            Number of shares executed, with support for fractional share quantities.
 
         price:
             Execution price per share.
@@ -51,7 +51,7 @@ class TradeExecution:
     position_id: int
     side: ExecutionSide
     executed_at: datetime
-    shares: int
+    shares: Decimal
     price: Decimal
 
     execution_id: Optional[int] = None
