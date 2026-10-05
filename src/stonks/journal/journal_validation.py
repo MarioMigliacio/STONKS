@@ -11,6 +11,7 @@ from stonks.journal.account_transaction_type import (
     AccountTransactionType,
 )
 from stonks.journal.execution_side import ExecutionSide
+from stonks.journal.position import Position
 from stonks.journal.trade_execution import TradeExecution
 
 
@@ -141,3 +142,22 @@ def validate_account_transaction(
     )
 
     validate_timestamp(transaction.occurred_at)
+
+
+def validate_position(position: Position) -> None:
+    """
+    Validate a journal position.
+
+    Args:
+        position:
+            Position to validate.
+
+    Raises:
+        ValueError:
+            If the position contains invalid data.
+    """
+    if not isinstance(position.ticker, str):
+        raise ValueError("Ticker must be a string.")
+
+    if not position.ticker.strip():
+        raise ValueError("Ticker cannot be empty.")
