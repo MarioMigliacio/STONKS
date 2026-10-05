@@ -8,7 +8,9 @@ import sqlite3
 import pytest
 
 from stonks.journal.journal_database import (
+    SCHEMA_VERSION,
     create_connection,
+    get_schema_version,
     initialize_database,
 )
 
@@ -36,6 +38,54 @@ def test_database_initialization(tmp_path) -> None:
         assert "positions" in table_names
         assert "trade_executions" in table_names
         assert "account_transactions" in table_names
+
+    finally:
+        connection.close()
+
+
+def test_database_schema_version(tmp_path) -> None:
+    """Verify initialization assigns the current schema version."""
+
+    database_path = tmp_path / "test_journal.db"
+
+    initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        assert get_schema_version(connection) == SCHEMA_VERSION
+
+    finally:
+        connection.close()
+
+
+def test_newer_schema_version_is_rejected(tmp_path) -> None:
+    """Verify databases from newer STONKS versions are rejected."""
+
+    database_path = tmp_path / "test_journal.db"
+
+    initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        newer_version = SCHEMA_VERSION + 1
+
+        connection.execute(f"PRAGMA user_version = {newer_version}")
+
+    finally:
+        connection.close()
+
+    with pytest.raises(
+        RuntimeError,
+        match="newer than supported",
+    ):
+        initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        assert get_schema_version(connection) == newer_version
 
     finally:
         connection.close()
@@ -208,6 +258,7 @@ def test_database_initialization_is_repeatable(tmp_path) -> None:
         result = connection.execute("SELECT COUNT(*) FROM positions").fetchone()
 
         assert result[0] == 1
+        assert get_schema_version(connection) == SCHEMA_VERSION
 
     finally:
         connection.close()
