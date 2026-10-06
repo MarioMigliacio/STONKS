@@ -9,6 +9,8 @@ from typing import Optional
 
 from stonks.config.journal_paths import DATABASE_FILE
 
+SCHEMA_VERSION = 1
+
 
 def create_connection(
     database_path: Optional[Path] = None,
@@ -46,6 +48,25 @@ def create_connection(
         raise
 
 
+def get_schema_version(
+    connection: sqlite3.Connection,
+) -> int:
+    """
+    Return the journal database schema version.
+
+    Args:
+        connection:
+            SQLite connection whose schema version is requested.
+
+    Returns:
+        int:
+            Current SQLite user schema version.
+    """
+    row = connection.execute("PRAGMA user_version").fetchone()
+
+    return int(row[0])
+
+
 def initialize_database(
     database_path: Optional[Path] = None,
 ) -> None:
@@ -68,6 +89,13 @@ def initialize_database(
     connection = create_connection(database_path)
 
     try:
+        current_version = get_schema_version(connection)
+
+        if current_version > SCHEMA_VERSION:
+            raise RuntimeError(
+                f"Journal database schema version {current_version} is newer than supported version {SCHEMA_VERSION}."
+            )
+
         with connection:
             connection.execute(
                 """
@@ -86,7 +114,7 @@ def initialize_database(
                     lessons_learned TEXT NOT NULL DEFAULT '',
 
                     notes TEXT NOT NULL DEFAULT ''
-                )
+                ) STRICT
                 """
             )
 
@@ -111,7 +139,7 @@ def initialize_database(
                     FOREIGN KEY (position_id)
                         REFERENCES positions(position_id)
                         ON DELETE CASCADE
-                )
+                ) STRICT
                 """
             )
 
@@ -134,9 +162,11 @@ def initialize_database(
                     amount TEXT NOT NULL,
 
                     notes TEXT NOT NULL DEFAULT ''
-                )
+                ) STRICT
                 """
             )
+
+            connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
     finally:
         connection.close()

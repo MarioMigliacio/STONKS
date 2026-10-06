@@ -4,7 +4,10 @@
 # =============================================================================
 
 import sqlite3
+from contextlib import contextmanager
+from dataclasses import replace
 from decimal import Decimal
+from typing import Generator
 
 from stonks.journal.account_transaction import AccountTransaction
 from stonks.journal.execution_side import ExecutionSide
@@ -13,7 +16,9 @@ from stonks.journal.journal_validation import (
     normalize_timestamp,
     validate_account_transaction,
     validate_execution,
+    validate_position,
 )
+from stonks.journal.position import Position
 from stonks.journal.trade_execution import TradeExecution
 
 
@@ -35,6 +40,28 @@ class JournalService:
     ) -> None:
         self.m_connection = connection
         self.m_repository = JournalRepository(connection)
+
+    @contextmanager
+    def _transaction(self) -> Generator[None, None, None]:
+        """
+        Manage an atomic journal write transaction.
+
+        Raises:
+            RuntimeError:
+                If the connection already has an active transaction.
+        """
+        if self.m_connection.in_transaction:
+            raise RuntimeError("JournalService requires a connection without an active transaction.")
+
+        self.m_connection.execute("BEGIN IMMEDIATE")
+
+        try:
+            yield
+            self.m_connection.commit()
+
+        except Exception:
+            self.m_connection.rollback()
+            raise
 
     def validate_position_history(
         self,
@@ -124,13 +151,7 @@ class JournalService:
             notes=execution.notes,
         )
 
-        if self.m_connection.in_transaction:
-            raise RuntimeError("JournalService requires a connection without an active transaction.")
-
-        # Acquire the write lock before inspecting history.
-        self.m_connection.execute("BEGIN IMMEDIATE")
-
-        try:
+        with self._transaction():
             if self.m_repository.get_position(normalized.position_id) is None:
                 raise ValueError("Position does not exist.")
 
@@ -138,13 +159,7 @@ class JournalService:
 
             self.validate_position_history(normalized.position_id)
 
-            self.m_connection.commit()
-
             return execution_id
-
-        except Exception:
-            self.m_connection.rollback()
-            raise
 
     def update_execution(
         self,
@@ -185,16 +200,10 @@ class JournalService:
             notes=execution.notes,
         )
 
-        if self.m_connection.in_transaction:
-            raise RuntimeError("JournalService requires a connection without an active transaction.")
-
-        self.m_connection.execute("BEGIN IMMEDIATE")
-
-        try:
+        with self._transaction():
             existing = self.m_repository.get_execution(normalized.execution_id)
 
             if existing is None:
-                self.m_connection.rollback()
                 return False
 
             if existing.position_id != normalized.position_id:
@@ -204,13 +213,7 @@ class JournalService:
 
             self.validate_position_history(normalized.position_id)
 
-            self.m_connection.commit()
-
             return updated
-
-        except Exception:
-            self.m_connection.rollback()
-            raise
 
     def delete_execution(
         self,
@@ -232,29 +235,17 @@ class JournalService:
             ValueError:
                 If deletion invalidates position history.
         """
-        if self.m_connection.in_transaction:
-            raise RuntimeError("JournalService requires a connection without an active transaction.")
-
-        self.m_connection.execute("BEGIN IMMEDIATE")
-
-        try:
+        with self._transaction():
             existing = self.m_repository.get_execution(execution_id)
 
             if existing is None:
-                self.m_connection.rollback()
                 return False
 
             deleted = self.m_repository.delete_execution(execution_id)
 
             self.validate_position_history(existing.position_id)
 
-            self.m_connection.commit()
-
             return deleted
-
-        except Exception:
-            self.m_connection.rollback()
-            raise
 
     def create_account_transaction(
         self,
@@ -285,21 +276,8 @@ class JournalService:
             notes=transaction.notes,
         )
 
-        if self.m_connection.in_transaction:
-            raise RuntimeError("JournalService requires a connection without an active transaction.")
-
-        self.m_connection.execute("BEGIN IMMEDIATE")
-
-        try:
-            transaction_id = self.m_repository.create_account_transaction(normalized)
-
-            self.m_connection.commit()
-
-            return transaction_id
-
-        except Exception:
-            self.m_connection.rollback()
-            raise
+        with self._transaction():
+            return self.m_repository.create_account_transaction(normalized)
 
     def update_account_transaction(
         self,
@@ -333,27 +311,13 @@ class JournalService:
             notes=transaction.notes,
         )
 
-        if self.m_connection.in_transaction:
-            raise RuntimeError("JournalService requires a connection without an active transaction.")
-
-        self.m_connection.execute("BEGIN IMMEDIATE")
-
-        try:
+        with self._transaction():
             existing = self.m_repository.get_account_transaction(normalized.transaction_id)
 
             if existing is None:
-                self.m_connection.rollback()
                 return False
 
-            updated = self.m_repository.update_account_transaction(normalized)
-
-            self.m_connection.commit()
-
-            return updated
-
-        except Exception:
-            self.m_connection.rollback()
-            raise
+            return self.m_repository.update_account_transaction(normalized)
 
     def delete_account_transaction(
         self,
@@ -370,18 +334,96 @@ class JournalService:
             bool:
                 True if deleted, False if not found.
         """
-        if self.m_connection.in_transaction:
-            raise RuntimeError("JournalService requires a connection without an active transaction.")
+        with self._transaction():
+            return self.m_repository.delete_account_transaction(transaction_id)
 
-        self.m_connection.execute("BEGIN IMMEDIATE")
+    def create_position(
+        self,
+        position: Position,
+    ) -> int:
+        """
+        Validate and create a journal position.
 
-        try:
-            deleted = self.m_repository.delete_account_transaction(transaction_id)
+        Args:
+            position:
+                Position to create.
 
-            self.m_connection.commit()
+        Returns:
+            int:
+                Identifier of the created position.
+        """
+        validate_position(position)
 
-            return deleted
+        normalized = replace(
+            position,
+            position_id=None,
+            ticker=position.ticker.strip().upper(),
+        )
 
-        except Exception:
-            self.m_connection.rollback()
-            raise
+        with self._transaction():
+            return self.m_repository.create_position(normalized)
+
+    def update_position(
+        self,
+        position: Position,
+    ) -> bool:
+        """
+        Update a position without modifying its executions.
+
+        Args:
+            position:
+                Position containing updated information.
+
+        Returns:
+            bool:
+                True if updated, False if not found.
+        """
+        if position.position_id is None:
+            raise ValueError("Cannot update a position without an ID.")
+
+        validate_position(position)
+
+        normalized = replace(
+            position,
+            ticker=position.ticker.strip().upper(),
+        )
+
+        with self._transaction():
+            existing = self.m_repository.get_position(normalized.position_id)
+
+            if existing is None:
+                return False
+
+            return self.m_repository.update_position(normalized)
+
+    def delete_position(
+        self,
+        position_id: int,
+    ) -> bool:
+        """
+        Delete an empty position without losing trade history.
+
+        Args:
+            position_id:
+                Identifier of the position to delete.
+
+        Returns:
+            bool:
+                True if deleted, False if not found.
+
+        Raises:
+            ValueError:
+                If the position contains executions.
+        """
+        with self._transaction():
+            existing = self.m_repository.get_position(position_id)
+
+            if existing is None:
+                return False
+
+            executions = self.m_repository.get_position_executions(position_id)
+
+            if executions:
+                raise ValueError("Cannot delete a position with executions.")
+
+            return self.m_repository.delete_position(position_id)
