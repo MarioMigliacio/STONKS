@@ -10,6 +10,6 @@ __pycache__/
 Thumbs.db
 logs/
 *.log
-data/journal/*.csv
-backups/*.zip
+/data/journal/
+/backups/
 data/cache/**/*.json
