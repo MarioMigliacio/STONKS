@@ -114,7 +114,7 @@ def initialize_database(
                     lessons_learned TEXT NOT NULL DEFAULT '',
 
                     notes TEXT NOT NULL DEFAULT ''
-                )
+                ) STRICT
                 """
             )
 
@@ -139,7 +139,7 @@ def initialize_database(
                     FOREIGN KEY (position_id)
                         REFERENCES positions(position_id)
                         ON DELETE CASCADE
-                )
+                ) STRICT
                 """
             )
 
@@ -162,7 +162,7 @@ def initialize_database(
                     amount TEXT NOT NULL,
 
                     notes TEXT NOT NULL DEFAULT ''
-                )
+                ) STRICT
                 """
             )
 

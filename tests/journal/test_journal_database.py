@@ -262,3 +262,89 @@ def test_database_initialization_is_repeatable(tmp_path) -> None:
 
     finally:
         connection.close()
+
+
+def test_execution_rejects_invalid_storage_type(
+    tmp_path,
+) -> None:
+    """Verify strict tables reject non-text financial storage."""
+
+    database_path = tmp_path / "test_journal.db"
+
+    initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        with connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO positions (ticker)
+                VALUES (?)
+                """,
+                ("AMD",),
+            )
+
+            position_id = cursor.lastrowid
+
+        with pytest.raises(sqlite3.IntegrityError):
+            with connection:
+                connection.execute(
+                    """
+                    INSERT INTO trade_executions (
+                        position_id,
+                        side,
+                        executed_at,
+                        shares,
+                        price
+                    )
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        position_id,
+                        "BUY",
+                        "2026-09-30T16:30:00+00:00",
+                        sqlite3.Binary(b"1.375"),
+                        "165.50",
+                    ),
+                )
+
+    finally:
+        connection.close()
+
+
+def test_journal_tables_are_strict(tmp_path) -> None:
+    """Verify journal tables use strict SQLite typing."""
+
+    database_path = tmp_path / "test_journal.db"
+
+    initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        rows = connection.execute(
+            """
+            PRAGMA table_list
+            """
+        ).fetchall()
+
+        journal_tables = {
+            row["name"]: row["strict"]
+            for row in rows
+            if row["name"]
+            in {
+                "positions",
+                "trade_executions",
+                "account_transactions",
+            }
+        }
+
+        assert journal_tables == {
+            "positions": 1,
+            "trade_executions": 1,
+            "account_transactions": 1,
+        }
+
+    finally:
+        connection.close()
