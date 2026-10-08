@@ -9,5 +9,5 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 DATA_DIRECTORY = PROJECT_ROOT / "data" / "journal"
 BACKUP_DIRECTORY = PROJECT_ROOT / "backups"
-
+EXPORT_DIRECTORY = BACKUP_DIRECTORY / "journal_export"
 DATABASE_FILE = DATA_DIRECTORY / "stonks_journal.db"
