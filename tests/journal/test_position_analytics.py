@@ -3,13 +3,15 @@
 # Purpose: Pytest file for test_position_analytics.py.
 # =============================================================================
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from typing import Optional
 
 from stonks.journal.execution_side import ExecutionSide
 from stonks.journal.position_analytics import (
     calculate_position_metrics,
 )
+from stonks.journal.position_status import PositionStatus
 from stonks.journal.trade_execution import TradeExecution
 
 
@@ -18,13 +20,14 @@ def make_execution(
     shares: str,
     price: str,
     fees: str = "0",
+    executed_at: Optional[datetime] = None,
 ) -> TradeExecution:
     """Create a trading execution for analytics tests."""
 
     return TradeExecution(
         position_id=1,
         side=side,
-        executed_at=datetime(2026, 10, 7, 14, 30, tzinfo=timezone.utc),
+        executed_at=(executed_at if executed_at is not None else datetime(2026, 10, 7, 14, 30, tzinfo=timezone.utc)),
         shares=Decimal(shares),
         price=Decimal(price),
         fees=Decimal(fees),
@@ -150,3 +153,171 @@ def test_purchase_after_partial_sale() -> None:
     assert metrics.average_entry_price == Decimal("120")
     assert metrics.remaining_cost_basis == Decimal("1200")
     assert metrics.realized_pnl == Decimal("100")
+
+
+def test_draft_position_status() -> None:
+    """Verify positions without executions remain drafts."""
+
+    metrics = calculate_position_metrics(1, [])
+
+    assert metrics.status == PositionStatus.DRAFT
+    assert metrics.realized_return_pct is None
+
+
+def test_open_position_status() -> None:
+    """Verify positions with remaining shares are open."""
+
+    executions = [
+        make_execution(ExecutionSide.BUY, "10", "100"),
+    ]
+
+    metrics = calculate_position_metrics(1, executions)
+
+    assert metrics.status == PositionStatus.OPEN
+    assert metrics.realized_return_pct is None
+
+
+def test_closed_position_realized_return() -> None:
+    """Verify realized return for a fully closed position."""
+
+    executions = [
+        make_execution(ExecutionSide.BUY, "10", "100"),
+        make_execution(ExecutionSide.SELL, "10", "120"),
+    ]
+
+    metrics = calculate_position_metrics(1, executions)
+
+    assert metrics.status == PositionStatus.CLOSED
+    assert metrics.realized_return_pct == Decimal("20")
+
+
+def test_partial_sale_realized_return() -> None:
+    """Verify realized return uses only sold-share cost basis."""
+
+    executions = [
+        make_execution(ExecutionSide.BUY, "10", "100"),
+        make_execution(ExecutionSide.SELL, "5", "120"),
+    ]
+
+    metrics = calculate_position_metrics(1, executions)
+
+    assert metrics.status == PositionStatus.OPEN
+    assert metrics.realized_return_pct == Decimal("20")
+
+
+def test_draft_position_has_no_holding_duration() -> None:
+    """Verify draft positions have no holding timestamps."""
+
+    metrics = calculate_position_metrics(1, [])
+
+    assert metrics.opened_at is None
+    assert metrics.closed_at is None
+    assert metrics.holding_duration is None
+
+
+def test_open_position_has_no_holding_duration() -> None:
+    """Verify open positions have no completed holding duration."""
+
+    opened_at = datetime(2026, 10, 7, 14, 30, tzinfo=timezone.utc)
+
+    executions = [
+        make_execution(
+            ExecutionSide.BUY,
+            "10",
+            "100",
+            executed_at=opened_at,
+        ),
+    ]
+
+    metrics = calculate_position_metrics(1, executions)
+
+    assert metrics.opened_at == opened_at
+    assert metrics.closed_at is None
+    assert metrics.holding_duration is None
+
+
+def test_closed_position_holding_duration() -> None:
+    """Verify duration between first purchase and final sale."""
+
+    opened_at = datetime(2026, 10, 7, 14, 30, tzinfo=timezone.utc)
+
+    closed_at = datetime(2026, 10, 7, 14, 47, tzinfo=timezone.utc)
+
+    executions = [
+        make_execution(
+            ExecutionSide.BUY,
+            "10",
+            "100",
+            executed_at=opened_at,
+        ),
+        make_execution(
+            ExecutionSide.SELL,
+            "10",
+            "120",
+            executed_at=closed_at,
+        ),
+    ]
+
+    metrics = calculate_position_metrics(1, executions)
+
+    assert metrics.opened_at == opened_at
+    assert metrics.closed_at == closed_at
+    assert metrics.holding_duration == timedelta(minutes=17)
+
+
+def test_partial_exit_does_not_end_holding_duration() -> None:
+    """Verify partial exits leave the position open."""
+
+    opened_at = datetime(2026, 10, 7, 14, 30, tzinfo=timezone.utc)
+
+    partial_exit_at = datetime(2026, 10, 7, 14, 45, tzinfo=timezone.utc)
+
+    executions = [
+        make_execution(
+            ExecutionSide.BUY,
+            "10",
+            "100",
+            executed_at=opened_at,
+        ),
+        make_execution(
+            ExecutionSide.SELL,
+            "5",
+            "120",
+            executed_at=partial_exit_at,
+        ),
+    ]
+
+    metrics = calculate_position_metrics(1, executions)
+
+    assert metrics.opened_at == opened_at
+    assert metrics.closed_at is None
+    assert metrics.holding_duration is None
+
+
+def test_holding_duration_across_timezones() -> None:
+    """Verify duration calculations across timezone offsets."""
+
+    pacific = timezone(timedelta(hours=-7))
+
+    opened_at = datetime(2026, 10, 7, 7, 30, tzinfo=pacific)
+
+    closed_at = datetime(2026, 10, 7, 14, 47, tzinfo=timezone.utc)
+
+    executions = [
+        make_execution(
+            ExecutionSide.BUY,
+            "10",
+            "100",
+            executed_at=opened_at,
+        ),
+        make_execution(
+            ExecutionSide.SELL,
+            "10",
+            "120",
+            executed_at=closed_at,
+        ),
+    ]
+
+    metrics = calculate_position_metrics(1, executions)
+
+    assert metrics.holding_duration == timedelta(minutes=17)
