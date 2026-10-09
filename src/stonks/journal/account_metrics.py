@@ -24,11 +24,27 @@ class AccountMetrics:
             calculated as deposits minus withdrawals.
 
         cash_balance:
-            Calculated account cash balance after applying account
+            Ledger-derived cash balance after applying account
             transactions and trade execution cash flows.
+
+        realized_trading_pnl:
+            Combined realized profit or loss across trading positions,
+            including allocated purchase fees and selling fees.
+
+        account_fees:
+            Total standalone account-level fees, excluding fees
+            already included in trade execution calculations.
+
+        net_realized_pnl:
+            Combined realized trading profit or loss after
+            deducting standalone account-level fees.
+            Excludes unrealized gains, losses, and cash adjustments.
     """
 
     total_deposits: Decimal
     total_withdrawals: Decimal
     net_contributions: Decimal
     cash_balance: Decimal
+    realized_trading_pnl: Decimal
+    account_fees: Decimal
+    net_realized_pnl: Decimal

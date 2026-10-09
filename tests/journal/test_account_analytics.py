@@ -12,6 +12,7 @@ from stonks.journal.account_analytics import (
 from stonks.journal.account_transaction import AccountTransaction
 from stonks.journal.account_transaction_type import AccountTransactionType
 from stonks.journal.execution_side import ExecutionSide
+from stonks.journal.position_analytics import calculate_position_metrics
 from stonks.journal.trade_execution import TradeExecution
 
 
@@ -76,7 +77,7 @@ def make_execution(
 def test_empty_account_contributions() -> None:
     """Verify an account without transactions has zero contributions."""
 
-    metrics = calculate_account_metrics([], [])
+    metrics = calculate_account_metrics([], [], [])
 
     assert metrics.total_deposits == Decimal("0")
     assert metrics.total_withdrawals == Decimal("0")
@@ -92,7 +93,7 @@ def test_multiple_deposits() -> None:
         make_transaction(AccountTransactionType.DEPOSIT, "250.50"),
     ]
 
-    metrics = calculate_account_metrics(transactions, [])
+    metrics = calculate_account_metrics(transactions, [], [])
 
     assert metrics.total_deposits == Decimal("1250.50")
     assert metrics.total_withdrawals == Decimal("0")
@@ -109,7 +110,7 @@ def test_deposits_and_withdrawals() -> None:
         make_transaction(AccountTransactionType.DEPOSIT, "200"),
     ]
 
-    metrics = calculate_account_metrics(transactions, [])
+    metrics = calculate_account_metrics(transactions, [], [])
 
     assert metrics.total_deposits == Decimal("1200")
     assert metrics.total_withdrawals == Decimal("300")
@@ -126,7 +127,7 @@ def test_fees_and_adjustments_excluded() -> None:
         make_transaction(AccountTransactionType.ADJUSTMENT, "25"),
     ]
 
-    metrics = calculate_account_metrics(transactions, [])
+    metrics = calculate_account_metrics(transactions, [], [])
 
     assert metrics.total_deposits == Decimal("1000")
     assert metrics.total_withdrawals == Decimal("0")
@@ -145,7 +146,7 @@ def test_purchase_reduces_cash_balance() -> None:
         make_execution(ExecutionSide.BUY, "10", "25"),
     ]
 
-    metrics = calculate_account_metrics(transactions, executions)
+    metrics = calculate_account_metrics(transactions, executions, [])
 
     assert metrics.cash_balance == Decimal("750")
     assert metrics.net_contributions == Decimal("1000")
@@ -163,7 +164,7 @@ def test_sale_increases_cash_balance() -> None:
         make_execution(ExecutionSide.SELL, "5", "30"),
     ]
 
-    metrics = calculate_account_metrics(transactions, executions)
+    metrics = calculate_account_metrics(transactions, executions, [])
 
     assert metrics.cash_balance == Decimal("900")
 
@@ -180,7 +181,7 @@ def test_execution_fees_reduce_cash_balance() -> None:
         make_execution(ExecutionSide.SELL, "5", "30", fees="2.50"),
     ]
 
-    metrics = calculate_account_metrics(transactions, executions)
+    metrics = calculate_account_metrics(transactions, executions, [])
 
     assert metrics.cash_balance == Decimal("896.00")
 
@@ -193,7 +194,7 @@ def test_account_fees_reduce_cash_balance() -> None:
         make_transaction(AccountTransactionType.FEE, "5"),
     ]
 
-    metrics = calculate_account_metrics(transactions, [])
+    metrics = calculate_account_metrics(transactions, [], [])
 
     assert metrics.cash_balance == Decimal("995")
     assert metrics.net_contributions == Decimal("1000")
@@ -208,7 +209,84 @@ def test_adjustments_modify_cash_balance() -> None:
         make_transaction(AccountTransactionType.ADJUSTMENT, "-10"),
     ]
 
-    metrics = calculate_account_metrics(transactions, [])
+    metrics = calculate_account_metrics(transactions, [], [])
 
     assert metrics.cash_balance == Decimal("1015")
     assert metrics.net_contributions == Decimal("1000")
+
+
+def test_profitable_position() -> None:
+    """Verify realized trading profits contribute to account profitability."""
+
+    executions = [
+        make_execution(ExecutionSide.BUY, "10", "100"),
+        make_execution(ExecutionSide.SELL, "10", "120"),
+    ]
+
+    position = calculate_position_metrics(1, executions)
+
+    metrics = calculate_account_metrics([], executions, [position])
+
+    assert metrics.realized_trading_pnl == Decimal("200")
+    assert metrics.account_fees == Decimal("0")
+    assert metrics.net_realized_pnl == Decimal("200")
+
+
+def test_losing_position() -> None:
+    """Verify realized trading losses reduce account profitability."""
+
+    executions = [
+        make_execution(ExecutionSide.BUY, "10", "100"),
+        make_execution(ExecutionSide.SELL, "10", "90"),
+    ]
+
+    position = calculate_position_metrics(1, executions)
+
+    metrics = calculate_account_metrics([], executions, [position])
+
+    assert metrics.realized_trading_pnl == Decimal("-100")
+    assert metrics.net_realized_pnl == Decimal("-100")
+
+
+def test_account_fees_reduce_net_realized_pnl() -> None:
+    """Verify account fees reduce profits without double-counting execution fees."""
+
+    transactions = [
+        make_transaction(AccountTransactionType.FEE, "5"),
+    ]
+
+    executions = [
+        make_execution(ExecutionSide.BUY, "10", "100", fees="2"),
+        make_execution(ExecutionSide.SELL, "10", "120", fees="3"),
+    ]
+
+    position = calculate_position_metrics(1, executions)
+
+    metrics = calculate_account_metrics(
+        transactions,
+        executions,
+        [position],
+    )
+
+    assert metrics.realized_trading_pnl == Decimal("195")
+    assert metrics.account_fees == Decimal("5")
+    assert metrics.net_realized_pnl == Decimal("190")
+
+
+def test_partial_position_realized_profit() -> None:
+    """Verify only realized profits contribute to account profitability."""
+
+    executions = [
+        make_execution(ExecutionSide.BUY, "10", "100"),
+        make_execution(ExecutionSide.SELL, "5", "120"),
+    ]
+
+    position = calculate_position_metrics(1, executions)
+
+    metrics = calculate_account_metrics([], executions, [position])
+
+    assert position.open_shares == Decimal("5")
+    assert position.realized_pnl == Decimal("100")
+
+    assert metrics.realized_trading_pnl == Decimal("100")
+    assert metrics.net_realized_pnl == Decimal("100")
