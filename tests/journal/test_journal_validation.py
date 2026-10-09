@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_journal_validation.py
-# Purpose: Tests journal financial and timestamp validation.
+# Purpose: Pytest file for test_journal_validation.py.
 # =============================================================================
 
 from datetime import datetime, timedelta, timezone
