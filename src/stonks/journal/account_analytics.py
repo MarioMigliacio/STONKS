@@ -55,8 +55,8 @@ def calculate_account_metrics(
     Returns:
         AccountMetrics:
             Calculated account contributions, cash balance,
-            realized trading profit or loss, account fees,
-            and net realized profit or loss.
+            realized trading profitability, remaining position
+            cost basis, and equity at cost basis.
     """
     total_deposits = Decimal("0")
     total_withdrawals = Decimal("0")
@@ -92,6 +92,13 @@ def calculate_account_metrics(
 
     net_realized_pnl = realized_trading_pnl - account_fees
 
+    open_position_cost_basis = sum(
+        (position.remaining_cost_basis for position in positions),
+        Decimal("0"),
+    )
+
+    equity_at_cost_basis = cash_balance + open_position_cost_basis
+
     return AccountMetrics(
         total_deposits=total_deposits,
         total_withdrawals=total_withdrawals,
@@ -100,4 +107,6 @@ def calculate_account_metrics(
         realized_trading_pnl=realized_trading_pnl,
         account_fees=account_fees,
         net_realized_pnl=net_realized_pnl,
+        open_position_cost_basis=open_position_cost_basis,
+        equity_at_cost_basis=equity_at_cost_basis,
     )

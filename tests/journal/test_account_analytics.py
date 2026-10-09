@@ -74,8 +74,8 @@ def make_execution(
     )
 
 
-def test_empty_account_contributions() -> None:
-    """Verify an account without transactions has zero contributions."""
+def test_empty_account_metrics() -> None:
+    """Verify an empty account produces zero financial metrics."""
 
     metrics = calculate_account_metrics([], [], [])
 
@@ -83,6 +83,11 @@ def test_empty_account_contributions() -> None:
     assert metrics.total_withdrawals == Decimal("0")
     assert metrics.net_contributions == Decimal("0")
     assert metrics.cash_balance == Decimal("0")
+    assert metrics.realized_trading_pnl == Decimal("0")
+    assert metrics.account_fees == Decimal("0")
+    assert metrics.net_realized_pnl == Decimal("0")
+    assert metrics.open_position_cost_basis == Decimal("0")
+    assert metrics.equity_at_cost_basis == Decimal("0")
 
 
 def test_multiple_deposits() -> None:
@@ -290,3 +295,60 @@ def test_partial_position_realized_profit() -> None:
 
     assert metrics.realized_trading_pnl == Decimal("100")
     assert metrics.net_realized_pnl == Decimal("100")
+
+
+def test_closed_position_equity_at_cost_basis() -> None:
+    """Verify realized profits remain in equity after closing a position."""
+
+    transactions = [
+        make_transaction(AccountTransactionType.DEPOSIT, "1000"),
+    ]
+
+    executions = [
+        make_execution(ExecutionSide.BUY, "5", "100"),
+        make_execution(ExecutionSide.SELL, "5", "120"),
+    ]
+
+    position = calculate_position_metrics(1, executions)
+    metrics = calculate_account_metrics(transactions, executions, [position])
+
+    assert metrics.open_position_cost_basis == Decimal("0")
+    assert metrics.cash_balance == Decimal("1100")
+    assert metrics.equity_at_cost_basis == Decimal("1100")
+
+
+def test_partial_position_equity_at_cost_basis() -> None:
+    """Verify remaining shares contribute their cost basis to equity."""
+
+    transactions = [
+        make_transaction(AccountTransactionType.DEPOSIT, "1000"),
+    ]
+
+    executions = [
+        make_execution(ExecutionSide.BUY, "10", "50"),
+        make_execution(ExecutionSide.SELL, "5", "60"),
+    ]
+
+    position = calculate_position_metrics(1, executions)
+    metrics = calculate_account_metrics(transactions, executions, [position])
+
+    assert metrics.cash_balance == Decimal("800")
+    assert metrics.open_position_cost_basis == Decimal("250")
+    assert metrics.equity_at_cost_basis == Decimal("1050")
+
+
+def test_fees_and_adjustments_affect_equity() -> None:
+    """Verify account fees and adjustments affect book-value equity."""
+
+    transactions = [
+        make_transaction(AccountTransactionType.DEPOSIT, "1000"),
+        make_transaction(AccountTransactionType.FEE, "5"),
+        make_transaction(AccountTransactionType.ADJUSTMENT, "20"),
+    ]
+
+    metrics = calculate_account_metrics(transactions, [], [])
+
+    assert metrics.net_contributions == Decimal("1000")
+    assert metrics.account_fees == Decimal("5")
+    assert metrics.net_realized_pnl == Decimal("-5")
+    assert metrics.equity_at_cost_basis == Decimal("1015")

@@ -39,6 +39,16 @@ class AccountMetrics:
             Combined realized trading profit or loss after
             deducting standalone account-level fees.
             Excludes unrealized gains, losses, and cash adjustments.
+
+        open_position_cost_basis:
+            Combined remaining cost basis of all open trading
+            positions, including allocated purchase fees.
+            Excludes unrealized gains and losses.
+
+        equity_at_cost_basis:
+            Estimated account book value calculated as cash
+            balance plus remaining open position cost basis.
+            Does not represent current market-value equity.
     """
 
     total_deposits: Decimal
@@ -48,3 +58,5 @@ class AccountMetrics:
     realized_trading_pnl: Decimal
     account_fees: Decimal
     net_realized_pnl: Decimal
+    open_position_cost_basis: Decimal
+    equity_at_cost_basis: Decimal
