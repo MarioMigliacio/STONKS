@@ -124,6 +124,47 @@ def test_get_position(repository) -> None:
     assert loaded.catalyst == "Positive earnings"
 
 
+def test_get_positions(repository: JournalRepository) -> None:
+    """Verify all positions are retrieved in database identifier order."""
+
+    with repository.m_connection:
+        first_id = repository.create_position(
+            Position(
+                ticker="NVDA",
+                strategy="Momentum",
+                catalyst="Positive earnings",
+                entry_reason="Breakout confirmation",
+            )
+        )
+
+        second_id = repository.create_position(
+            Position(
+                ticker="AMD",
+                strategy="Reversal",
+                catalyst="Analyst upgrade",
+                entry_reason="Support bounce",
+            )
+        )
+
+    positions = repository.get_positions()
+
+    assert len(positions) == 2
+    assert [position.position_id for position in positions] == [
+        first_id,
+        second_id,
+    ]
+    assert [position.ticker for position in positions] == [
+        "NVDA",
+        "AMD",
+    ]
+
+
+def test_get_positions_empty(repository: JournalRepository) -> None:
+    """Verify retrieving positions from an empty database returns a list."""
+
+    assert repository.get_positions() == []
+
+
 def test_get_missing_position(repository) -> None:
     """Verify missing positions return None."""
 
@@ -255,6 +296,69 @@ def test_get_position_executions(repository) -> None:
     assert len(executions) == 2
     assert executions[0].side == ExecutionSide.BUY
     assert executions[1].side == ExecutionSide.SELL
+
+
+def test_get_executions(repository: JournalRepository) -> None:
+    """Verify all executions are retrieved chronologically across positions."""
+
+    with repository.m_connection:
+        first_position_id = repository.create_position(
+            Position(
+                ticker="NVDA",
+                strategy="Momentum",
+                catalyst="Positive earnings",
+                entry_reason="Breakout confirmation",
+            )
+        )
+
+        second_position_id = repository.create_position(
+            Position(
+                ticker="AMD",
+                strategy="Reversal",
+                catalyst="Analyst upgrade",
+                entry_reason="Support bounce",
+            )
+        )
+
+        later_id = repository.create_execution(
+            TradeExecution(
+                position_id=first_position_id,
+                side=ExecutionSide.SELL,
+                executed_at=datetime(2026, 10, 8, 16, 0, tzinfo=timezone.utc),
+                shares=Decimal("5"),
+                price=Decimal("120"),
+            )
+        )
+
+        earlier_id = repository.create_execution(
+            TradeExecution(
+                position_id=second_position_id,
+                side=ExecutionSide.BUY,
+                executed_at=datetime(2026, 10, 8, 14, 0, tzinfo=timezone.utc),
+                shares=Decimal("10"),
+                price=Decimal("50"),
+            )
+        )
+
+    executions = repository.get_executions()
+
+    assert len(executions) == 2
+
+    assert [execution.execution_id for execution in executions] == [
+        earlier_id,
+        later_id,
+    ]
+
+    assert [execution.position_id for execution in executions] == [
+        second_position_id,
+        first_position_id,
+    ]
+
+
+def test_get_executions_empty(repository: JournalRepository) -> None:
+    """Verify retrieving executions from an empty database returns a list."""
+
+    assert repository.get_executions() == []
 
 
 def test_update_execution(repository) -> None:
