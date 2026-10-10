@@ -115,6 +115,24 @@ class JournalRepository:
 
         return self._row_to_position(row)
 
+    def get_positions(self) -> list[Position]:
+        """
+        Retrieve all trading positions.
+
+        Returns:
+            list[Position]:
+                Positions ordered by database identifier.
+        """
+        rows = self.m_connection.execute(
+            """
+            SELECT *
+            FROM positions
+            ORDER BY position_id ASC
+            """
+        ).fetchall()
+
+        return [self._row_to_position(row) for row in rows]
+
     def update_position(
         self,
         position: Position,
@@ -289,6 +307,24 @@ class JournalRepository:
             return None
 
         return self._row_to_execution(row)
+
+    def get_executions(self) -> list[TradeExecution]:
+        """
+        Retrieve all trade executions chronologically.
+
+        Returns:
+            list[TradeExecution]:
+                Executions ordered by timestamp and execution identifier.
+        """
+        rows = self.m_connection.execute(
+            """
+            SELECT *
+            FROM trade_executions
+            ORDER BY executed_at ASC, execution_id ASC
+            """
+        ).fetchall()
+
+        return [self._row_to_execution(row) for row in rows]
 
     def get_position_executions(
         self,
