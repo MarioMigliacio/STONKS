@@ -27,6 +27,10 @@ class Position:
             Unique database identifier. None for positions
             that have not yet been persisted.
 
+        account_id:
+            Identifier of the trading account that owns the position.
+            None until account ownership is assigned.
+
         strategy:
             Trading setup or strategy used.
 
@@ -52,6 +56,7 @@ class Position:
     ticker: str
 
     position_id: Optional[int] = None
+    account_id: Optional[int] = None
 
     strategy: str = ""
     catalyst: str = ""

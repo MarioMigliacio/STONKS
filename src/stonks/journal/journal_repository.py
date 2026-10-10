@@ -10,9 +10,11 @@ from typing import Optional
 
 from stonks.journal.account_transaction import AccountTransaction
 from stonks.journal.account_transaction_type import AccountTransactionType
+from stonks.journal.account_type import AccountType
 from stonks.journal.execution_side import ExecutionSide
 from stonks.journal.position import Position
 from stonks.journal.trade_execution import TradeExecution
+from stonks.journal.trading_account import TradingAccount
 
 
 class JournalRepository:
@@ -39,6 +41,185 @@ class JournalRepository:
                 Active SQLite database connection.
         """
         self.m_connection = connection
+
+    def create_trading_account(
+        self,
+        account: TradingAccount,
+    ) -> int:
+        """
+        Insert a new trading account.
+
+        Args:
+            account:
+                Trading account to persist.
+
+        Returns:
+            int:
+                Newly generated account identifier.
+        """
+        cursor = self.m_connection.execute(
+            """
+            INSERT INTO trading_accounts (
+                name,
+                account_type,
+                broker,
+                is_active,
+                is_default
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                account.name,
+                account.account_type.value,
+                account.broker,
+                int(account.is_active),
+                int(account.is_default),
+            ),
+        )
+
+        if cursor.lastrowid is None:
+            raise RuntimeError("Failed to retrieve the new account ID.")
+
+        return cursor.lastrowid
+
+    def get_trading_account(
+        self,
+        account_id: int,
+    ) -> Optional[TradingAccount]:
+        """
+        Retrieve a trading account by identifier.
+
+        Args:
+            account_id:
+                Database identifier to retrieve.
+
+        Returns:
+            Optional[TradingAccount]:
+                Trading account if found, otherwise None.
+        """
+        row = self.m_connection.execute(
+            """
+            SELECT *
+            FROM trading_accounts
+            WHERE account_id = ?
+            """,
+            (account_id,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        return self._row_to_trading_account(row)
+
+    def get_trading_accounts(self) -> list[TradingAccount]:
+        """
+        Retrieve all trading accounts, including archived accounts.
+
+        Returns:
+            list[TradingAccount]:
+                Trading accounts ordered by database identifier.
+        """
+        rows = self.m_connection.execute(
+            """
+            SELECT *
+            FROM trading_accounts
+            ORDER BY account_id ASC
+            """
+        ).fetchall()
+
+        return [self._row_to_trading_account(row) for row in rows]
+
+    def get_default_trading_account(
+        self,
+    ) -> Optional[TradingAccount]:
+        """
+        Retrieve the default trading account.
+
+        Returns:
+            Optional[TradingAccount]:
+                Default account if one exists, otherwise None.
+        """
+        row = self.m_connection.execute(
+            """
+            SELECT *
+            FROM trading_accounts
+            WHERE is_default = 1
+            """
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        return self._row_to_trading_account(row)
+
+    def update_trading_account(
+        self,
+        account: TradingAccount,
+    ) -> bool:
+        """
+        Update an existing trading account.
+
+        Args:
+            account:
+                Trading account containing updated values.
+
+        Returns:
+            bool:
+                True if a record was updated.
+
+        Raises:
+            ValueError:
+                If the account has no database identifier.
+        """
+        if account.account_id is None:
+            raise ValueError("Cannot update an account without an ID.")
+
+        cursor = self.m_connection.execute(
+            """
+            UPDATE trading_accounts
+            SET
+                name = ?,
+                account_type = ?,
+                broker = ?,
+                is_active = ?,
+                is_default = ?
+            WHERE account_id = ?
+            """,
+            (
+                account.name,
+                account.account_type.value,
+                account.broker,
+                int(account.is_active),
+                int(account.is_default),
+                account.account_id,
+            ),
+        )
+
+        return cursor.rowcount > 0
+
+    @staticmethod
+    def _row_to_trading_account(
+        row: sqlite3.Row,
+    ) -> TradingAccount:
+        """
+        Convert a database row into a TradingAccount instance.
+
+        Args:
+            row:
+                SQLite trading account record.
+
+        Returns:
+            TradingAccount:
+                Reconstructed trading account entity.
+        """
+        return TradingAccount(
+            account_id=row["account_id"],
+            name=row["name"],
+            account_type=AccountType(row["account_type"]),
+            broker=row["broker"],
+            is_active=bool(row["is_active"]),
+            is_default=bool(row["is_default"]),
+        )
 
     def create_position(
         self,

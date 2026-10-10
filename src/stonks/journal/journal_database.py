@@ -170,3 +170,54 @@ def initialize_database(
 
     finally:
         connection.close()
+
+
+def create_trading_accounts_table(
+    connection: sqlite3.Connection,
+) -> None:
+    """
+    Create the trading accounts table and its constraints.
+
+    Args:
+        connection:
+            SQLite connection used to create the table.
+    """
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS trading_accounts (
+            account_id INTEGER PRIMARY KEY,
+
+            name TEXT NOT NULL
+                CHECK (length(trim(name)) > 0),
+
+            account_type TEXT NOT NULL
+                CHECK (
+                    account_type IN (
+                        'ROTH_IRA',
+                        'TRADITIONAL_IRA',
+                        'CASH',
+                        'MARGIN',
+                        'OTHER'
+                    )
+                ),
+
+            broker TEXT NOT NULL DEFAULT '',
+
+            is_active INTEGER NOT NULL DEFAULT 1
+                CHECK (is_active IN (0, 1)),
+
+            is_default INTEGER NOT NULL DEFAULT 0
+                CHECK (is_default IN (0, 1)),
+
+            CHECK (NOT (is_default = 1 AND is_active = 0))
+        ) STRICT
+        """
+    )
+
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_trading_accounts_default
+        ON trading_accounts(is_default)
+        WHERE is_default = 1
+        """
+    )

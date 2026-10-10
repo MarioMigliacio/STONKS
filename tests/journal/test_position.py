@@ -38,3 +38,22 @@ def test_position_annotations() -> None:
     assert position.exit_reason == "Momentum faded"
     assert position.mistakes == "Entered too early"
     assert position.lessons_learned == "Wait for confirmation"
+
+
+def test_position_account_ownership() -> None:
+    """Verify a position retains its assigned account identifier."""
+
+    position = Position(
+        ticker="NVDA",
+        account_id=2,
+    )
+
+    assert position.account_id == 2
+
+
+def test_position_account_defaults_to_none() -> None:
+    """Verify legacy position construction remains supported."""
+
+    position = Position(ticker="AMD")
+
+    assert position.account_id is None

@@ -35,6 +35,10 @@ class AccountTransaction:
         transaction_id:
             Unique database identifier. None before persistence.
 
+        account_id:
+            Identifier of the trading account associated with
+            the cash transaction. None until ownership is assigned.
+
         notes:
             Additional information about the transaction.
     """
@@ -44,6 +48,7 @@ class AccountTransaction:
     amount: Decimal
 
     transaction_id: Optional[int] = None
+    account_id: Optional[int] = None
     notes: str = ""
 
     @property
