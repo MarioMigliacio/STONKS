@@ -9,6 +9,7 @@ from decimal import Decimal
 from stonks.journal.account_analytics import calculate_account_metrics
 from stonks.journal.account_transaction import AccountTransaction
 from stonks.journal.account_transaction_type import AccountTransactionType
+from stonks.journal.account_type import AccountType
 from stonks.journal.execution_side import ExecutionSide
 from stonks.journal.journal_database import (
     create_connection,
@@ -19,6 +20,7 @@ from stonks.journal.journal_service import JournalService
 from stonks.journal.position import Position
 from stonks.journal.position_analytics import calculate_position_metrics
 from stonks.journal.trade_execution import TradeExecution
+from stonks.journal.trading_account import TradingAccount
 
 
 def test_persisted_account_transactions(tmp_path) -> None:
@@ -34,6 +36,14 @@ def test_persisted_account_transactions(tmp_path) -> None:
         repository = JournalRepository(connection)
         service = JournalService(connection)
 
+        account_id = service.create_trading_account(
+            TradingAccount(
+                name="Test Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+                broker="Webull",
+            )
+        )
+
         occurred_at = datetime(2026, 10, 8, 14, 30, tzinfo=timezone.utc)
 
         transactions = [
@@ -41,21 +51,25 @@ def test_persisted_account_transactions(tmp_path) -> None:
                 transaction_type=AccountTransactionType.DEPOSIT,
                 occurred_at=occurred_at,
                 amount=Decimal("1000.25"),
+                account_id=account_id,
             ),
             AccountTransaction(
                 transaction_type=AccountTransactionType.WITHDRAWAL,
                 occurred_at=occurred_at,
                 amount=Decimal("200"),
+                account_id=account_id,
             ),
             AccountTransaction(
                 transaction_type=AccountTransactionType.FEE,
                 occurred_at=occurred_at,
                 amount=Decimal("4.25"),
+                account_id=account_id,
             ),
             AccountTransaction(
                 transaction_type=AccountTransactionType.ADJUSTMENT,
                 occurred_at=occurred_at,
                 amount=Decimal("-10"),
+                account_id=account_id,
             ),
         ]
 
@@ -99,6 +113,14 @@ def test_persisted_account_reconciliation(tmp_path) -> None:
         repository = JournalRepository(connection)
         service = JournalService(connection)
 
+        account_id = service.create_trading_account(
+            TradingAccount(
+                name="Test Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+                broker="Webull",
+            )
+        )
+
         occurred_at = datetime(2026, 10, 8, 14, 30, tzinfo=timezone.utc)
 
         service.create_account_transaction(
@@ -106,6 +128,7 @@ def test_persisted_account_reconciliation(tmp_path) -> None:
                 transaction_type=AccountTransactionType.DEPOSIT,
                 occurred_at=occurred_at,
                 amount=Decimal("2000"),
+                account_id=account_id,
             )
         )
 
@@ -114,6 +137,7 @@ def test_persisted_account_reconciliation(tmp_path) -> None:
                 transaction_type=AccountTransactionType.FEE,
                 occurred_at=occurred_at,
                 amount=Decimal("5"),
+                account_id=account_id,
             )
         )
 
@@ -122,12 +146,14 @@ def test_persisted_account_reconciliation(tmp_path) -> None:
                 transaction_type=AccountTransactionType.ADJUSTMENT,
                 occurred_at=occurred_at,
                 amount=Decimal("20"),
+                account_id=account_id,
             )
         )
 
         position_id = service.create_position(
             Position(
                 ticker="NVDA",
+                account_id=account_id,
                 strategy="Momentum",
                 catalyst="Earnings",
                 entry_reason="Breakout confirmation",

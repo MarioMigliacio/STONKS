@@ -6,6 +6,7 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
+from stonks.journal.account_type import AccountType
 from stonks.journal.execution_side import ExecutionSide
 from stonks.journal.journal_database import (
     create_connection,
@@ -19,6 +20,7 @@ from stonks.journal.position_analytics import (
 )
 from stonks.journal.position_status import PositionStatus
 from stonks.journal.trade_execution import TradeExecution
+from stonks.journal.trading_account import TradingAccount
 
 
 def test_persisted_position_analytics(tmp_path) -> None:
@@ -35,9 +37,18 @@ def test_persisted_position_analytics(tmp_path) -> None:
         repository = JournalRepository(connection)
         service = JournalService(connection)
 
+        account_id = service.create_trading_account(
+            TradingAccount(
+                name="Test Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+                broker="Webull",
+            )
+        )
+
         position_id = service.create_position(
             Position(
                 ticker="NVDA",
+                account_id=account_id,
                 strategy="Momentum",
                 catalyst="Positive earnings",
             )

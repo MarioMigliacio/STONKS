@@ -7,9 +7,10 @@ import sqlite3
 from contextlib import contextmanager
 from dataclasses import replace
 from decimal import Decimal
-from typing import Generator
+from typing import Generator, Optional
 
 from stonks.journal.account_transaction import AccountTransaction
+from stonks.journal.account_validation import validate_trading_account
 from stonks.journal.execution_side import ExecutionSide
 from stonks.journal.journal_repository import JournalRepository
 from stonks.journal.journal_validation import (
@@ -20,6 +21,7 @@ from stonks.journal.journal_validation import (
 )
 from stonks.journal.position import Position
 from stonks.journal.trade_execution import TradeExecution
+from stonks.journal.trading_account import TradingAccount
 
 
 class JournalService:
@@ -62,6 +64,167 @@ class JournalService:
         except Exception:
             self.m_connection.rollback()
             raise
+
+    def create_trading_account(
+        self,
+        account: TradingAccount,
+    ) -> int:
+        """
+        Validate and create a trading account.
+
+        The first account becomes the default automatically.
+
+        Args:
+            account:
+                Trading account to create.
+
+        Returns:
+            int:
+                Identifier of the new account.
+
+        Raises:
+            ValueError:
+                If account data is invalid or the requested
+                default account conflicts with an existing one.
+        """
+        validate_trading_account(account)
+
+        with self._transaction():
+            accounts = self.m_repository.get_trading_accounts()
+            is_first_account = len(accounts) == 0
+
+            normalized = replace(
+                account,
+                account_id=None,
+                name=account.name.strip(),
+                broker=account.broker.strip(),
+                is_default=is_first_account or account.is_default,
+            )
+
+            validate_trading_account(normalized)
+
+            if normalized.is_default:
+                existing_default = self.m_repository.get_default_trading_account()
+
+                if existing_default is not None:
+                    raise ValueError("A default account already exists. Use set_default_trading_account() to switch.")
+
+            return self.m_repository.create_trading_account(normalized)
+
+    def update_trading_account(
+        self,
+        account: TradingAccount,
+    ) -> bool:
+        """
+        Update account details without changing default selection.
+
+        Args:
+            account:
+                Account containing updated information.
+
+        Returns:
+            bool:
+                True if updated, False if not found.
+
+        Raises:
+            ValueError:
+                If the update violates account rules.
+        """
+        if account.account_id is None:
+            raise ValueError("Cannot update an account without an ID.")
+
+        validate_trading_account(account)
+
+        with self._transaction():
+            existing = self.m_repository.get_trading_account(account.account_id)
+
+            if existing is None:
+                return False
+
+            if account.is_default != existing.is_default:
+                raise ValueError("Use set_default_trading_account() to change the default account.")
+
+            if existing.is_default and not account.is_active:
+                raise ValueError("Cannot archive the default account. Select another default first.")
+
+            normalized = replace(
+                account,
+                name=account.name.strip(),
+                broker=account.broker.strip(),
+            )
+
+            return self.m_repository.update_trading_account(normalized)
+
+    def set_default_trading_account(
+        self,
+        account_id: int,
+    ) -> None:
+        """
+        Atomically assign the default trading account.
+
+        Args:
+            account_id:
+                Identifier of the account to select.
+
+        Raises:
+            ValueError:
+                If the account does not exist or is archived.
+        """
+        with self._transaction():
+            target = self.m_repository.get_trading_account(account_id)
+
+            if target is None:
+                raise ValueError("Trading account does not exist.")
+
+            if not target.is_active:
+                raise ValueError("Cannot make an archived account the default.")
+
+            existing_default = self.m_repository.get_default_trading_account()
+
+            if existing_default is not None and existing_default.account_id == account_id:
+                return
+
+            if existing_default is not None:
+                existing_default.is_default = False
+                self.m_repository.update_trading_account(existing_default)
+
+            target.is_default = True
+            self.m_repository.update_trading_account(target)
+
+    def archive_trading_account(
+        self,
+        account_id: int,
+    ) -> bool:
+        """
+        Archive a trading account without deleting its history.
+
+        Args:
+            account_id:
+                Identifier of the account to archive.
+
+        Returns:
+            bool:
+                True if archived, False if not found.
+
+        Raises:
+            ValueError:
+                If the account is currently the default.
+        """
+        with self._transaction():
+            account = self.m_repository.get_trading_account(account_id)
+
+            if account is None:
+                return False
+
+            if account.is_default:
+                raise ValueError("Cannot archive the default account. Select another default first.")
+
+            if not account.is_active:
+                return True
+
+            account.is_active = False
+
+            return self.m_repository.update_trading_account(account)
 
     def validate_position_history(
         self,
@@ -273,10 +436,12 @@ class JournalService:
             occurred_at=normalize_timestamp(transaction.occurred_at),
             amount=transaction.amount,
             transaction_id=None,
+            account_id=transaction.account_id,
             notes=transaction.notes,
         )
 
         with self._transaction():
+            self._validate_account_ownership(normalized.account_id)
             return self.m_repository.create_account_transaction(normalized)
 
     def update_account_transaction(
@@ -308,6 +473,7 @@ class JournalService:
             occurred_at=normalize_timestamp(transaction.occurred_at),
             amount=transaction.amount,
             transaction_id=transaction.transaction_id,
+            account_id=transaction.account_id,
             notes=transaction.notes,
         )
 
@@ -316,6 +482,9 @@ class JournalService:
 
             if existing is None:
                 return False
+
+            if existing.account_id != normalized.account_id:
+                raise ValueError("Cannot move a transaction to another trading account.")
 
             return self.m_repository.update_account_transaction(normalized)
 
@@ -336,6 +505,33 @@ class JournalService:
         """
         with self._transaction():
             return self.m_repository.delete_account_transaction(transaction_id)
+
+    def _validate_account_ownership(
+        self,
+        account_id: Optional[int],
+    ) -> None:
+        """
+        Validate that an account exists and accepts new activity.
+
+        Args:
+            account_id:
+                Identifier of the trading account to validate.
+
+        Raises:
+            ValueError:
+                If the account ID is missing, the account does not
+                exist, or the account is archived.
+        """
+        if account_id is None:
+            raise ValueError("A trading account is required.")
+
+        account = self.m_repository.get_trading_account(account_id)
+
+        if account is None:
+            raise ValueError(f"Trading account {account_id} does not exist.")
+
+        if not account.is_active:
+            raise ValueError(f"Trading account {account_id} is archived.")
 
     def create_position(
         self,
@@ -361,6 +557,7 @@ class JournalService:
         )
 
         with self._transaction():
+            self._validate_account_ownership(normalized.account_id)
             return self.m_repository.create_position(normalized)
 
     def update_position(
@@ -393,6 +590,9 @@ class JournalService:
 
             if existing is None:
                 return False
+
+            if existing.account_id != normalized.account_id:
+                raise ValueError("Cannot move a position to another trading account.")
 
             return self.m_repository.update_position(normalized)
 

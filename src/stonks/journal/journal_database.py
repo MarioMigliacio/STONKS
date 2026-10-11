@@ -9,7 +9,7 @@ from typing import Optional
 
 from stonks.config.journal_paths import DATABASE_FILE
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def create_connection(
@@ -96,11 +96,32 @@ def initialize_database(
                 f"Journal database schema version {current_version} is newer than supported version {SCHEMA_VERSION}."
             )
 
+        if current_version not in (0, SCHEMA_VERSION):
+            raise RuntimeError(
+                f"Unsupported journal database schema version {current_version}. Expected version {SCHEMA_VERSION}."
+            )
+
+        if current_version == 0:
+            existing_tables = connection.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                AND name NOT LIKE 'sqlite_%'
+                """
+            ).fetchall()
+
+            if existing_tables:
+                raise RuntimeError("Cannot initialize an unversioned database that already contains tables.")
+
         with connection:
+            create_trading_accounts_table(connection)
+
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS positions (
                     position_id INTEGER PRIMARY KEY,
+                    account_id INTEGER NOT NULL,
 
                     ticker TEXT NOT NULL,
 
@@ -113,7 +134,11 @@ def initialize_database(
                     mistakes TEXT NOT NULL DEFAULT '',
                     lessons_learned TEXT NOT NULL DEFAULT '',
 
-                    notes TEXT NOT NULL DEFAULT ''
+                    notes TEXT NOT NULL DEFAULT '',
+
+                    FOREIGN KEY (account_id)
+                        REFERENCES trading_accounts(account_id)
+                        ON DELETE RESTRICT
                 ) STRICT
                 """
             )
@@ -147,6 +172,7 @@ def initialize_database(
                 """
                 CREATE TABLE IF NOT EXISTS account_transactions (
                     transaction_id INTEGER PRIMARY KEY,
+                    account_id INTEGER NOT NULL,
 
                     transaction_type TEXT NOT NULL
                         CHECK (
@@ -161,12 +187,110 @@ def initialize_database(
                     occurred_at TEXT NOT NULL,
                     amount TEXT NOT NULL,
 
-                    notes TEXT NOT NULL DEFAULT ''
+                    notes TEXT NOT NULL DEFAULT '',
+
+                    FOREIGN KEY (account_id)
+                        REFERENCES trading_accounts(account_id)
+                        ON DELETE RESTRICT
                 ) STRICT
                 """
             )
+
+            create_account_ownership_triggers(connection)
 
             connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
     finally:
         connection.close()
+
+
+def create_trading_accounts_table(
+    connection: sqlite3.Connection,
+) -> None:
+    """
+    Create the trading accounts table and its constraints.
+
+    Args:
+        connection:
+            SQLite connection used to create the table.
+    """
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS trading_accounts (
+            account_id INTEGER PRIMARY KEY,
+
+            name TEXT NOT NULL
+                CHECK (length(trim(name)) > 0),
+
+            account_type TEXT NOT NULL
+                CHECK (
+                    account_type IN (
+                        'ROTH_IRA',
+                        'TRADITIONAL_IRA',
+                        'CASH',
+                        'MARGIN',
+                        'OTHER'
+                    )
+                ),
+
+            broker TEXT NOT NULL DEFAULT '',
+
+            is_active INTEGER NOT NULL DEFAULT 1
+                CHECK (is_active IN (0, 1)),
+
+            is_default INTEGER NOT NULL DEFAULT 0
+                CHECK (is_default IN (0, 1)),
+
+            CHECK (NOT (is_default = 1 AND is_active = 0))
+        ) STRICT
+        """
+    )
+
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_trading_accounts_default
+        ON trading_accounts(is_default)
+        WHERE is_default = 1
+        """
+    )
+
+
+def create_account_ownership_triggers(
+    connection: sqlite3.Connection,
+) -> None:
+    """
+    Prevent existing journal records from changing accounts.
+
+    Args:
+        connection:
+            SQLite connection used to create the triggers.
+    """
+    connection.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS
+            trg_positions_account_immutable
+        BEFORE UPDATE OF account_id ON positions
+        WHEN NEW.account_id != OLD.account_id
+        BEGIN
+            SELECT RAISE(
+                ABORT,
+                'Cannot change position account ownership'
+            );
+        END
+        """
+    )
+
+    connection.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS
+            trg_transactions_account_immutable
+        BEFORE UPDATE OF account_id ON account_transactions
+        WHEN NEW.account_id != OLD.account_id
+        BEGIN
+            SELECT RAISE(
+                ABORT,
+                'Cannot change transaction account ownership'
+            );
+        END
+        """
+    )

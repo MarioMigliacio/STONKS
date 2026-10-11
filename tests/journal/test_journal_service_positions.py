@@ -41,14 +41,51 @@ def make_execution(
 def test_create_position(journal) -> None:
     """Verify positions are normalized and persisted."""
 
-    service, repository, _ = journal
+    service, repository, existing_position_id = journal
 
-    position_id = service.create_position(Position(ticker=" amd "))
+    existing_position = repository.get_position(existing_position_id)
+
+    assert existing_position is not None
+    assert existing_position.account_id is not None
+
+    position_id = service.create_position(
+        Position(
+            ticker=" amd ",
+            account_id=existing_position.account_id,
+        )
+    )
 
     loaded = repository.get_position(position_id)
 
     assert loaded is not None
     assert loaded.ticker == "AMD"
+    assert loaded.account_id == existing_position.account_id
+
+
+def test_create_position_without_account_id(journal) -> None:
+    """
+    Verify positions require a valid trading account.
+
+    Rejected positions must not be persisted.
+    """
+    service, repository, _ = journal
+
+    positions_before = repository.get_positions()
+
+    with pytest.raises(
+        ValueError,
+        match="A trading account is required",
+    ):
+        service.create_position(
+            Position(
+                ticker="AMD",
+                account_id=None,
+            )
+        )
+
+    positions_after = repository.get_positions()
+
+    assert positions_after == positions_before
 
 
 @pytest.mark.parametrize(
@@ -185,3 +222,33 @@ def test_delete_missing_position(journal) -> None:
     service, repository, _ = journal
 
     assert service.delete_position(999) is False
+
+
+def test_position_update_rejects_account_reassignment(
+    journal,
+) -> None:
+    """Verify a position cannot change its owning account."""
+
+    service, repository, position_id = journal
+
+    position = repository.get_position(position_id)
+
+    assert position is not None
+    assert position.account_id is not None
+
+    original_account_id = position.account_id
+
+    # Attempt to reassign the position to another account.
+    position.account_id = original_account_id + 1
+
+    with pytest.raises(
+        ValueError,
+        match="Cannot move a position",
+    ):
+        service.update_position(position)
+
+    # Verify the original account ownership remains unchanged.
+    loaded = repository.get_position(position_id)
+
+    assert loaded is not None
+    assert loaded.account_id == original_account_id

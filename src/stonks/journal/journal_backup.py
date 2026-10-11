@@ -47,7 +47,6 @@ def create_database_backup(
             If the source journal database does not exist.
     """
     source_path = database_path if database_path is not None else DATABASE_FILE
-
     destination_directory = backup_directory if backup_directory is not None else BACKUP_DIRECTORY
 
     if not source_path.exists():
@@ -61,9 +60,6 @@ def create_database_backup(
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
 
     backup_path = destination_directory / f"stonks_journal_{timestamp}.db"
-
-    source_connection = sqlite3.connect(str(source_path))
-    backup_connection = sqlite3.connect(str(backup_path))
 
     try:
         with closing(sqlite3.connect(str(source_path))) as source_connection:
@@ -104,6 +100,7 @@ def validate_database_backup(
         raise FileNotFoundError(f"Journal backup does not exist: {backup_path}")
 
     required_tables = {
+        "trading_accounts",
         "positions",
         "trade_executions",
         "account_transactions",

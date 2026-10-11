@@ -3,7 +3,7 @@
 # Purpose: Pytest file for test_account_transaction.py.
 # =============================================================================
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -96,3 +96,28 @@ def test_invalid_transaction_type() -> None:
 
     with pytest.raises(ValueError):
         _ = transaction.net_cash_flow
+
+
+def test_account_transaction_ownership() -> None:
+    """Verify a cash transaction retains its account identifier."""
+
+    transaction = AccountTransaction(
+        transaction_type=AccountTransactionType.DEPOSIT,
+        occurred_at=datetime.now(timezone.utc),
+        amount=Decimal("500.00"),
+        account_id=2,
+    )
+
+    assert transaction.account_id == 2
+
+
+def test_account_transaction_defaults_to_none() -> None:
+    """Verify legacy transaction construction remains supported."""
+
+    transaction = AccountTransaction(
+        transaction_type=AccountTransactionType.DEPOSIT,
+        occurred_at=datetime.now(timezone.utc),
+        amount=Decimal("500.00"),
+    )
+
+    assert transaction.account_id is None

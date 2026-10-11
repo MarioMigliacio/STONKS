@@ -77,10 +77,20 @@ See [C.I.A. News Subsystem](docs/cia.md) for details.
 
 ### Journal
 
-- Trade order tracking
-- Account snapshot tracking
-- CSV-based persistence
-- Journal backup utility
+- SQLite-based journal persistence (schema v2)
+- Multiple trading account support
+- Roth IRA, Traditional IRA, Cash, Margin, and Other account types
+- Default account selection and account archival
+- Account-owned positions and trade executions
+- Deposits, withdrawals, and account-level cash transactions
+- Position, trade, and account performance analytics
+- Trading pattern analysis
+- Repository and service architecture
+- Account ownership validation and database integrity constraints
+- Consistent SQLite database backups and restoration
+- Human-readable CSV exports
+
+The journal backend is being prepared for a desktop GUI in v2.1.0. The legacy journal CLI has been retired.
 
 See [Journal Subsystem](docs/journal.md) for details.
 
@@ -134,6 +144,7 @@ STONKS/
 │   ├── api/
 │   ├── cache/
 │   ├── cia/
+│   ├── journal/
 │   └── scanner/
 ├── .env
 ├── pyproject.toml
@@ -194,11 +205,13 @@ ENABLE_FLOAT_DATA = True
 .\scripts\run.ps1
 ```
 
-### Journal CLI
+### Trading Journal
 
-```powershell
-.\scripts\journal.ps1
-```
+The trading journal currently operates through its SQLite database, repository, and service layers.
+
+The legacy command-line journal interface has been retired as part of the v2.1.0 redesign.
+
+A desktop graphical interface is planned for a future development phase.
 
 ### Historical Cache CLI
 
@@ -216,12 +229,6 @@ ENABLE_FLOAT_DATA = True
 
 ```powershell
 .\scripts\news.ps1
-```
-
-### Backup Journal Data
-
-```powershell
-.\scripts\backup_journal.ps1
 ```
 
 ### Run Tests
@@ -284,7 +291,9 @@ Defaults to `False`.
 
 STONKS uses **Pytest** for automated testing and **Ruff** for linting and formatting.
 
-The test suite covers scanner calculations and integration behavior, cache services, API response handling, float-data processing, market-session selection, price-action analysis, and C.I.A. catalyst analysis.
+The test suite covers scanner calculations, API response handling, caching, float-data processing, market-session selection, price-action analysis, and C.I.A. catalyst intelligence.
+
+Journal tests additionally cover SQLite schema initialization, trading account management, position and execution persistence, account transactions, financial analytics, ownership validation, database integrity, backup and restoration, and CSV exports.
 
 The repository also uses GitHub Actions as a quality gate for automated test and Ruff checks.
 
