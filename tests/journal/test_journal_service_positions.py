@@ -185,3 +185,41 @@ def test_delete_missing_position(journal) -> None:
     service, repository, _ = journal
 
     assert service.delete_position(999) is False
+
+
+def test_position_update_rejects_account_reassignment(
+    journal,
+    monkeypatch,
+) -> None:
+    """Verify a position cannot change its owning account."""
+    service, repository, _ = journal
+
+    position_id = service.create_position(Position(ticker="NVDA"))
+
+    original_get = service.m_repository.get_position
+
+    def get_position_with_account(identifier):
+        position = original_get(identifier)
+
+        if position is not None:
+            position.account_id = 1
+
+        return position
+
+    monkeypatch.setattr(
+        service.m_repository,
+        "get_position",
+        get_position_with_account,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Cannot move a position",
+    ):
+        service.update_position(
+            Position(
+                ticker="NVDA",
+                position_id=position_id,
+                account_id=2,
+            )
+        )

@@ -236,31 +236,63 @@ class JournalRepository:
             int:
                 Newly generated database identifier.
         """
-        cursor = self.m_connection.execute(
-            """
-            INSERT INTO positions (
-                ticker,
-                strategy,
-                catalyst,
-                entry_reason,
-                exit_reason,
-                mistakes,
-                lessons_learned,
-                notes
+        # Support both schemas during the v2 transition.
+        columns = {row["name"] for row in self.m_connection.execute("PRAGMA table_info(positions)")}
+
+        if "account_id" in columns:
+            cursor = self.m_connection.execute(
+                """
+                INSERT INTO positions (
+                    account_id,
+                    ticker,
+                    strategy,
+                    catalyst,
+                    entry_reason,
+                    exit_reason,
+                    mistakes,
+                    lessons_learned,
+                    notes
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    position.account_id,
+                    position.ticker,
+                    position.strategy,
+                    position.catalyst,
+                    position.entry_reason,
+                    position.exit_reason,
+                    position.mistakes,
+                    position.lessons_learned,
+                    position.notes,
+                ),
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                position.ticker,
-                position.strategy,
-                position.catalyst,
-                position.entry_reason,
-                position.exit_reason,
-                position.mistakes,
-                position.lessons_learned,
-                position.notes,
-            ),
-        )
+        else:
+            cursor = self.m_connection.execute(
+                """
+                INSERT INTO positions (
+                    ticker,
+                    strategy,
+                    catalyst,
+                    entry_reason,
+                    exit_reason,
+                    mistakes,
+                    lessons_learned,
+                    notes
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    position.ticker,
+                    position.strategy,
+                    position.catalyst,
+                    position.entry_reason,
+                    position.exit_reason,
+                    position.mistakes,
+                    position.lessons_learned,
+                    position.notes,
+                ),
+            )
 
         if cursor.lastrowid is None:
             raise RuntimeError("Failed to retrieve the new position ID.")
@@ -406,6 +438,7 @@ class JournalRepository:
         """
         return Position(
             position_id=row["position_id"],
+            account_id=(row["account_id"] if "account_id" in row.keys() else None),
             ticker=row["ticker"],
             strategy=row["strategy"],
             catalyst=row["catalyst"],
@@ -648,23 +681,46 @@ class JournalRepository:
             int:
                 Newly generated transaction identifier.
         """
-        cursor = self.m_connection.execute(
-            """
-            INSERT INTO account_transactions (
-                transaction_type,
-                occurred_at,
-                amount,
-                notes
+        columns = {row["name"] for row in self.m_connection.execute("PRAGMA table_info(account_transactions)")}
+
+        if "account_id" in columns:
+            cursor = self.m_connection.execute(
+                """
+                INSERT INTO account_transactions (
+                    account_id,
+                    transaction_type,
+                    occurred_at,
+                    amount,
+                    notes
+                )
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    transaction.account_id,
+                    transaction.transaction_type.value,
+                    transaction.occurred_at.isoformat(),
+                    str(transaction.amount),
+                    transaction.notes,
+                ),
             )
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                transaction.transaction_type.value,
-                transaction.occurred_at.isoformat(),
-                str(transaction.amount),
-                transaction.notes,
-            ),
-        )
+        else:
+            cursor = self.m_connection.execute(
+                """
+                INSERT INTO account_transactions (
+                    transaction_type,
+                    occurred_at,
+                    amount,
+                    notes
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    transaction.transaction_type.value,
+                    transaction.occurred_at.isoformat(),
+                    str(transaction.amount),
+                    transaction.notes,
+                ),
+            )
 
         if cursor.lastrowid is None:
             raise RuntimeError("Failed to retrieve the new transaction ID.")
@@ -801,6 +857,7 @@ class JournalRepository:
         """
         return AccountTransaction(
             transaction_id=row["transaction_id"],
+            account_id=(row["account_id"] if "account_id" in row.keys() else None),
             transaction_type=AccountTransactionType(row["transaction_type"]),
             occurred_at=datetime.fromisoformat(row["occurred_at"]),
             amount=Decimal(row["amount"]),

@@ -15,6 +15,20 @@ from stonks.journal.journal_database import (
 )
 
 
+@pytest.fixture
+def connection(tmp_path):
+    """Provide an initialized, temporary journal database connection."""
+    database_path = tmp_path / "test_journal.db"
+
+    initialize_database(database_path)
+    database_connection = create_connection(database_path)
+
+    try:
+        yield database_connection
+    finally:
+        database_connection.close()
+
+
 def test_database_initialization(tmp_path) -> None:
     """Verify journal tables are created successfully."""
 
@@ -348,3 +362,125 @@ def test_journal_tables_are_strict(tmp_path) -> None:
 
     finally:
         connection.close()
+
+
+def test_v2_schema_creates_trading_accounts(tmp_path) -> None:
+    """Verify schema v2 creates the trading accounts table."""
+    database_path = tmp_path / "journal_v2.db"
+
+    initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        tables = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+
+        assert "trading_accounts" in tables
+        assert get_schema_version(connection) == 2
+
+    finally:
+        connection.close()
+
+
+def test_v2_positions_require_account_ownership(tmp_path) -> None:
+    """Verify positions require a valid trading account."""
+    database_path = tmp_path / "journal_v2.db"
+
+    initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        columns = {row["name"]: row for row in connection.execute("PRAGMA table_info(positions)")}
+
+        assert "account_id" in columns
+        assert columns["account_id"]["notnull"] == 1
+
+        foreign_keys = connection.execute("PRAGMA foreign_key_list(positions)").fetchall()
+
+        assert any(row["table"] == "trading_accounts" and row["from"] == "account_id" for row in foreign_keys)
+
+    finally:
+        connection.close()
+
+
+def test_v2_transactions_require_account_ownership(tmp_path) -> None:
+    """Verify cash transactions require a valid trading account."""
+    database_path = tmp_path / "journal_v2.db"
+
+    initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        columns = {row["name"]: row for row in connection.execute("PRAGMA table_info(account_transactions)")}
+
+        assert "account_id" in columns
+        assert columns["account_id"]["notnull"] == 1
+
+        foreign_keys = connection.execute("PRAGMA foreign_key_list(account_transactions)").fetchall()
+
+        assert any(row["table"] == "trading_accounts" and row["from"] == "account_id" for row in foreign_keys)
+
+    finally:
+        connection.close()
+
+
+def test_v2_position_account_ownership_is_immutable(connection) -> None:
+    """Reject reassignment of a position to another trading account."""
+    connection.execute(
+        """
+        INSERT INTO trading_accounts (account_id, name, account_type)
+        VALUES (1, 'Roth IRA', 'ROTH_IRA'),
+               (2, 'Cash Account', 'CASH')
+        """
+    )
+
+    connection.execute(
+        """
+        INSERT INTO positions (position_id, account_id, ticker)
+        VALUES (1, 1, 'NVDA')
+        """
+    )
+
+    with pytest.raises(sqlite3.IntegrityError):
+        connection.execute("UPDATE positions SET account_id = 2 WHERE position_id = 1")
+
+
+def test_v2_transaction_account_ownership_is_immutable(connection) -> None:
+    """Reject reassignment of a cash transaction to another account."""
+    connection.execute(
+        """
+        INSERT INTO trading_accounts (account_id, name, account_type)
+        VALUES (1, 'Roth IRA', 'ROTH_IRA'),
+               (2, 'Cash Account', 'CASH')
+        """
+    )
+
+    connection.execute(
+        """
+        INSERT INTO account_transactions (
+            transaction_id,
+            account_id,
+            transaction_type,
+            occurred_at,
+            amount
+        )
+        VALUES (
+            1,
+            1,
+            'DEPOSIT',
+            '2026-10-10T12:00:00+00:00',
+            '100.00'
+        )
+        """
+    )
+
+    with pytest.raises(sqlite3.IntegrityError):
+        connection.execute(
+            """
+            UPDATE account_transactions
+            SET account_id = 2
+            WHERE transaction_id = 1
+            """
+        )

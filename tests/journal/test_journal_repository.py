@@ -596,3 +596,42 @@ def test_fractional_share_execution(repository) -> None:
     assert loaded.shares == Decimal("1.375")
     assert loaded.price == Decimal("12.3456")
     assert loaded.gross_value == Decimal("16.9752")
+
+
+def test_v1_position_round_trip_preserves_legacy_compatibility(
+    repository,
+) -> None:
+    """Verify positions remain usable with the v1 schema."""
+    position = Position(
+        ticker="NVDA",
+        account_id=None,
+        strategy="Momentum",
+    )
+
+    with repository.m_connection:
+        position_id = repository.create_position(position)
+
+    restored = repository.get_position(position_id)
+
+    assert restored is not None
+    assert restored.ticker == "NVDA"
+    assert restored.account_id is None
+    assert restored.strategy == "Momentum"
+
+
+def test_v1_account_transaction_round_trip(repository) -> None:
+    """Verify cash transactions remain compatible with schema v1."""
+    transaction = AccountTransaction(
+        transaction_type=AccountTransactionType.DEPOSIT,
+        occurred_at=datetime.now(timezone.utc),
+        amount=Decimal("250.00"),
+    )
+
+    with repository.m_connection:
+        transaction_id = repository.create_account_transaction(transaction)
+
+    restored = repository.get_account_transaction(transaction_id)
+
+    assert restored is not None
+    assert restored.account_id is None
+    assert restored.amount == Decimal("250.00")

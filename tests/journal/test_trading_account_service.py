@@ -184,3 +184,53 @@ def test_cannot_create_archived_first_account(service) -> None:
         )
 
     assert service.m_repository.get_trading_accounts() == []
+
+
+def test_account_ownership_rejects_missing_account(service) -> None:
+    """Reject activity assigned to a nonexistent trading account."""
+    with pytest.raises(
+        ValueError,
+        match="does not exist",
+    ):
+        service._validate_account_ownership(999)
+
+
+def test_account_ownership_accepts_active_account(service) -> None:
+    """Allow activity assigned to an active trading account."""
+    account_id = service.create_trading_account(
+        TradingAccount(
+            name="Roth IRA",
+            account_type=AccountType.ROTH_IRA,
+        )
+    )
+
+    service._validate_account_ownership(account_id)
+
+
+def test_account_ownership_rejects_archived_account(service) -> None:
+    """Reject new activity assigned to an archived trading account."""
+    roth_id = service.create_trading_account(
+        TradingAccount(
+            name="Roth IRA",
+            account_type=AccountType.ROTH_IRA,
+        )
+    )
+
+    cash_id = service.create_trading_account(
+        TradingAccount(
+            name="Cash Account",
+            account_type=AccountType.CASH,
+        )
+    )
+
+    # The first account is automatically the default.
+    # Switch the default before archiving it.
+    service.set_default_trading_account(cash_id)
+
+    assert service.archive_trading_account(roth_id) is True
+
+    with pytest.raises(
+        ValueError,
+        match="archived",
+    ):
+        service._validate_account_ownership(roth_id)
