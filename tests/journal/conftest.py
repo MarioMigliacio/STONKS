@@ -5,6 +5,7 @@
 
 import pytest
 
+from stonks.journal.account_type import AccountType
 from stonks.journal.journal_database import (
     create_connection,
     initialize_database,
@@ -12,12 +13,17 @@ from stonks.journal.journal_database import (
 from stonks.journal.journal_repository import JournalRepository
 from stonks.journal.journal_service import JournalService
 from stonks.journal.position import Position
+from stonks.journal.trading_account import TradingAccount
 
 
 @pytest.fixture
 def journal(tmp_path):
-    """Provide an initialized journal service and repository."""
+    """
+    Provide an initialized journal service and repository.
 
+    Creates a temporary schema v2 database with a default
+    trading account and an associated test position.
+    """
     database_path = tmp_path / "test_journal.db"
     initialize_database(database_path)
 
@@ -27,8 +33,20 @@ def journal(tmp_path):
         repository = JournalRepository(connection)
         service = JournalService(connection)
 
-        with connection:
-            position_id = repository.create_position(Position(ticker="AMD"))
+        account_id = service.create_trading_account(
+            TradingAccount(
+                name="Test Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+                broker="Webull",
+            )
+        )
+
+        position_id = service.create_position(
+            Position(
+                ticker="AMD",
+                account_id=account_id,
+            )
+        )
 
         yield service, repository, position_id
 

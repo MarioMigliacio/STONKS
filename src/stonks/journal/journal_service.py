@@ -510,17 +510,20 @@ class JournalService:
         self,
         account_id: Optional[int],
     ) -> None:
-        """Validate that an account exists and accepts new activity.
+        """
+        Validate that an account exists and accepts new activity.
 
         Args:
-            account_id: Identifier of the trading account to validate.
+            account_id:
+                Identifier of the trading account to validate.
 
         Raises:
-            ValueError: If the account does not exist or is archived.
+            ValueError:
+                If the account ID is missing, the account does not
+                exist, or the account is archived.
         """
         if account_id is None:
-            # Temporary schema v1 compatibility.
-            return
+            raise ValueError("A trading account is required.")
 
         account = self.m_repository.get_trading_account(account_id)
 

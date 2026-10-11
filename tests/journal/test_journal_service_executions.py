@@ -351,6 +351,11 @@ def test_update_execution_wrong_position(journal) -> None:
 
     service, repository, position_id = journal
 
+    original_position = repository.get_position(position_id)
+
+    assert original_position is not None
+    assert original_position.account_id is not None
+
     execution_id = service.create_execution(
         make_execution(
             position_id,
@@ -359,8 +364,12 @@ def test_update_execution_wrong_position(journal) -> None:
         )
     )
 
-    with repository.m_connection:
-        other_position_id = repository.create_position(Position(ticker="NVDA"))
+    other_position_id = service.create_position(
+        Position(
+            ticker="NVDA",
+            account_id=original_position.account_id,
+        )
+    )
 
     execution = repository.get_execution(execution_id)
 

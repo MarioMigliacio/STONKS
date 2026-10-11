@@ -16,6 +16,7 @@ from stonks.config.journal_paths import (
 )
 
 JOURNAL_TABLES = (
+    "trading_accounts",
     "positions",
     "trade_executions",
     "account_transactions",

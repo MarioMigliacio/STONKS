@@ -3,7 +3,6 @@
 # Purpose: Pytest file for test_journal_backup.py.
 # =============================================================================
 
-
 import sqlite3
 
 import pytest
@@ -53,11 +52,12 @@ def test_backup_preserves_journal_data(tmp_path) -> None:
     try:
         with connection:
             connection.execute(
-                """
-                INSERT INTO positions (ticker)
-                VALUES (?)
-                """,
-                ("AMD",),
+                "INSERT OR IGNORE INTO trading_accounts "
+                "(account_id, name, account_type) VALUES (1, 'Test Roth IRA', 'ROTH_IRA')"
+            )
+            connection.execute(
+                "INSERT INTO positions (ticker, account_id) VALUES (?, ?)",
+                ("AMD", 1),
             )
 
     finally:
@@ -188,7 +188,6 @@ def test_non_database_backup_fails_validation(
     """Verify a non-SQLite file cannot be restored."""
 
     backup_path = tmp_path / "fake_backup.db"
-
     backup_path.write_text("Definitely a journal database. Trust me.")
 
     with pytest.raises(
@@ -204,7 +203,6 @@ def test_unrelated_database_fails_validation(
     """Verify an unrelated SQLite database is rejected."""
 
     backup_path = tmp_path / "unrelated.db"
-
     connection = sqlite3.connect(str(backup_path))
 
     try:
@@ -270,11 +268,12 @@ def test_restore_database_backup(tmp_path) -> None:
     try:
         with connection:
             connection.execute(
-                """
-                INSERT INTO positions (ticker)
-                VALUES (?)
-                """,
-                ("AMD",),
+                "INSERT OR IGNORE INTO trading_accounts "
+                "(account_id, name, account_type) VALUES (1, 'Test Roth IRA', 'ROTH_IRA')"
+            )
+            connection.execute(
+                "INSERT INTO positions (ticker, account_id) VALUES (?, ?)",
+                ("AMD", 1),
             )
 
     finally:
@@ -296,11 +295,12 @@ def test_restore_database_backup(tmp_path) -> None:
             )
 
             connection.execute(
-                """
-                INSERT INTO positions (ticker)
-                VALUES (?)
-                """,
-                ("NVDA",),
+                "INSERT OR IGNORE INTO trading_accounts "
+                "(account_id, name, account_type) VALUES (1, 'Test Roth IRA', 'ROTH_IRA')"
+            )
+            connection.execute(
+                "INSERT INTO positions (ticker, account_id) VALUES (?, ?)",
+                ("NVDA", 1),
             )
 
     finally:
@@ -349,11 +349,12 @@ def test_restore_creates_safety_backup(
     try:
         with connection:
             connection.execute(
-                """
-                INSERT INTO positions (ticker)
-                VALUES (?)
-                """,
-                ("NVDA",),
+                "INSERT OR IGNORE INTO trading_accounts "
+                "(account_id, name, account_type) VALUES (1, 'Test Roth IRA', 'ROTH_IRA')"
+            )
+            connection.execute(
+                "INSERT INTO positions (ticker, account_id) VALUES (?, ?)",
+                ("NVDA", 1),
             )
 
     finally:
@@ -403,11 +404,12 @@ def test_invalid_backup_does_not_modify_journal(
     try:
         with connection:
             connection.execute(
-                """
-                INSERT INTO positions (ticker)
-                VALUES (?)
-                """,
-                ("AMD",),
+                "INSERT OR IGNORE INTO trading_accounts "
+                "(account_id, name, account_type) VALUES (1, 'Test Roth IRA', 'ROTH_IRA')"
+            )
+            connection.execute(
+                "INSERT INTO positions (ticker, account_id) VALUES (?, ?)",
+                ("AMD", 1),
             )
 
     finally:

@@ -3,24 +3,30 @@
 # Purpose: Pytest file for test_trading_account_service.py.
 # =============================================================================
 
+from datetime import datetime, timezone
+from decimal import Decimal
+
 import pytest
 
+from stonks.journal.account_transaction import AccountTransaction
+from stonks.journal.account_transaction_type import AccountTransactionType
 from stonks.journal.account_type import AccountType
 from stonks.journal.journal_database import (
     create_connection,
-    create_trading_accounts_table,
+    initialize_database,
 )
 from stonks.journal.journal_service import JournalService
+from stonks.journal.position import Position
 from stonks.journal.trading_account import TradingAccount
 
 
 @pytest.fixture
 def service(tmp_path):
-    """Create an isolated service with trading account persistence."""
-    connection = create_connection(tmp_path / "accounts.db")
+    """Create an isolated service with the complete journal schema."""
+    database_path = tmp_path / "accounts.db"
 
-    with connection:
-        create_trading_accounts_table(connection)
+    initialize_database(database_path)
+    connection = create_connection(database_path)
 
     yield JournalService(connection)
 
@@ -234,3 +240,51 @@ def test_account_ownership_rejects_archived_account(service) -> None:
         match="archived",
     ):
         service._validate_account_ownership(roth_id)
+
+
+def test_archived_account_rejects_new_position(
+    service,
+) -> None:
+    """Verify archived accounts cannot receive new positions."""
+    service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+    archived_id = service.create_trading_account(TradingAccount("Old Cash", AccountType.CASH))
+
+    assert service.archive_trading_account(archived_id) is True
+
+    positions_before = service.m_repository.get_positions()
+
+    with pytest.raises(ValueError, match="archived"):
+        service.create_position(
+            Position(
+                ticker="NVDA",
+                account_id=archived_id,
+            )
+        )
+
+    assert service.m_repository.get_positions() == positions_before
+
+
+def test_archived_account_rejects_new_transaction(
+    service,
+) -> None:
+    """Verify archived accounts cannot receive new transactions."""
+    service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+    archived_id = service.create_trading_account(TradingAccount("Old Cash", AccountType.CASH))
+
+    assert service.archive_trading_account(archived_id) is True
+
+    transactions_before = service.m_repository.get_account_transactions()
+
+    with pytest.raises(ValueError, match="archived"):
+        service.create_account_transaction(
+            AccountTransaction(
+                transaction_type=AccountTransactionType.DEPOSIT,
+                occurred_at=datetime(2026, 10, 10, 14, 30, tzinfo=timezone.utc),
+                amount=Decimal("100"),
+                account_id=archived_id,
+            )
+        )
+
+    assert service.m_repository.get_account_transactions() == transactions_before
