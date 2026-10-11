@@ -290,21 +290,40 @@ class JournalRepository:
 
         return self._row_to_position(row)
 
-    def get_positions(self) -> list[Position]:
+    def get_positions(
+        self,
+        account_id: Optional[int] = None,
+    ) -> list[Position]:
         """
-        Retrieve all trading positions.
+        Retrieve trading positions, optionally filtered by account.
+
+        Args:
+            account_id:
+                Optional trading account identifier. When omitted,
+                positions from all accounts are returned.
 
         Returns:
             list[Position]:
-                Positions ordered by database identifier.
+                Matching positions ordered by database identifier.
         """
-        rows = self.m_connection.execute(
-            """
-            SELECT *
-            FROM positions
-            ORDER BY position_id ASC
-            """
-        ).fetchall()
+        if account_id is None:
+            rows = self.m_connection.execute(
+                """
+                SELECT *
+                FROM positions
+                ORDER BY position_id ASC
+                """
+            ).fetchall()
+        else:
+            rows = self.m_connection.execute(
+                """
+                SELECT *
+                FROM positions
+                WHERE account_id = ?
+                ORDER BY position_id ASC
+                """,
+                (account_id,),
+            ).fetchall()
 
         return [self._row_to_position(row) for row in rows]
 
@@ -484,21 +503,43 @@ class JournalRepository:
 
         return self._row_to_execution(row)
 
-    def get_executions(self) -> list[TradeExecution]:
+    def get_executions(
+        self,
+        account_id: Optional[int] = None,
+    ) -> list[TradeExecution]:
         """
-        Retrieve all trade executions chronologically.
+        Retrieve trade executions, optionally filtered by account.
+
+        Args:
+            account_id:
+                Optional trading account identifier. When omitted,
+                executions from all accounts are returned.
 
         Returns:
             list[TradeExecution]:
-                Executions ordered by timestamp and execution identifier.
+                Matching executions ordered by timestamp and
+                execution identifier.
         """
-        rows = self.m_connection.execute(
-            """
-            SELECT *
-            FROM trade_executions
-            ORDER BY executed_at ASC, execution_id ASC
-            """
-        ).fetchall()
+        if account_id is None:
+            rows = self.m_connection.execute(
+                """
+                SELECT *
+                FROM trade_executions
+                ORDER BY executed_at ASC, execution_id ASC
+                """
+            ).fetchall()
+        else:
+            rows = self.m_connection.execute(
+                """
+                SELECT e.*
+                FROM trade_executions AS e
+                JOIN positions AS p
+                    ON e.position_id = p.position_id
+                WHERE p.account_id = ?
+                ORDER BY e.executed_at ASC, e.execution_id ASC
+                """,
+                (account_id,),
+            ).fetchall()
 
         return [self._row_to_execution(row) for row in rows]
 
@@ -695,21 +736,39 @@ class JournalRepository:
 
     def get_account_transactions(
         self,
+        account_id: Optional[int] = None,
     ) -> list[AccountTransaction]:
         """
-        Retrieve all account transactions chronologically.
+        Retrieve account transactions, optionally filtered by account.
+
+        Args:
+            account_id:
+                Optional trading account identifier. When omitted,
+                transactions from all accounts are returned.
 
         Returns:
             list[AccountTransaction]:
-                Transactions ordered by timestamp and ID.
+                Matching transactions ordered by timestamp and
+                transaction identifier.
         """
-        rows = self.m_connection.execute(
-            """
-            SELECT *
-            FROM account_transactions
-            ORDER BY occurred_at ASC, transaction_id ASC
-            """
-        ).fetchall()
+        if account_id is None:
+            rows = self.m_connection.execute(
+                """
+                SELECT *
+                FROM account_transactions
+                ORDER BY occurred_at ASC, transaction_id ASC
+                """
+            ).fetchall()
+        else:
+            rows = self.m_connection.execute(
+                """
+                SELECT *
+                FROM account_transactions
+                WHERE account_id = ?
+                ORDER BY occurred_at ASC, transaction_id ASC
+                """,
+                (account_id,),
+            ).fetchall()
 
         return [self._row_to_account_transaction(row) for row in rows]
 
