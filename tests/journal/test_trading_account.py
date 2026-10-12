@@ -3,8 +3,8 @@
 # Purpose: Pytest file for test_trade_account.py.
 # =============================================================================
 
-from stonks.journal.account_type import AccountType
-from stonks.journal.trading_account import TradingAccount
+from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.trading_account import TradingAccount
 
 
 def test_create_trading_account() -> None:

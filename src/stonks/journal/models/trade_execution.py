@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from stonks.journal.execution_side import ExecutionSide
+from stonks.journal.models.execution_side import ExecutionSide
 
 
 @dataclass

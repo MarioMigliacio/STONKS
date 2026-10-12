@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from stonks.journal.account_transaction_type import (
+from stonks.journal.models.account_transaction_type import (
     AccountTransactionType,
 )
 

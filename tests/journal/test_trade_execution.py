@@ -8,8 +8,8 @@ from decimal import Decimal
 
 import pytest
 
-from stonks.journal.execution_side import ExecutionSide
-from stonks.journal.trade_execution import TradeExecution
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.trade_execution import TradeExecution
 
 
 def create_execution(

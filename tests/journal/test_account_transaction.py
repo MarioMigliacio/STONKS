@@ -8,8 +8,8 @@ from decimal import Decimal
 
 import pytest
 
-from stonks.journal.account_transaction import AccountTransaction
-from stonks.journal.account_transaction_type import (
+from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import (
     AccountTransactionType,
 )
 

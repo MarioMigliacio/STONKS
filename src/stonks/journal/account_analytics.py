@@ -8,10 +8,10 @@ from decimal import Decimal
 from typing import List
 
 from stonks.journal.account_metrics import AccountMetrics
-from stonks.journal.account_transaction import AccountTransaction
-from stonks.journal.account_transaction_type import AccountTransactionType
+from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import AccountTransactionType
+from stonks.journal.models.trade_execution import TradeExecution
 from stonks.journal.position_metrics import PositionMetrics
-from stonks.journal.trade_execution import TradeExecution
 
 
 def calculate_account_metrics(

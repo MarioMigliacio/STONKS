@@ -6,13 +6,13 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from stonks.journal.account_transaction import AccountTransaction
-from stonks.journal.account_transaction_type import (
+from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import (
     AccountTransactionType,
 )
-from stonks.journal.execution_side import ExecutionSide
-from stonks.journal.position import Position
-from stonks.journal.trade_execution import TradeExecution
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.position import Position
+from stonks.journal.models.trade_execution import TradeExecution
 
 
 def validate_timestamp(value: datetime) -> None:

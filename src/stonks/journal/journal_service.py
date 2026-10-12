@@ -9,9 +9,7 @@ from dataclasses import replace
 from decimal import Decimal
 from typing import Generator, Optional
 
-from stonks.journal.account_transaction import AccountTransaction
 from stonks.journal.account_validation import validate_trading_account
-from stonks.journal.execution_side import ExecutionSide
 from stonks.journal.journal_repository import JournalRepository
 from stonks.journal.journal_validation import (
     normalize_timestamp,
@@ -19,9 +17,11 @@ from stonks.journal.journal_validation import (
     validate_execution,
     validate_position,
 )
-from stonks.journal.position import Position
-from stonks.journal.trade_execution import TradeExecution
-from stonks.journal.trading_account import TradingAccount
+from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.position import Position
+from stonks.journal.models.trade_execution import TradeExecution
+from stonks.journal.models.trading_account import TradingAccount
 
 
 class JournalService:

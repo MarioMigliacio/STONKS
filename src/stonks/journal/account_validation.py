@@ -3,8 +3,8 @@
 # Purpose: Validates trading account data and business rules.
 # =============================================================================
 
-from stonks.journal.account_type import AccountType
-from stonks.journal.trading_account import TradingAccount
+from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.trading_account import TradingAccount
 
 
 def validate_trading_account(account: TradingAccount) -> None:

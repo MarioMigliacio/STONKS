@@ -8,11 +8,6 @@ from decimal import Decimal
 
 import pytest
 
-from stonks.journal.account_transaction import AccountTransaction
-from stonks.journal.account_transaction_type import (
-    AccountTransactionType,
-)
-from stonks.journal.execution_side import ExecutionSide
 from stonks.journal.journal_validation import (
     normalize_timestamp,
     validate_account_transaction,
@@ -20,7 +15,12 @@ from stonks.journal.journal_validation import (
     validate_execution,
     validate_timestamp,
 )
-from stonks.journal.trade_execution import TradeExecution
+from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import (
+    AccountTransactionType,
+)
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.trade_execution import TradeExecution
 
 
 def create_test_execution() -> TradeExecution:

@@ -7,12 +7,12 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 
-from stonks.journal.execution_side import ExecutionSide
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.position_status import PositionStatus
+from stonks.journal.models.trade_execution import TradeExecution
 from stonks.journal.position_analytics import (
     calculate_position_metrics,
 )
-from stonks.journal.position_status import PositionStatus
-from stonks.journal.trade_execution import TradeExecution
 
 
 def make_execution(

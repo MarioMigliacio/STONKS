@@ -10,10 +10,6 @@ from pathlib import Path
 
 import pytest
 
-from stonks.journal.account_transaction import AccountTransaction
-from stonks.journal.account_transaction_type import AccountTransactionType
-from stonks.journal.account_type import AccountType
-from stonks.journal.execution_side import ExecutionSide
 from stonks.journal.journal_database import (
     create_connection,
     initialize_database,
@@ -21,9 +17,13 @@ from stonks.journal.journal_database import (
 from stonks.journal.journal_repository import (
     JournalRepository,
 )
-from stonks.journal.position import Position
-from stonks.journal.trade_execution import TradeExecution
-from stonks.journal.trading_account import TradingAccount
+from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import AccountTransactionType
+from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.position import Position
+from stonks.journal.models.trade_execution import TradeExecution
+from stonks.journal.models.trading_account import TradingAccount
 
 
 @pytest.fixture

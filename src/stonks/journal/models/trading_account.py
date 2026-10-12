@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from stonks.journal.account_type import AccountType
+from stonks.journal.models.account_type import AccountType
 
 
 @dataclass

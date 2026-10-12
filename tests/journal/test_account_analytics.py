@@ -9,11 +9,11 @@ from decimal import Decimal
 from stonks.journal.account_analytics import (
     calculate_account_metrics,
 )
-from stonks.journal.account_transaction import AccountTransaction
-from stonks.journal.account_transaction_type import AccountTransactionType
-from stonks.journal.execution_side import ExecutionSide
+from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import AccountTransactionType
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.trade_execution import TradeExecution
 from stonks.journal.position_analytics import calculate_position_metrics
-from stonks.journal.trade_execution import TradeExecution
 
 
 def make_transaction(
