@@ -9,7 +9,7 @@ from decimal import Decimal
 
 import pytest
 
-from stonks.journal.journal_export import export_journal_to_csv
+from stonks.journal.export.journal_export import export_journal_to_csv
 from stonks.journal.models.execution_side import ExecutionSide
 from stonks.journal.models.trade_execution import TradeExecution
 from stonks.journal.persistence.journal_database import (

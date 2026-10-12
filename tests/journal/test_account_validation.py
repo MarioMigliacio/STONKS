@@ -5,9 +5,9 @@
 
 import pytest
 
-from stonks.journal.validation.account_validation import validate_trading_account
 from stonks.journal.models.account_type import AccountType
 from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.validation.account_validation import validate_trading_account
 
 
 def make_account(**overrides) -> TradingAccount:
