@@ -83,9 +83,11 @@ See [C.I.A. News Subsystem](docs/cia.md) for details.
 - Default account selection and account archival
 - Account-owned positions and trade executions
 - Deposits, withdrawals, and account-level cash transactions
-- Position, trade, and account performance analytics
-- Trading pattern analysis
-- Repository and service architecture
+- Position-level weighted-average cost and realized P&L analytics
+- Account-level cash flow and financial performance metrics
+- Consolidated multi-account portfolio analytics
+- Repository, service, and analytics architecture
+- Application bootstrap and managed SQLite connection lifecycle
 - Account ownership validation and database integrity constraints
 - Consistent SQLite database backups and restoration
 - Human-readable CSV exports
@@ -127,7 +129,6 @@ STONKS/
 │   │   ├── intraday/
 │   │   └── quotes/
 │   └── journal/
-│       └── templates/
 ├── docs/
 ├── scripts/
 ├── src/
@@ -137,6 +138,13 @@ STONKS/
 │       ├── cia/
 │       ├── config/
 │       ├── journal/
+│       │   ├── analytics/
+│       │   ├── export/
+│       │   ├── models/
+│       │   ├── persistence/
+│       │   ├── services/
+│       │   ├── validation/
+│       │   └── journal_context.py
 │       ├── models/
 │       ├── news/
 │       └── scanner/
@@ -293,7 +301,7 @@ STONKS uses **Pytest** for automated testing and **Ruff** for linting and format
 
 The test suite covers scanner calculations, API response handling, caching, float-data processing, market-session selection, price-action analysis, and C.I.A. catalyst intelligence.
 
-Journal tests additionally cover SQLite schema initialization, trading account management, position and execution persistence, account transactions, financial analytics, ownership validation, database integrity, backup and restoration, and CSV exports.
+Journal tests additionally cover SQLite schema initialization, trading account management, position and execution persistence, account transactions, financial analytics, ownership validation, database integrity, backup and restoration, and CSV exports as well as portfolio aggregation, financial invariants, and application bootstrap testing.
 
 The repository also uses GitHub Actions as a quality gate for automated test and Ruff checks.
 
