@@ -5,6 +5,8 @@
 
 from decimal import Decimal
 
+import pytest
+
 from stonks.journal.account_metrics import AccountMetrics
 from stonks.journal.portfolio_analytics import calculate_portfolio_metrics
 
@@ -49,6 +51,51 @@ def create_test_account_metrics(
         open_position_cost_basis=Decimal(cost_basis),
         equity_at_cost_basis=Decimal(cash) + Decimal(cost_basis),
     )
+
+
+@pytest.mark.parametrize(
+    "accounts",
+    [
+        [],
+        [
+            create_test_account_metrics(
+                deposits="1000",
+                withdrawals="100",
+                cash="500",
+                trading_pnl="75",
+                fees="5",
+                cost_basis="400",
+            )
+        ],
+        [
+            create_test_account_metrics(
+                deposits="2000",
+                withdrawals="200",
+                cash="1200",
+                trading_pnl="150",
+                fees="10",
+                cost_basis="800",
+            ),
+            create_test_account_metrics(
+                deposits="1500",
+                withdrawals="100",
+                cash="900",
+                trading_pnl="-50",
+                fees="5",
+                cost_basis="600",
+            ),
+        ],
+    ],
+)
+def test_portfolio_financial_invariants(accounts) -> None:
+    """Verify aggregated portfolio metrics preserve accounting identities."""
+    metrics = calculate_portfolio_metrics(accounts)
+
+    assert metrics.net_contributions == (metrics.total_deposits - metrics.total_withdrawals)
+
+    assert metrics.net_realized_pnl == (metrics.realized_trading_pnl - metrics.account_fees)
+
+    assert metrics.equity_at_cost_basis == (metrics.cash_balance + metrics.open_position_cost_basis)
 
 
 def test_empty_portfolio() -> None:

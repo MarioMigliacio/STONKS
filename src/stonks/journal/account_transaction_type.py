@@ -22,9 +22,18 @@ class AccountTransactionType(str, Enum):
 
         ADJUSTMENT:
             Other account cash adjustments.
+
+        TRANSFER_IN:
+            Funds received from another tracked trading account.
+
+        TRANSFER_OUT:
+            Funds sent to another tracked trading account.
+
     """
 
     DEPOSIT = "DEPOSIT"
     WITHDRAWAL = "WITHDRAWAL"
     FEE = "FEE"
     ADJUSTMENT = "ADJUSTMENT"
+    TRANSFER_IN = "TRANSFER_IN"
+    TRANSFER_OUT = "TRANSFER_OUT"

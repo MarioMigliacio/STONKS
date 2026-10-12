@@ -56,19 +56,24 @@ class AccountTransaction:
         """
         Calculate the signed account cash movement.
 
-        Deposits increase cash, while withdrawals and fees
-        decrease cash. Adjustments retain their signed amount.
+        Deposits and incoming transfers increase cash.
+        Withdrawals, fees, and outgoing transfers decrease cash.
+        Adjustments retain their signed amount.
 
         Returns:
             Decimal:
                 Signed cash movement for the transaction.
         """
-        if self.transaction_type == AccountTransactionType.DEPOSIT:
+        if self.transaction_type in (
+            AccountTransactionType.DEPOSIT,
+            AccountTransactionType.TRANSFER_IN,
+        ):
             return self.amount
 
         if self.transaction_type in (
             AccountTransactionType.WITHDRAWAL,
             AccountTransactionType.FEE,
+            AccountTransactionType.TRANSFER_OUT,
         ):
             return -self.amount
 
