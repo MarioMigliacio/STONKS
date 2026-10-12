@@ -8,7 +8,7 @@ from decimal import Decimal
 
 import pytest
 
-from stonks.journal.journal_validation import (
+from stonks.journal.validation.journal_validation import (
     normalize_timestamp,
     validate_account_transaction,
     validate_decimal,

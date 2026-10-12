@@ -9,8 +9,8 @@ from dataclasses import replace
 from decimal import Decimal
 from typing import Generator, Optional
 
-from stonks.journal.account_validation import validate_trading_account
-from stonks.journal.journal_validation import (
+from stonks.journal.validation.account_validation import validate_trading_account
+from stonks.journal.validation.journal_validation import (
     normalize_timestamp,
     validate_account_transaction,
     validate_execution,
