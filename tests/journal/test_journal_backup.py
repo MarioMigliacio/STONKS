@@ -7,12 +7,12 @@ import sqlite3
 
 import pytest
 
-from stonks.journal.journal_backup import (
+from stonks.journal.persistence.journal_backup import (
     create_database_backup,
     restore_database_backup,
     validate_database_backup,
 )
-from stonks.journal.journal_database import (
+from stonks.journal.persistence.journal_database import (
     SCHEMA_VERSION,
     create_connection,
     get_schema_version,

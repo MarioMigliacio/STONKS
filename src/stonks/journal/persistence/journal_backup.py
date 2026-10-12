@@ -13,7 +13,7 @@ from stonks.config.journal_paths import (
     BACKUP_DIRECTORY,
     DATABASE_FILE,
 )
-from stonks.journal.journal_database import (
+from stonks.journal.persistence.journal_database import (
     SCHEMA_VERSION,
     get_schema_version,
 )

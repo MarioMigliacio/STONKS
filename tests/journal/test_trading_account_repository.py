@@ -7,13 +7,13 @@ import sqlite3
 
 import pytest
 
-from stonks.journal.journal_database import (
+from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.persistence.journal_database import (
     create_connection,
     create_trading_accounts_table,
 )
-from stonks.journal.journal_repository import JournalRepository
-from stonks.journal.models.account_type import AccountType
-from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.persistence.journal_repository import JournalRepository
 
 
 @pytest.fixture

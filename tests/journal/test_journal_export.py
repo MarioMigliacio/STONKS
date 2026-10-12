@@ -9,14 +9,14 @@ from decimal import Decimal
 
 import pytest
 
-from stonks.journal.journal_database import (
+from stonks.journal.journal_export import export_journal_to_csv
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.trade_execution import TradeExecution
+from stonks.journal.persistence.journal_database import (
     create_connection,
     initialize_database,
 )
-from stonks.journal.journal_export import export_journal_to_csv
-from stonks.journal.journal_repository import JournalRepository
-from stonks.journal.models.execution_side import ExecutionSide
-from stonks.journal.models.trade_execution import TradeExecution
+from stonks.journal.persistence.journal_repository import JournalRepository
 
 
 def create_test_account(connection) -> int:

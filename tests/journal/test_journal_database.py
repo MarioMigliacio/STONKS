@@ -7,7 +7,7 @@ import sqlite3
 
 import pytest
 
-from stonks.journal.journal_database import (
+from stonks.journal.persistence.journal_database import (
     SCHEMA_VERSION,
     create_connection,
     get_schema_version,

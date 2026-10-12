@@ -11,7 +11,7 @@ from stonks.journal.analytics.account_metrics import AccountMetrics
 from stonks.journal.analytics.portfolio_analytics import calculate_portfolio_metrics
 from stonks.journal.analytics.portfolio_metrics import PortfolioMetrics
 from stonks.journal.analytics.position_analytics import calculate_position_metrics
-from stonks.journal.journal_repository import JournalRepository
+from stonks.journal.persistence.journal_repository import JournalRepository
 
 
 def analyze_account(
