@@ -8,7 +8,6 @@ from decimal import Decimal
 
 from stonks.journal.analytics.account_analytics import calculate_account_metrics
 from stonks.journal.analytics.position_analytics import calculate_position_metrics
-from stonks.journal.journal_service import JournalService
 from stonks.journal.models.account_transaction import AccountTransaction
 from stonks.journal.models.account_transaction_type import AccountTransactionType
 from stonks.journal.models.account_type import AccountType
@@ -21,6 +20,7 @@ from stonks.journal.persistence.journal_database import (
     initialize_database,
 )
 from stonks.journal.persistence.journal_repository import JournalRepository
+from stonks.journal.services.journal_service import JournalService
 
 
 def test_persisted_account_transactions(tmp_path) -> None:

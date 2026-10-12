@@ -9,7 +9,6 @@ from decimal import Decimal
 from stonks.journal.analytics.position_analytics import (
     calculate_position_metrics,
 )
-from stonks.journal.journal_service import JournalService
 from stonks.journal.models.account_type import AccountType
 from stonks.journal.models.execution_side import ExecutionSide
 from stonks.journal.models.position import Position
@@ -21,6 +20,7 @@ from stonks.journal.persistence.journal_database import (
     initialize_database,
 )
 from stonks.journal.persistence.journal_repository import JournalRepository
+from stonks.journal.services.journal_service import JournalService
 
 
 def test_persisted_position_analytics(tmp_path) -> None:

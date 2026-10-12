@@ -8,7 +8,6 @@ from decimal import Decimal
 
 import pytest
 
-from stonks.journal.journal_service import JournalService
 from stonks.journal.models.account_transaction import AccountTransaction
 from stonks.journal.models.account_transaction_type import AccountTransactionType
 from stonks.journal.models.account_type import AccountType
@@ -18,6 +17,7 @@ from stonks.journal.persistence.journal_database import (
     create_connection,
     initialize_database,
 )
+from stonks.journal.services.journal_service import JournalService
 
 
 @pytest.fixture
