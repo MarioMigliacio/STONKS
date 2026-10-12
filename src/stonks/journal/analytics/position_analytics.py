@@ -6,10 +6,10 @@
 from decimal import Decimal
 from typing import List
 
+from stonks.journal.analytics.position_metrics import PositionMetrics
 from stonks.journal.models.execution_side import ExecutionSide
 from stonks.journal.models.position_status import PositionStatus
 from stonks.journal.models.trade_execution import TradeExecution
-from stonks.journal.position_metrics import PositionMetrics
 
 
 def calculate_position_metrics(

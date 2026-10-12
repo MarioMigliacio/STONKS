@@ -6,8 +6,8 @@
 from decimal import Decimal
 from typing import List
 
-from stonks.journal.account_metrics import AccountMetrics
-from stonks.journal.portfolio_metrics import PortfolioMetrics
+from stonks.journal.analytics.account_metrics import AccountMetrics
+from stonks.journal.analytics.portfolio_metrics import PortfolioMetrics
 
 
 def calculate_portfolio_metrics(

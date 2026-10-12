@@ -7,8 +7,8 @@ from decimal import Decimal
 
 import pytest
 
-from stonks.journal.account_metrics import AccountMetrics
-from stonks.journal.portfolio_analytics import calculate_portfolio_metrics
+from stonks.journal.analytics.account_metrics import AccountMetrics
+from stonks.journal.analytics.portfolio_analytics import calculate_portfolio_metrics
 
 
 def create_test_account_metrics(

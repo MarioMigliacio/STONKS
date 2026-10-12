@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from stonks.journal.journal_analyzer import (
+from stonks.journal.analytics.journal_analyzer import (
     analyze_account,
     analyze_portfolio,
 )

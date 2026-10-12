@@ -6,12 +6,12 @@
 from collections import defaultdict
 from typing import List, Optional
 
-from stonks.journal.account_analytics import calculate_account_metrics
-from stonks.journal.account_metrics import AccountMetrics
+from stonks.journal.analytics.account_analytics import calculate_account_metrics
+from stonks.journal.analytics.account_metrics import AccountMetrics
+from stonks.journal.analytics.portfolio_analytics import calculate_portfolio_metrics
+from stonks.journal.analytics.portfolio_metrics import PortfolioMetrics
+from stonks.journal.analytics.position_analytics import calculate_position_metrics
 from stonks.journal.journal_repository import JournalRepository
-from stonks.journal.portfolio_analytics import calculate_portfolio_metrics
-from stonks.journal.portfolio_metrics import PortfolioMetrics
-from stonks.journal.position_analytics import calculate_position_metrics
 
 
 def analyze_account(

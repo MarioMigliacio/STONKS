@@ -6,7 +6,8 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from stonks.journal.account_analytics import calculate_account_metrics
+from stonks.journal.analytics.account_analytics import calculate_account_metrics
+from stonks.journal.analytics.position_analytics import calculate_position_metrics
 from stonks.journal.journal_database import (
     create_connection,
     initialize_database,
@@ -20,7 +21,6 @@ from stonks.journal.models.execution_side import ExecutionSide
 from stonks.journal.models.position import Position
 from stonks.journal.models.trade_execution import TradeExecution
 from stonks.journal.models.trading_account import TradingAccount
-from stonks.journal.position_analytics import calculate_position_metrics
 
 
 def test_persisted_account_transactions(tmp_path) -> None:
