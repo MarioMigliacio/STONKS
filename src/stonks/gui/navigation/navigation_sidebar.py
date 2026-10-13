@@ -1,10 +1,11 @@
 # =============================================================================
 # File: navigation_sidebar.py
-# Purpose: Provides sidebar controls for the STONKS application.
+# Purpose: Provides sidebar navigation for the STONKS application.
 # =============================================================================
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
+    QButtonGroup,
     QFrame,
     QLabel,
     QPushButton,
@@ -16,16 +17,21 @@ class NavigationSidebar(QFrame):
     """
     Represent the persistent STONKS navigation sidebar.
 
-    Provides controls for accessing the application's primary
-    functional areas.
+    Provides navigation controls and visually identifies the
+    currently selected application page.
+
+    Attributes:
+        m_button_group:
+            Exclusive button group managing navigation selection.
     """
 
     navigation_requested = Signal(str)
 
     def __init__(self) -> None:
-        """Initialize the sidebar and its navigation controls."""
+        """Initialize the sidebar and navigation controls."""
         super().__init__()
 
+        self.setObjectName("navigationSidebar")
         self.setFixedWidth(220)
 
         self._setup_ui()
@@ -35,26 +41,32 @@ class NavigationSidebar(QFrame):
         layout = QVBoxLayout(self)
 
         title = QLabel("STONKS")
-        layout.addWidget(title)
+        title.setObjectName("applicationTitle")
 
+        layout.addWidget(title)
         layout.addSpacing(20)
 
-        self.m_dashboard_button = QPushButton("Dashboard")
-        self.m_journal_button = QPushButton("Journal")
-        self.m_accounts_button = QPushButton("Accounts")
-        self.m_scanner_button = QPushButton("Scanner")
-        self.m_cia_button = QPushButton("C.I.A.")
+        self.m_button_group = QButtonGroup(self)
+        self.m_button_group.setExclusive(True)
 
-        layout.addWidget(self.m_dashboard_button)
-        layout.addWidget(self.m_journal_button)
-        layout.addWidget(self.m_accounts_button)
-        layout.addWidget(self.m_scanner_button)
-        layout.addWidget(self.m_cia_button)
+        page_definitions = {
+            "dashboard": "Dashboard",
+            "journal": "Journal",
+            "accounts": "Accounts",
+            "scanner": "Scanner",
+            "cia": "C.I.A.",
+        }
+
+        for page_name, display_name in page_definitions.items():
+            button = QPushButton(display_name)
+            button.setCheckable(True)
+
+            self.m_button_group.addButton(button)
+            layout.addWidget(button)
+
+            button.clicked.connect(lambda checked=False, name=page_name: self.navigation_requested.emit(name))
+
+            if page_name == "dashboard":
+                button.setChecked(True)
 
         layout.addStretch()
-
-        self.m_dashboard_button.clicked.connect(lambda: self.navigation_requested.emit("dashboard"))
-        self.m_journal_button.clicked.connect(lambda: self.navigation_requested.emit("journal"))
-        self.m_accounts_button.clicked.connect(lambda: self.navigation_requested.emit("accounts"))
-        self.m_scanner_button.clicked.connect(lambda: self.navigation_requested.emit("scanner"))
-        self.m_cia_button.clicked.connect(lambda: self.navigation_requested.emit("cia"))
