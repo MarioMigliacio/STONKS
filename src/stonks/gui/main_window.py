@@ -27,7 +27,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("STONKS - Trading Intelligence")
-        # self.resize(1200, 800) # kind of like this reduced size instead.
+        self.resize(900, 600)
         self.setMinimumSize(900, 600)
 
         self._setup_ui()
