@@ -3,17 +3,15 @@
 # Purpose: Defines the main desktop application window for STONKS.
 # =============================================================================
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
-    QLabel,
     QMainWindow,
     QStackedWidget,
-    QVBoxLayout,
     QWidget,
 )
 
 from stonks.gui.navigation.navigation_sidebar import NavigationSidebar
+from stonks.gui.pages.placeholder_page import PlaceholderPage
 
 
 class MainWindow(QMainWindow):
@@ -29,7 +27,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("STONKS - Trading Intelligence")
-        self.resize(1200, 800)
+        # self.resize(1200, 800) # kind of like this reduced size instead.
         self.setMinimumSize(900, 600)
 
         self._setup_ui()
@@ -57,13 +55,7 @@ class MainWindow(QMainWindow):
 
         # Create a placeholder widget for each page.
         for page_name, display_name in page_definitions.items():
-            page = QWidget()
-            page_layout = QVBoxLayout(page)
-
-            label = QLabel(display_name)
-            label.setAlignment(Qt.AlignCenter)
-
-            page_layout.addWidget(label)
+            page = PlaceholderPage(display_name)
 
             page_index = self.m_pages.addWidget(page)
             self.m_page_indices[page_name] = page_index
