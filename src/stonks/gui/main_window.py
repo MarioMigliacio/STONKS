@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -20,7 +21,7 @@ class MainWindow(QMainWindow):
     Represent the primary STONKS desktop application window.
 
     Coordinates the persistent navigation sidebar and central
-    application content.
+    application pages.
     """
 
     def __init__(self) -> None:
@@ -34,28 +35,60 @@ class MainWindow(QMainWindow):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        """Construct the main application shell."""
+        """Construct the application shell and navigation pages."""
         central_widget = QWidget(self)
-
         main_layout = QHBoxLayout(central_widget)
 
+        # Create the persistent navigation sidebar.
         self.m_sidebar = NavigationSidebar()
 
-        content_widget = QWidget()
-        content_layout = QVBoxLayout(content_widget)
+        # Create the container for application pages.
+        self.m_pages = QStackedWidget()
+        self.m_page_indices = {}
 
-        title = QLabel("Welcome to STONKS")
-        title.setAlignment(Qt.AlignCenter)
+        # Define our initial application pages.
+        page_definitions = {
+            "dashboard": "Dashboard",
+            "journal": "Trading Journal",
+            "accounts": "Trading Accounts",
+            "scanner": "Market Scanner",
+            "cia": "Catalyst Intelligence Analysis",
+        }
 
-        subtitle = QLabel("Trading Intelligence Console")
-        subtitle.setAlignment(Qt.AlignCenter)
+        # Create a placeholder widget for each page.
+        for page_name, display_name in page_definitions.items():
+            page = QWidget()
+            page_layout = QVBoxLayout(page)
 
-        content_layout.addStretch()
-        content_layout.addWidget(title)
-        content_layout.addWidget(subtitle)
-        content_layout.addStretch()
+            label = QLabel(display_name)
+            label.setAlignment(Qt.AlignCenter)
 
+            page_layout.addWidget(label)
+
+            page_index = self.m_pages.addWidget(page)
+            self.m_page_indices[page_name] = page_index
+
+        # Add the sidebar and page container to the main layout.
         main_layout.addWidget(self.m_sidebar)
-        main_layout.addWidget(content_widget, stretch=1)
+        main_layout.addWidget(self.m_pages, stretch=1)
 
+        # Connect sidebar navigation requests to the main window.
+        self.m_sidebar.navigation_requested.connect(self._navigate_to)
+
+        # Assign the completed layout to the window.
         self.setCentralWidget(central_widget)
+
+    def _navigate_to(self, page_name: str) -> None:
+        """
+        Display the requested application page.
+
+        Args:
+            page_name:
+                Identifier of the page to display.
+        """
+        page_index = self.m_page_indices.get(page_name)
+
+        if page_index is None:
+            return
+
+        self.m_pages.setCurrentIndex(page_index)

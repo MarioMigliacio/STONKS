@@ -3,6 +3,7 @@
 # Purpose: Provides sidebar controls for the STONKS application.
 # =============================================================================
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QFrame,
     QLabel,
@@ -18,6 +19,8 @@ class NavigationSidebar(QFrame):
     Provides controls for accessing the application's primary
     functional areas.
     """
+
+    navigation_requested = Signal(str)
 
     def __init__(self) -> None:
         """Initialize the sidebar and its navigation controls."""
@@ -49,3 +52,9 @@ class NavigationSidebar(QFrame):
         layout.addWidget(self.m_cia_button)
 
         layout.addStretch()
+
+        self.m_dashboard_button.clicked.connect(lambda: self.navigation_requested.emit("dashboard"))
+        self.m_journal_button.clicked.connect(lambda: self.navigation_requested.emit("journal"))
+        self.m_accounts_button.clicked.connect(lambda: self.navigation_requested.emit("accounts"))
+        self.m_scanner_button.clicked.connect(lambda: self.navigation_requested.emit("scanner"))
+        self.m_cia_button.clicked.connect(lambda: self.navigation_requested.emit("cia"))
