@@ -3,3 +3,4 @@ pandas
 python-dotenv
 pytest
 ruff
+PySide6==6.10.3
