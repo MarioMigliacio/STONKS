@@ -3,7 +3,7 @@
 # Purpose: Pytest file for test_position.py.
 # =============================================================================
 
-from stonks.journal.position import Position
+from stonks.journal.models.position import Position
 
 
 def test_create_position() -> None:

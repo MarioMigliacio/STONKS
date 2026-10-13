@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional
 
-from stonks.journal.position_status import PositionStatus
+from stonks.journal.models.position_status import PositionStatus
 
 
 @dataclass(frozen=True)

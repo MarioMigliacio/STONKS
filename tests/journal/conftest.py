@@ -5,15 +5,15 @@
 
 import pytest
 
-from stonks.journal.account_type import AccountType
-from stonks.journal.journal_database import (
+from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.position import Position
+from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.persistence.journal_database import (
     create_connection,
     initialize_database,
 )
-from stonks.journal.journal_repository import JournalRepository
-from stonks.journal.journal_service import JournalService
-from stonks.journal.position import Position
-from stonks.journal.trading_account import TradingAccount
+from stonks.journal.persistence.journal_repository import JournalRepository
+from stonks.journal.services.journal_service import JournalService
 
 
 @pytest.fixture

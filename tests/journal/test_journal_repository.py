@@ -10,20 +10,20 @@ from pathlib import Path
 
 import pytest
 
-from stonks.journal.account_transaction import AccountTransaction
-from stonks.journal.account_transaction_type import AccountTransactionType
-from stonks.journal.account_type import AccountType
-from stonks.journal.execution_side import ExecutionSide
-from stonks.journal.journal_database import (
+from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import AccountTransactionType
+from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.position import Position
+from stonks.journal.models.trade_execution import TradeExecution
+from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.persistence.journal_database import (
     create_connection,
     initialize_database,
 )
-from stonks.journal.journal_repository import (
+from stonks.journal.persistence.journal_repository import (
     JournalRepository,
 )
-from stonks.journal.position import Position
-from stonks.journal.trade_execution import TradeExecution
-from stonks.journal.trading_account import TradingAccount
 
 
 @pytest.fixture
@@ -47,6 +47,20 @@ def repository(tmp_path: Path):
         yield repository
     finally:
         connection.close()
+
+
+@pytest.fixture
+def second_account_id(repository: JournalRepository) -> int:
+    """Create a second trading account for ownership filtering tests."""
+    with repository.m_connection:
+        return repository.create_trading_account(
+            TradingAccount(
+                name="Test Cash Account",
+                account_type=AccountType.CASH,
+                broker="Webull",
+                is_default=False,
+            )
+        )
 
 
 def create_test_position(account_id: int) -> Position:
@@ -155,6 +169,30 @@ def test_get_positions(repository: JournalRepository) -> None:
 def test_get_positions_empty(repository: JournalRepository) -> None:
     """Verify retrieving positions from an empty database returns a list."""
     assert repository.get_positions() == []
+
+
+def test_get_positions_by_account(
+    repository: JournalRepository,
+    second_account_id: int,
+) -> None:
+    """Verify position retrieval respects account ownership."""
+    first_account_id = repository.test_account_id
+
+    with repository.m_connection:
+        first_position_id = repository.create_position(create_test_position(first_account_id))
+        second_position_id = repository.create_position(create_test_position(second_account_id))
+
+    all_positions = repository.get_positions()
+    first_positions = repository.get_positions(account_id=first_account_id)
+    second_positions = repository.get_positions(account_id=second_account_id)
+
+    assert [position.position_id for position in all_positions] == [
+        first_position_id,
+        second_position_id,
+    ]
+    assert [position.position_id for position in first_positions] == [first_position_id]
+    assert [position.position_id for position in second_positions] == [second_position_id]
+    assert repository.get_positions(account_id=999) == []
 
 
 def test_get_missing_position(repository) -> None:
@@ -317,6 +355,47 @@ def test_get_executions_empty(repository: JournalRepository) -> None:
     assert repository.get_executions() == []
 
 
+def test_get_executions_by_account(
+    repository: JournalRepository,
+    second_account_id: int,
+) -> None:
+    """Verify account filtering preserves execution chronology."""
+    first_account_id = repository.test_account_id
+
+    with repository.m_connection:
+        first_position_id = repository.create_position(create_test_position(first_account_id))
+        second_position_id = repository.create_position(create_test_position(second_account_id))
+
+        later = create_test_execution(first_position_id)
+        later.executed_at = datetime(2026, 10, 8, 16, 0, tzinfo=timezone.utc)
+
+        earlier = create_test_execution(second_position_id)
+        earlier.executed_at = datetime(2026, 10, 8, 14, 0, tzinfo=timezone.utc)
+
+        latest = create_test_execution(second_position_id)
+        latest.executed_at = datetime(2026, 10, 8, 17, 0, tzinfo=timezone.utc)
+
+        later_id = repository.create_execution(later)
+        earlier_id = repository.create_execution(earlier)
+        latest_id = repository.create_execution(latest)
+
+    all_executions = repository.get_executions()
+    first_executions = repository.get_executions(account_id=first_account_id)
+    second_executions = repository.get_executions(account_id=second_account_id)
+
+    assert [execution.execution_id for execution in all_executions] == [
+        earlier_id,
+        later_id,
+        latest_id,
+    ]
+    assert [execution.execution_id for execution in first_executions] == [later_id]
+    assert [execution.execution_id for execution in second_executions] == [
+        earlier_id,
+        latest_id,
+    ]
+    assert repository.get_executions(account_id=999) == []
+
+
 def test_update_execution(repository) -> None:
     """Verify an existing execution can be updated."""
     with repository.m_connection:
@@ -413,6 +492,73 @@ def test_get_account_transactions(repository) -> None:
     assert len(transactions) == 2
     assert transactions[0].transaction_type == (AccountTransactionType.DEPOSIT)
     assert transactions[1].transaction_type == (AccountTransactionType.WITHDRAWAL)
+
+
+def test_get_account_transactions_by_account(
+    repository: JournalRepository,
+    second_account_id: int,
+) -> None:
+    """Verify transaction filtering preserves chronological ordering."""
+    first_account_id = repository.test_account_id
+
+    later = create_test_account_transaction(first_account_id)
+    later.occurred_at = datetime(2026, 10, 8, 16, 0, tzinfo=timezone.utc)
+
+    earlier = create_test_account_transaction(second_account_id)
+    earlier.occurred_at = datetime(2026, 10, 8, 14, 0, tzinfo=timezone.utc)
+
+    latest = create_test_account_transaction(second_account_id)
+    latest.occurred_at = datetime(2026, 10, 8, 17, 0, tzinfo=timezone.utc)
+
+    with repository.m_connection:
+        later_id = repository.create_account_transaction(later)
+        earlier_id = repository.create_account_transaction(earlier)
+        latest_id = repository.create_account_transaction(latest)
+
+    all_transactions = repository.get_account_transactions()
+    first_transactions = repository.get_account_transactions(account_id=first_account_id)
+    second_transactions = repository.get_account_transactions(account_id=second_account_id)
+
+    assert [transaction.transaction_id for transaction in all_transactions] == [
+        earlier_id,
+        later_id,
+        latest_id,
+    ]
+    assert [transaction.transaction_id for transaction in first_transactions] == [later_id]
+    assert [transaction.transaction_id for transaction in second_transactions] == [
+        earlier_id,
+        latest_id,
+    ]
+    assert repository.get_account_transactions(account_id=999) == []
+
+
+def test_archived_account_history_remains_queryable(
+    repository: JournalRepository,
+    second_account_id: int,
+) -> None:
+    """Verify archiving an account does not hide historical records."""
+    with repository.m_connection:
+        position_id = repository.create_position(create_test_position(second_account_id))
+        execution_id = repository.create_execution(create_test_execution(position_id))
+        transaction_id = repository.create_account_transaction(create_test_account_transaction(second_account_id))
+
+        account = repository.get_trading_account(second_account_id)
+        assert account is not None
+
+        account.is_active = False
+        repository.update_trading_account(account)
+
+    assert [position.position_id for position in repository.get_positions(account_id=second_account_id)] == [
+        position_id
+    ]
+
+    assert [execution.execution_id for execution in repository.get_executions(account_id=second_account_id)] == [
+        execution_id
+    ]
+
+    assert [
+        transaction.transaction_id for transaction in repository.get_account_transactions(account_id=second_account_id)
+    ] == [transaction_id]
 
 
 def test_update_account_transaction(repository) -> None:

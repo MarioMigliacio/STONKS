@@ -190,42 +190,94 @@ Database triggers prevent ownership reassignment even when SQL operations bypass
 
 ## Application Architecture
 
-The Journal separates responsibilities into three primary layers.
+The Journal subsystem is organized into six packages, each with a distinct responsibility.
 
-### Models
+| Package       | Responsibility                                                 |
+| ------------- | -------------------------------------------------------------- |
+| `models`      | Trading entities, enumerations, and domain data                |
+| `analytics`   | Position, account, and portfolio financial calculations        |
+| `persistence` | SQLite database management, repository operations, and backups |
+| `services`    | Business-rule enforcement and transactional operations         |
+| `validation`  | Input validation and trading integrity rules                   |
+| `export`      | Human-readable journal data exports                            |
 
-Journal models represent trading accounts, positions, trade executions, and account transactions.
+### Application Bootstrap
 
-### Repository
+`JournalContext` provides a centralized entry point for initializing the journal backend.
 
-`JournalRepository` manages database persistence and record retrieval.
+It initializes the database, creates a configured SQLite connection, and exposes the repository and service dependencies.
 
-It provides CRUD operations without containing user-interface logic.
+The context also supports managed connection cleanup.
 
-### Service
+### Repository and Service
 
-`JournalService` coordinates journal operations, validates business rules, and manages transactional consistency.
+`JournalRepository` handles persistence and data retrieval.
 
-Analytics components operate independently of the user interface.
+`JournalService` coordinates validated operations and manages atomic database transactions.
 
-This separation allows the future GUI to reuse the existing journal functionality.
+Financial analytics remain independent of the user interface.
+
+The future desktop GUI will reuse these components without implementing its own database operations or financial calculations.
 
 ---
 
 ## Journal Analytics
 
-The journal includes analytical components for evaluating trading activity.
+The Journal provides financial analysis at three levels.
 
-These support:
+### Position Analytics
 
-- Position-level trade analysis
-- Realized trading performance
-- Account-level performance calculations
-- Trading pattern analysis
+Position analytics calculate:
 
-The architecture provides a foundation for future consolidated analytics across multiple brokerage accounts.
+- Open share quantity
+- Weighted-average acquisition cost
+- Remaining position cost basis
+- Realized trading profit or loss
+- Position status (Draft, Open, Closed)
+- Holding duration
 
-Portfolio-wide aggregation and inter-account transfer handling are planned for Phase B.
+Partial entries and exits are supported.
+
+### Account Analytics
+
+Account analytics consolidate trading activity and cash transactions for an individual brokerage account.
+
+Reported metrics include:
+
+- Total deposits and withdrawals
+- Net contributions
+- Cash balance
+- Realized trading P&L
+- Account-level fees
+- Net realized P&L
+- Open position cost basis
+- Equity at cost basis
+
+### Portfolio Analytics
+
+`analyze_portfolio()` aggregates financial metrics across multiple trading accounts.
+
+By default, all accounts are included, including archived accounts. Callers may also select specific accounts.
+
+Portfolio analytics preserve account isolation and avoid duplicate account counting.
+
+### Financial Consistency
+
+The following accounting relationships are maintained:
+
+- Net contributions = Deposits − Withdrawals
+- Net realized P&L = Realized trading P&L − Account fees
+- Equity at cost basis = Cash balance + Open position cost basis
+
+### Current Limitations
+
+Equity at cost basis is not a live market valuation.
+
+Unrealized gains and losses are not included.
+
+Inter-account transfers are not yet modeled explicitly. Transfers recorded as ordinary deposits and withdrawals may distort consolidated contribution reporting.
+
+Historical equity curves and advanced trading-pattern analysis remain future enhancements.
 
 ---
 
@@ -300,21 +352,3 @@ Regression coverage includes:
 Temporary SQLite databases isolate tests from production journal data.
 
 ---
-
-## Development Status
-
-**STONKS v2.1.0 — Trading Journal Revamp**
-
-**Phase A: Multi-Account Foundation**
-
-Implemented and regression-tested.
-
-**Phase B: Combined Portfolio Intelligence**
-
-Planned next, including consolidated account analytics and inter-account transfer handling.
-
-**Desktop GUI**
-
-Planned as a subsequent development stage.
-
-The legacy CSV-based journal and command-line interface have been retired in favor of the SQLite architecture.

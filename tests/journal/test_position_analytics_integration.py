@@ -6,21 +6,21 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from stonks.journal.account_type import AccountType
-from stonks.journal.execution_side import ExecutionSide
-from stonks.journal.journal_database import (
+from stonks.journal.analytics.position_analytics import (
+    calculate_position_metrics,
+)
+from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.position import Position
+from stonks.journal.models.position_status import PositionStatus
+from stonks.journal.models.trade_execution import TradeExecution
+from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.persistence.journal_database import (
     create_connection,
     initialize_database,
 )
-from stonks.journal.journal_repository import JournalRepository
-from stonks.journal.journal_service import JournalService
-from stonks.journal.position import Position
-from stonks.journal.position_analytics import (
-    calculate_position_metrics,
-)
-from stonks.journal.position_status import PositionStatus
-from stonks.journal.trade_execution import TradeExecution
-from stonks.journal.trading_account import TradingAccount
+from stonks.journal.persistence.journal_repository import JournalRepository
+from stonks.journal.services.journal_service import JournalService
 
 
 def test_persisted_position_analytics(tmp_path) -> None:
