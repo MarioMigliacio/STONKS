@@ -54,4 +54,34 @@ QPushButton:checked {
 QPushButton:focus {
     outline: none;
 }
+
+QTableWidget {
+    background-color: #141A23;
+    alternate-background-color: #1C2532;
+    color: #E8EDF5;
+    gridline-color: #344154;
+    border: 1px solid #344154;
+    border-radius: 6px;
+    selection-background-color: #235C93;
+    selection-color: #FFFFFF;
+}
+
+QHeaderView::section {
+    background-color: #263346;
+    color: #E8EDF5;
+    border: none;
+    border-right: 1px solid #344154;
+    border-bottom: 1px solid #344154;
+    padding: 8px 12px;
+    font-weight: bold;
+}
+
+QTableCornerButton::section {
+    background-color: #263346;
+    border: none;
+}
+
+QTableWidget QTableWidgetItem {
+    color: #E8EDF5;
+}
 """

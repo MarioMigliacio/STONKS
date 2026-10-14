@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from stonks.gui.navigation.navigation_sidebar import NavigationSidebar
+from stonks.gui.pages.accounts_page import AccountsPage
 from stonks.gui.pages.placeholder_page import PlaceholderPage
 from stonks.journal.journal_context import JournalContext
 
@@ -69,7 +70,13 @@ class MainWindow(QMainWindow):
 
         # Create a placeholder widget for each page.
         for page_name, display_name in page_definitions.items():
-            page = PlaceholderPage(display_name)
+            if page_name == "accounts" and self.m_journal_context is not None:
+                page = AccountsPage(
+                    repository=self.m_journal_context.m_repository,
+                    service=self.m_journal_context.m_service,
+                )
+            else:
+                page = PlaceholderPage(display_name)
 
             page_index = self.m_pages.addWidget(page)
             self.m_page_indices[page_name] = page_index
