@@ -5,7 +5,10 @@
 
 from pathlib import Path
 
+from PySide6.QtWidgets import QDialog
+
 from stonks.gui.pages.accounts_page import AccountsPage
+from stonks.gui.pages.create_account_dialog import CreateAccountDialog
 from stonks.journal.journal_context import JournalContext
 from stonks.journal.models.account_type import AccountType
 from stonks.journal.models.trading_account import TradingAccount
@@ -142,3 +145,92 @@ def test_accounts_page_preserves_selection_on_refresh(
         page.refresh_accounts()
 
         assert page.get_selected_account_id() == account_id
+
+
+def test_accounts_page_edit_persists_changes(
+    qtbot,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Verify editing an account updates SQLite and refreshes the table."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        account_id = journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Cash",
+                account_type=AccountType.CASH,
+                broker="Webull",
+            )
+        )
+
+        page = AccountsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        page.m_table.selectRow(0)
+
+        def accept_edit(dialog):
+            dialog.m_name.setText("Updated Cash Account")
+            dialog.m_broker.setText("Updated Broker")
+            return QDialog.Accepted
+
+        monkeypatch.setattr(
+            CreateAccountDialog,
+            "exec",
+            accept_edit,
+        )
+
+        page.m_edit_action.trigger()
+
+        stored_account = journal.m_repository.get_trading_account(account_id)
+
+        assert stored_account is not None
+        assert stored_account.name == "Updated Cash Account"
+        assert stored_account.broker == "Updated Broker"
+        assert stored_account.is_default is True
+
+        assert page.m_table.item(0, 0).text() == "Updated Cash Account"
+        assert page.get_selected_account_id() == account_id
+
+
+def test_accounts_page_edit_cancelled(
+    qtbot,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Verify canceling an edit leaves the trading account unchanged."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        account_id = journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Cash",
+                account_type=AccountType.CASH,
+                broker="Webull",
+            )
+        )
+
+        page = AccountsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        page.m_table.selectRow(0)
+
+        monkeypatch.setattr(
+            CreateAccountDialog,
+            "exec",
+            lambda dialog: QDialog.Rejected,
+        )
+
+        page.m_edit_action.trigger()
+
+        stored_account = journal.m_repository.get_trading_account(account_id)
+
+        assert stored_account is not None
+        assert stored_account.name == "Webull Cash"
+        assert stored_account.broker == "Webull"

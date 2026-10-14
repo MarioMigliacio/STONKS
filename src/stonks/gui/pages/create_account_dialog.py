@@ -3,6 +3,8 @@
 # Purpose: Collect user input for creating a trading account.
 # =============================================================================
 
+from typing import Optional
+
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -29,14 +31,27 @@ class CreateAccountDialog(QDialog):
             Input field for the brokerage name.
     """
 
-    def __init__(self, parent=None) -> None:
-        """Initialize the account creation dialog."""
+    def __init__(
+        self,
+        parent=None,
+        account: Optional[TradingAccount] = None,
+    ) -> None:
+        """Initialize the dialog for creating or editing an account."""
         super().__init__(parent)
 
-        self.setWindowTitle("Create Trading Account")
+        self.m_existing_account = account
+
+        self.setWindowTitle("Edit Trading Account" if account else "Create Trading Account")
         self.setMinimumWidth(380)
 
         self._setup_ui()
+
+        if account is not None:
+            self.m_name.setText(account.name)
+            self.m_broker.setText(account.broker)
+
+            index = self.m_account_type.findData(account.account_type.value)
+            self.m_account_type.setCurrentIndex(index)
 
     def _setup_ui(self) -> None:
         """Construct account entry fields and dialog controls."""
@@ -74,14 +89,19 @@ class CreateAccountDialog(QDialog):
 
     def get_account(self) -> TradingAccount:
         """
-        Construct a trading account from the entered information.
+        Construct a trading account from the dialog fields.
 
         Returns:
             TradingAccount:
-                New account containing the user's entered values.
+                New or updated account with its identity and state preserved.
         """
+        existing = self.m_existing_account
+
         return TradingAccount(
             name=self.m_name.text(),
             account_type=AccountType(self.m_account_type.currentData()),
             broker=self.m_broker.text(),
+            account_id=existing.account_id if existing else None,
+            is_active=existing.is_active if existing else True,
+            is_default=existing.is_default if existing else False,
         )
