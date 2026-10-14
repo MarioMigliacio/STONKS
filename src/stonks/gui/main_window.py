@@ -3,6 +3,8 @@
 # Purpose: Defines the main desktop application window for STONKS.
 # =============================================================================
 
+from typing import Optional
+
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
@@ -12,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from stonks.gui.navigation.navigation_sidebar import NavigationSidebar
 from stonks.gui.pages.placeholder_page import PlaceholderPage
+from stonks.journal.journal_context import JournalContext
 
 
 class MainWindow(QMainWindow):
@@ -22,13 +25,24 @@ class MainWindow(QMainWindow):
     application pages.
     """
 
-    def __init__(self) -> None:
-        """Initialize the STONKS application window."""
+    def __init__(
+        self,
+        journal_context: Optional[JournalContext] = None,
+    ) -> None:
+        """
+        Initialize the STONKS application window.
+
+        Args:
+            journal_context:
+                Optional initialized journal application context.
+        """
         super().__init__()
 
+        self.m_journal_context = journal_context
+
         self.setWindowTitle("STONKS - Trading Intelligence")
-        self.resize(900, 600)
         self.setMinimumSize(900, 600)
+        self.resize(900, 600)
 
         self._setup_ui()
 

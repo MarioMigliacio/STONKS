@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_main_window.py
-# Purpose: Verify STONKS desktop application navigation and window behavior.
+# Purpose: Pytest file for test_main_window.py.
 # =============================================================================
 
 import pytest
