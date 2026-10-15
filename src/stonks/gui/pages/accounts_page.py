@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from stonks.gui.icons import get_icon
 from stonks.gui.pages.create_account_dialog import CreateAccountDialog
 from stonks.journal.persistence.journal_repository import JournalRepository
 from stonks.journal.services.journal_service import JournalService
@@ -95,6 +96,7 @@ class AccountsPage(QWidget):
 
         self.m_actions_menu = QMenu(self)
         self.m_edit_action = self.m_actions_menu.addAction("Edit Account")
+        self.m_edit_action.setIcon(get_icon("pencil"))
 
         self.m_actions_button.setMenu(self.m_actions_menu)
         self.m_edit_action.triggered.connect(self._edit_account)
