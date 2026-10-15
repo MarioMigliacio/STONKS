@@ -114,8 +114,6 @@ def test_accounts_page_returns_selected_account_id(
         page = AccountsPage(journal.m_repository)
         qtbot.addWidget(page)
 
-        assert page.get_selected_account_id() is None
-
         page.m_table.selectRow(0)
 
         assert page.get_selected_account_id() == account_id
@@ -234,3 +232,125 @@ def test_accounts_page_edit_cancelled(
         assert stored_account is not None
         assert stored_account.name == "Webull Cash"
         assert stored_account.broker == "Webull"
+
+
+def test_accounts_page_switches_default_account(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    """Verify the selected account becomes the new default."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        roth_id = journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+                broker="Webull",
+            )
+        )
+
+        cash_id = journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Cash",
+                account_type=AccountType.CASH,
+                broker="Webull",
+            )
+        )
+
+        page = AccountsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        # Select the second account.
+        page.m_table.selectRow(1)
+
+        assert page.m_default_action.isEnabled()
+
+        # Trigger the same QAction used by the menu.
+        page.m_default_action.trigger()
+
+        roth = journal.m_repository.get_trading_account(roth_id)
+        cash = journal.m_repository.get_trading_account(cash_id)
+
+        assert roth.is_default is False
+        assert cash.is_default is True
+
+        # Verify the visible table reflects the change.
+        assert page.m_table.item(0, 4).text() == "—"
+        assert page.m_table.item(1, 4).text() == "★ Yes"
+
+        # Account selection should remain unchanged.
+        assert page.get_selected_account_id() == cash_id
+
+        # The new default can no longer trigger the action.
+        assert not page.m_default_action.isEnabled()
+
+
+def test_default_action_disabled_for_current_default(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    """Verify an existing default account cannot be selected again."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+                broker="Webull",
+            )
+        )
+
+        page = AccountsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        page.m_table.selectRow(0)
+
+        assert page.m_actions_button.isEnabled()
+        assert not page.m_default_action.isEnabled()
+
+
+def test_default_switch_persists_after_reopening(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    """Verify default account changes persist across database sessions."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+            )
+        )
+
+        cash_id = journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Cash",
+                account_type=AccountType.CASH,
+            )
+        )
+
+        page = AccountsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        page.m_table.selectRow(1)
+        page.m_default_action.trigger()
+
+    # Reopen the database in a new application context.
+    with JournalContext(database_path) as reopened:
+        default_account = reopened.m_repository.get_default_trading_account()
+
+        assert default_account is not None
+        assert default_account.account_id == cash_id

@@ -84,4 +84,21 @@ QTableCornerButton::section {
 QTableWidget QTableWidgetItem {
     color: #E8EDF5;
 }
+
+QMenu {
+    background-color: #171D28;
+    color: #E8EDF5;
+    border: 1px solid #344055;
+    padding: 5px;
+}
+
+QMenu::item {
+    padding: 8px 24px 8px 12px;
+    border-radius: 4px;
+}
+
+QMenu::item:selected {
+    background-color: #263C59;
+    color: #FFFFFF;
+}
 """

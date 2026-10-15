@@ -98,8 +98,12 @@ class AccountsPage(QWidget):
         self.m_edit_action = self.m_actions_menu.addAction("Edit Account")
         self.m_edit_action.setIcon(get_icon("pencil"))
 
+        self.m_default_action = self.m_actions_menu.addAction("Set as Default")
+        self.m_default_action.setIcon(get_icon("star"))
+
         self.m_actions_button.setMenu(self.m_actions_menu)
         self.m_edit_action.triggered.connect(self._edit_account)
+        self.m_default_action.triggered.connect(self._set_default_account)
 
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -134,7 +138,15 @@ class AccountsPage(QWidget):
 
         accounts = self.m_repository.get_trading_accounts()
 
-        self.m_table.clearSelection()
+        if selected_account_id is None:
+            default_account = next(
+                (account for account in accounts if account.is_default),
+                None,
+            )
+
+            if default_account is not None:
+                selected_account_id = default_account.account_id
+
         self.m_table.setRowCount(len(accounts))
 
         for row_index, account in enumerate(accounts):
@@ -202,8 +214,22 @@ class AccountsPage(QWidget):
         return account_id if type(account_id) is int else None
 
     def _update_action_state(self) -> None:
-        """Enable account actions when a valid account is selected."""
-        self.m_actions_button.setEnabled(self.m_service is not None and self.get_selected_account_id() is not None)
+        """Update available actions for the selected trading account."""
+        account_id = self.get_selected_account_id()
+
+        has_selection = self.m_service is not None and account_id is not None
+
+        self.m_actions_button.setEnabled(has_selection)
+
+        if not has_selection:
+            self.m_default_action.setEnabled(False)
+            return
+
+        account = self.m_repository.get_trading_account(account_id)
+
+        can_set_default = account is not None and account.is_active and not account.is_default
+
+        self.m_default_action.setEnabled(can_set_default)
 
     def _create_account(self) -> None:
         """Open account creation and save accepted entries."""
@@ -274,6 +300,30 @@ class AccountsPage(QWidget):
                 self,
                 "Account Not Found",
                 "The account could not be updated.",
+            )
+            self.refresh_accounts()
+            return
+
+        self.refresh_accounts()
+
+    def _set_default_account(self) -> None:
+        """Assign the selected trading account as the default."""
+        if self.m_service is None:
+            return
+
+        account_id = self.get_selected_account_id()
+
+        if account_id is None:
+            return
+
+        try:
+            self.m_service.set_default_trading_account(account_id)
+
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                "Default Account",
+                str(error),
             )
             self.refresh_accounts()
             return
