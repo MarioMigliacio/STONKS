@@ -34,8 +34,8 @@ class AccountsPage(QWidget):
 
     Provides a table of trading accounts, including their account type,
     broker, active status, and default designation. Supports creating,
-    editing, selecting a default account, and archiving accounts
-    through the journal service.
+    editing, selecting a default account, and archiving accounts as
+    well as reactivating archived accounts through the journal service.
 
     Attributes:
         m_repository:
@@ -67,6 +67,11 @@ class AccountsPage(QWidget):
         m_archive_action:
             Menu action that archives the selected non-default account
             while preserving its trading history.
+
+        m_reactivate_action:
+            Menu action that restores an archived trading account
+            to active status without modifying its historical records
+            or default designation.
 
         m_table:
             Table displaying trading account information and managing
@@ -129,10 +134,15 @@ class AccountsPage(QWidget):
         self.m_archive_action = self.m_actions_menu.addAction("Archive Account")
         self.m_archive_action.setIcon(get_icon("archive"))
 
+        self.m_reactivate_action = self.m_actions_menu.addAction("Reactivate Account")
+        self.m_reactivate_action.setIcon(get_icon("archive-restore"))
+        self.m_reactivate_action.setVisible(False)
+
         self.m_actions_button.setMenu(self.m_actions_menu)
         self.m_edit_action.triggered.connect(self._edit_account)
         self.m_default_action.triggered.connect(self._set_default_account)
         self.m_archive_action.triggered.connect(self._archive_account)
+        self.m_reactivate_action.triggered.connect(self._reactivate_account)
 
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -252,18 +262,30 @@ class AccountsPage(QWidget):
 
         if not has_selection:
             self.m_default_action.setEnabled(False)
+
+            self.m_archive_action.setVisible(True)
             self.m_archive_action.setEnabled(False)
+
+            self.m_reactivate_action.setVisible(False)
+            self.m_reactivate_action.setEnabled(False)
             return
 
         account = self.m_repository.get_trading_account(account_id)
 
-        can_set_default = account is not None and account.is_active and not account.is_default
+        if account is None:
+            self.m_actions_button.setEnabled(False)
+            self.m_default_action.setEnabled(False)
+            self.m_archive_action.setEnabled(False)
+            self.m_reactivate_action.setEnabled(False)
+            return
 
-        self.m_default_action.setEnabled(can_set_default)
+        self.m_default_action.setEnabled(account.is_active and not account.is_default)
 
-        can_archive = account is not None and account.is_active and not account.is_default
+        self.m_archive_action.setVisible(account.is_active)
+        self.m_archive_action.setEnabled(account.is_active and not account.is_default)
 
-        self.m_archive_action.setEnabled(can_archive)
+        self.m_reactivate_action.setVisible(not account.is_active)
+        self.m_reactivate_action.setEnabled(not account.is_active)
 
     def _create_account(self) -> None:
         """Open account creation and save accepted entries."""
@@ -423,6 +445,42 @@ class AccountsPage(QWidget):
                 self,
                 "Account Not Found",
                 "The account could not be archived.",
+            )
+
+        self.refresh_accounts()
+
+    def _reactivate_account(self) -> None:
+        """
+        Reactivate the selected archived trading account.
+
+        Restores the account's active status through the journal
+        service and refreshes the displayed account information.
+        """
+        if self.m_service is None:
+            return
+
+        account_id = self.get_selected_account_id()
+
+        if account_id is None:
+            return
+
+        try:
+            reactivated = self.m_service.reactivate_trading_account(account_id)
+
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                "Account Reactivation",
+                str(error),
+            )
+            self.refresh_accounts()
+            return
+
+        if not reactivated:
+            QMessageBox.warning(
+                self,
+                "Account Not Found",
+                "The selected account could not be reactivated.",
             )
 
         self.refresh_accounts()

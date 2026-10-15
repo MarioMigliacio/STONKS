@@ -100,6 +100,48 @@ def test_archive_account(service) -> None:
     assert account.is_default is False
 
 
+def test_reactivate_trading_account(service) -> None:
+    """
+    Verify an archived account can be reactivated.
+
+    Reactivation must preserve the account's identity and
+    must not modify the existing default account.
+    """
+    default_id = service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+    account_id = service.create_trading_account(TradingAccount("Old Cash", AccountType.CASH))
+
+    # Archive the non-default account.
+    assert service.archive_trading_account(account_id) is True
+
+    archived = service.m_repository.get_trading_account(account_id)
+
+    assert archived is not None
+    assert archived.is_active is False
+
+    # Reactivate the account.
+    assert service.reactivate_trading_account(account_id) is True
+
+    reactivated = service.m_repository.get_trading_account(account_id)
+
+    assert reactivated is not None
+    assert reactivated.account_id == account_id
+    assert reactivated.is_active is True
+    assert reactivated.is_default is False
+
+    # Verify the original default account remains unchanged.
+    default_account = service.m_repository.get_default_trading_account()
+
+    assert default_account is not None
+    assert default_account.account_id == default_id
+
+    # Reactivation is idempotent.
+    assert service.reactivate_trading_account(account_id) is True
+
+    # Nonexistent accounts return False.
+    assert service.reactivate_trading_account(999999) is False
+
+
 def test_cannot_archive_default(service) -> None:
     """Verify default accounts require reassignment before archival."""
     account_id = service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))

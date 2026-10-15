@@ -11,11 +11,13 @@ from stonks.gui.icons import get_icon
 @pytest.mark.parametrize(
     "name",
     [
+        "archive-restore",
         "archive",
         "layout-dashboard",
         "pencil",
         "star",
         "trash",
+        "triangle-alert",
         "wallet",
     ],
 )

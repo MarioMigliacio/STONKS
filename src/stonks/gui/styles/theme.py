@@ -102,6 +102,11 @@ QMenu::item:selected {
     color: #FFFFFF;
 }
 
+QMenu::item:disabled {
+    color: #778397;
+    background-color: transparent;
+}
+
 QMenu::separator {
     height: 1px;
     background-color: #45566F;

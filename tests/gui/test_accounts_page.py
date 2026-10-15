@@ -465,3 +465,59 @@ def test_archive_account_cancellation_preserves_state(
 
         assert account is not None
         assert account.is_active is True
+
+
+def test_reactivate_account_action(
+    qtbot,
+    tmp_path,
+) -> None:
+    """Verify archived accounts can be reactivated through the GUI."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+            )
+        )
+
+        account_id = journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Cash Account",
+                account_type=AccountType.CASH,
+            )
+        )
+
+        journal.m_service.archive_trading_account(account_id)
+
+        page = AccountsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+
+        qtbot.addWidget(page)
+
+        for row in range(page.m_table.rowCount()):
+            item = page.m_table.item(row, 0)
+
+            if item.data(Qt.UserRole) == account_id:
+                page.m_table.selectRow(row)
+                break
+
+        assert page.get_selected_account_id() == account_id
+
+        assert not page.m_archive_action.isVisible()
+        assert page.m_reactivate_action.isVisible()
+        assert page.m_reactivate_action.isEnabled()
+
+        page.m_reactivate_action.trigger()
+
+        account = journal.m_repository.get_trading_account(account_id)
+
+        assert account is not None
+        assert account.is_active is True
+        assert account.is_default is False
+
+        assert page.m_archive_action.isVisible()
+        assert not page.m_reactivate_action.isVisible()

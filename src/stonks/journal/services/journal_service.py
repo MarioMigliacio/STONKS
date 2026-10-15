@@ -226,6 +226,38 @@ class JournalService:
 
             return self.m_repository.update_trading_account(account)
 
+    def reactivate_trading_account(
+        self,
+        account_id: int,
+    ) -> bool:
+        """
+        Reactivate an archived trading account.
+
+        Restores the account to active status without modifying its
+        default designation or historical financial records.
+
+        Args:
+            account_id:
+                Identifier of the trading account to reactivate.
+
+        Returns:
+            bool:
+                True if the account is active after the operation,
+                False if the account does not exist.
+        """
+        with self._transaction():
+            account = self.m_repository.get_trading_account(account_id)
+
+            if account is None:
+                return False
+
+            if account.is_active:
+                return True
+
+            account.is_active = True
+
+            return self.m_repository.update_trading_account(account)
+
     def validate_position_history(
         self,
         position_id: int,
