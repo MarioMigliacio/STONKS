@@ -101,4 +101,10 @@ QMenu::item:selected {
     background-color: #263C59;
     color: #FFFFFF;
 }
+
+QMenu::separator {
+    height: 1px;
+    background-color: #45566F;
+    margin: 6px 10px;
+}
 """

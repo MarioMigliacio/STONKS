@@ -5,7 +5,8 @@
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QDialog
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QMessageBox
 
 from stonks.gui.pages.accounts_page import AccountsPage
 from stonks.gui.pages.create_account_dialog import CreateAccountDialog
@@ -354,3 +355,113 @@ def test_default_switch_persists_after_reopening(
 
         assert default_account is not None
         assert default_account.account_id == cash_id
+
+
+def test_archive_account_preserves_account_record(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify confirmed archival makes an account inactive."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+            )
+        )
+
+        cash_id = journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Cash",
+                account_type=AccountType.CASH,
+            )
+        )
+
+        page = AccountsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        # Find the account by ID, not by assumed row order.
+        for row in range(page.m_table.rowCount()):
+            item = page.m_table.item(row, 0)
+
+            if item.data(Qt.UserRole) == cash_id:
+                page.m_table.selectRow(row)
+                break
+
+        assert page.get_selected_account_id() == cash_id
+        assert page.m_archive_action.isEnabled()
+
+        monkeypatch.setattr(
+            QMessageBox,
+            "question",
+            lambda *args, **kwargs: QMessageBox.Yes,
+        )
+
+        page.m_archive_action.trigger()
+
+        archived_account = journal.m_repository.get_trading_account(cash_id)
+
+        assert archived_account is not None
+        assert archived_account.is_active is False
+        assert archived_account.is_default is False
+
+        assert page.m_table.item(page.m_table.currentRow(), 3).text() == "Archived"
+
+        assert not page.m_archive_action.isEnabled()
+        assert not page.m_default_action.isEnabled()
+
+
+def test_archive_account_cancellation_preserves_state(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify declining archival leaves the account active."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Roth IRA",
+                account_type=AccountType.ROTH_IRA,
+            )
+        )
+
+        cash_id = journal.m_service.create_trading_account(
+            TradingAccount(
+                name="Webull Cash",
+                account_type=AccountType.CASH,
+            )
+        )
+
+        page = AccountsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        for row in range(page.m_table.rowCount()):
+            item = page.m_table.item(row, 0)
+
+            if item.data(Qt.UserRole) == cash_id:
+                page.m_table.selectRow(row)
+                break
+
+        monkeypatch.setattr(
+            QMessageBox,
+            "question",
+            lambda *args, **kwargs: QMessageBox.No,
+        )
+
+        page.m_archive_action.trigger()
+
+        account = journal.m_repository.get_trading_account(cash_id)
+
+        assert account is not None
+        assert account.is_active is True

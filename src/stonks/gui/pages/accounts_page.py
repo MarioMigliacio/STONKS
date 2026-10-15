@@ -30,28 +30,51 @@ from stonks.journal.services.journal_service import JournalService
 
 class AccountsPage(QWidget):
     """
-    Display and manage trading accounts through the journal backend.
+    Display and manage trading accounts within the STONKS journal.
 
-    Provides account creation, editing, selection, and status
-    information while delegating business operations to JournalService.
+    Provides a table of trading accounts, including their account type,
+    broker, active status, and default designation. Supports creating,
+    editing, selecting a default account, and archiving accounts
+    through the journal service.
 
     Attributes:
         m_repository:
-            Repository providing trading account records.
+            Journal repository used to retrieve trading account data.
+
         m_service:
-            Optional service providing validated account operations.
-        m_table:
-            Read-only table displaying trading accounts.
-        m_empty_label:
-            Message displayed when no trading accounts exist.
+            Optional journal service responsible for validated account
+            operations, including creation, updates, default selection,
+            and archival.
+
         m_create_button:
-            Button for creating a new trading account.
+            Button that opens the dialog for creating a trading account.
+
         m_actions_button:
-            Button providing actions for the selected account.
+            Dropdown button providing account management operations
+            for the currently selected trading account.
+
         m_actions_menu:
-            Context menu containing available account operations.
+            Context menu containing the available account management
+            actions.
+
         m_edit_action:
-            Menu action for editing the selected account.
+            Menu action that opens the selected account for editing.
+
+        m_default_action:
+            Menu action that assigns the selected active account as
+            the default trading account.
+
+        m_archive_action:
+            Menu action that archives the selected non-default account
+            while preserving its trading history.
+
+        m_table:
+            Table displaying trading account information and managing
+            the currently selected account.
+
+        m_empty_label:
+            Informational label displayed when no trading accounts
+            exist in the journal.
     """
 
     def __init__(
@@ -101,9 +124,15 @@ class AccountsPage(QWidget):
         self.m_default_action = self.m_actions_menu.addAction("Set as Default")
         self.m_default_action.setIcon(get_icon("star"))
 
+        self.m_actions_menu.addSeparator()
+
+        self.m_archive_action = self.m_actions_menu.addAction("Archive Account")
+        self.m_archive_action.setIcon(get_icon("archive"))
+
         self.m_actions_button.setMenu(self.m_actions_menu)
         self.m_edit_action.triggered.connect(self._edit_account)
         self.m_default_action.triggered.connect(self._set_default_account)
+        self.m_archive_action.triggered.connect(self._archive_account)
 
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -223,6 +252,7 @@ class AccountsPage(QWidget):
 
         if not has_selection:
             self.m_default_action.setEnabled(False)
+            self.m_archive_action.setEnabled(False)
             return
 
         account = self.m_repository.get_trading_account(account_id)
@@ -230,6 +260,10 @@ class AccountsPage(QWidget):
         can_set_default = account is not None and account.is_active and not account.is_default
 
         self.m_default_action.setEnabled(can_set_default)
+
+        can_archive = account is not None and account.is_active and not account.is_default
+
+        self.m_archive_action.setEnabled(can_archive)
 
     def _create_account(self) -> None:
         """Open account creation and save accepted entries."""
@@ -327,5 +361,68 @@ class AccountsPage(QWidget):
             )
             self.refresh_accounts()
             return
+
+        self.refresh_accounts()
+
+    def _archive_account(self) -> None:
+        """
+        Archive the selected trading account after user confirmation.
+
+        Archiving marks the account as inactive while preserving its
+        positions, executions, transactions, and historical records.
+        """
+        if self.m_service is None:
+            return
+
+        account_id = self.get_selected_account_id()
+
+        if account_id is None:
+            return
+
+        account = self.m_repository.get_trading_account(account_id)
+
+        if account is None:
+            QMessageBox.warning(
+                self,
+                "Account Not Found",
+                "The selected account no longer exists.",
+            )
+            self.refresh_accounts()
+            return
+
+        response = QMessageBox.question(
+            self,
+            "Archive Trading Account",
+            (
+                f"Archive '{account.name}'?\n\n"
+                "This account will become inactive.\n"
+                "Its trading history and financial records will be preserved.\n\n"
+                "You can reactivate this account later."
+            ),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if response != QMessageBox.Yes:
+            return
+
+        try:
+            archived = self.m_service.archive_trading_account(account_id)
+
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                "Account Archival",
+                str(error),
+            )
+            self.refresh_accounts()
+            return
+
+        if not archived:
+            QMessageBox.warning(
+                self,
+                "Account Not Found",
+                "The account could not be archived.",
+            )
 
         self.refresh_accounts()
