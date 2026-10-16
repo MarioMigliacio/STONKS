@@ -197,6 +197,55 @@ class JournalRepository:
 
         return cursor.rowcount > 0
 
+    def delete_trading_account(
+        self,
+        account_id: int,
+    ) -> bool:
+        """
+        Permanently delete a trading account and its financial records.
+
+        Deletes account transactions and positions before removing
+        the account. Associated trade executions are removed by
+        the database's ON DELETE CASCADE constraint.
+
+        The caller must provide a transaction boundary and ensure
+        that the account is eligible for deletion.
+
+        Args:
+            account_id:
+                Identifier of the trading account to delete.
+
+        Returns:
+            bool:
+                True if the account was deleted, False if it
+                does not exist.
+        """
+        self.m_connection.execute(
+            """
+            DELETE FROM account_transactions
+            WHERE account_id = ?
+            """,
+            (account_id,),
+        )
+
+        self.m_connection.execute(
+            """
+            DELETE FROM positions
+            WHERE account_id = ?
+            """,
+            (account_id,),
+        )
+
+        cursor = self.m_connection.execute(
+            """
+            DELETE FROM trading_accounts
+            WHERE account_id = ?
+            """,
+            (account_id,),
+        )
+
+        return cursor.rowcount > 0
+
     @staticmethod
     def _row_to_trading_account(
         row: sqlite3.Row,

@@ -155,6 +155,48 @@ class JournalService:
 
             return self.m_repository.update_trading_account(normalized)
 
+    def delete_trading_account(
+        self,
+        account_id: int,
+    ) -> bool:
+        """
+        Permanently delete an archived trading account.
+
+        Removes the account, its positions, trade executions,
+        and financial transactions in a single transaction.
+
+        Active and default trading accounts cannot be deleted.
+
+        Args:
+            account_id:
+                Identifier of the trading account to delete.
+
+        Returns:
+            bool:
+                True if the account was deleted, False if it
+                does not exist.
+
+        Raises:
+            ValueError:
+                If the account is active or currently the default.
+
+            RuntimeError:
+                If a transaction is already active.
+        """
+        with self._transaction():
+            account = self.m_repository.get_trading_account(account_id)
+
+            if account is None:
+                return False
+
+            if account.is_default:
+                raise ValueError("Cannot delete the default account. Select another default account first.")
+
+            if account.is_active:
+                raise ValueError("Cannot delete an active account. Archive the account before deleting it.")
+
+            return self.m_repository.delete_trading_account(account_id)
+
     def set_default_trading_account(
         self,
         account_id: int,
