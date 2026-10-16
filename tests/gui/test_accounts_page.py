@@ -3,6 +3,8 @@
 # Purpose: Pytest file for test_accounts_page.py.
 # =============================================================================
 
+from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -10,9 +12,54 @@ from PySide6.QtWidgets import QDialog, QMessageBox
 
 from stonks.gui.pages.accounts_page import AccountsPage
 from stonks.gui.pages.create_account_dialog import CreateAccountDialog
+from stonks.gui.pages.delete_account_dialog import DeleteAccountDialog
 from stonks.journal.journal_context import JournalContext
+from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import AccountTransactionType
 from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.position import Position
+from stonks.journal.models.trade_execution import TradeExecution
 from stonks.journal.models.trading_account import TradingAccount
+
+
+def _create_archived_account_page(qtbot, journal):
+    """
+    Create an Accounts page with a selectable archived account.
+
+    Args:
+        qtbot:
+            Pytest-qt widget fixture.
+
+        journal:
+            Initialized journal application context.
+
+    Returns:
+        tuple:
+            Accounts page, default account ID, and archived account ID.
+    """
+    default_id = journal.m_service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+    archived_id = journal.m_service.create_trading_account(TradingAccount("Old Cash", AccountType.CASH))
+
+    assert journal.m_service.archive_trading_account(archived_id)
+
+    page = AccountsPage(
+        repository=journal.m_repository,
+        service=journal.m_service,
+    )
+    qtbot.addWidget(page)
+
+    for row in range(page.m_table.rowCount()):
+        item = page.m_table.item(row, 0)
+
+        if item.data(Qt.UserRole) == archived_id:
+            page.m_table.selectRow(row)
+            break
+
+    assert page.get_selected_account_id() == archived_id
+
+    return page, default_id, archived_id
 
 
 def test_accounts_page_displays_database_records(
@@ -521,3 +568,183 @@ def test_reactivate_account_action(
 
         assert page.m_archive_action.isVisible()
         assert not page.m_reactivate_action.isVisible()
+
+
+def test_delete_account_cancellation_does_not_delete(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify cancelling deletion never calls the deletion service."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        page, _, archived_id = _create_archived_account_page(
+            qtbot,
+            journal,
+        )
+
+        deletion_calls = []
+
+        def track_deletion(account_id):
+            deletion_calls.append(account_id)
+            return True
+
+        monkeypatch.setattr(
+            journal.m_service,
+            "delete_trading_account",
+            track_deletion,
+        )
+
+        monkeypatch.setattr(
+            DeleteAccountDialog,
+            "exec",
+            lambda self: QDialog.Rejected,
+        )
+
+        page.m_delete_action.trigger()
+
+        assert deletion_calls == []
+
+        account = journal.m_repository.get_trading_account(archived_id)
+
+        assert account is not None
+        assert account.is_active is False
+
+
+def test_confirmed_account_deletion_removes_selected_account(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify confirmed deletion removes only the selected account."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        page, default_id, archived_id = _create_archived_account_page(
+            qtbot,
+            journal,
+        )
+
+        # Dialog authorization is tested separately.
+        # Here we test the page-to-service integration.
+        monkeypatch.setattr(
+            DeleteAccountDialog,
+            "exec",
+            lambda self: QDialog.Accepted,
+        )
+
+        assert page.m_delete_action.isEnabled()
+
+        page.m_delete_action.trigger()
+
+        assert journal.m_repository.get_trading_account(archived_id) is None
+
+        default_account = journal.m_repository.get_trading_account(default_id)
+
+        assert default_account is not None
+        assert default_account.is_default is True
+
+        # The deleted account should disappear from the table.
+        displayed_ids = [page.m_table.item(row, 0).data(Qt.UserRole) for row in range(page.m_table.rowCount())]
+
+        assert archived_id not in displayed_ids
+        assert default_id in displayed_ids
+
+
+def test_delete_dialog_receives_correct_record_counts(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify deletion confirmation receives live financial record counts."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        page, _, archived_id = _create_archived_account_page(
+            qtbot,
+            journal,
+        )
+
+        # Temporarily reactivate the account to create test records.
+        assert journal.m_service.reactivate_trading_account(archived_id)
+
+        position_id = journal.m_service.create_position(
+            Position(
+                ticker="NVDA",
+                account_id=archived_id,
+            )
+        )
+
+        timestamp = datetime(
+            2026,
+            10,
+            15,
+            14,
+            30,
+            tzinfo=timezone.utc,
+        )
+
+        journal.m_service.create_execution(
+            TradeExecution(
+                position_id=position_id,
+                side=ExecutionSide.BUY,
+                executed_at=timestamp,
+                shares=Decimal("10"),
+                price=Decimal("150"),
+            )
+        )
+
+        journal.m_service.create_execution(
+            TradeExecution(
+                position_id=position_id,
+                side=ExecutionSide.SELL,
+                executed_at=timestamp,
+                shares=Decimal("10"),
+                price=Decimal("155"),
+            )
+        )
+
+        journal.m_service.create_account_transaction(
+            AccountTransaction(
+                transaction_type=AccountTransactionType.DEPOSIT,
+                occurred_at=timestamp,
+                amount=Decimal("2000"),
+                account_id=archived_id,
+            )
+        )
+
+        # Archive again now that the test data exists.
+        assert journal.m_service.archive_trading_account(archived_id)
+
+        page.refresh_accounts()
+
+        captured = {}
+
+        class RecordingDeleteDialog:
+            """Capture dialog arguments without displaying a modal window."""
+
+            def __init__(self, account_name, summary, parent=None):
+                captured["account_name"] = account_name
+                captured["summary"] = summary
+
+            def exec(self):
+                return QDialog.Rejected
+
+        monkeypatch.setattr(
+            "stonks.gui.pages.accounts_page.DeleteAccountDialog",
+            RecordingDeleteDialog,
+        )
+
+        page.m_delete_action.trigger()
+
+        assert captured["account_name"] == "Old Cash"
+
+        assert captured["summary"] == {
+            "positions": 1,
+            "executions": 2,
+            "transactions": 1,
+        }
+
+        # Rejecting the dialog leaves the data untouched.
+        assert journal.m_repository.get_trading_account(archived_id) is not None

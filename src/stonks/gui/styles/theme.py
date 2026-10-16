@@ -112,4 +112,46 @@ QMenu::separator {
     background-color: #45566F;
     margin: 6px 10px;
 }
+
+QPushButton#dangerButton {
+    background-color: #9F3030;
+    color: #FFFFFF;
+    border: 1px solid #C84A4A;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-weight: 600;
+}
+
+QPushButton#dangerButton:hover {
+    background-color: #B93C3C;
+}
+
+QPushButton#dangerButton:pressed {
+    background-color: #872626;
+}
+
+QPushButton#dangerButton:disabled {
+    background-color: #48252D;
+    color: #A9B5C6;
+    border-color: #66363E;
+}
+
+QLabel#dangerHeading {
+    color: #F8FAFC;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+QLabel#dangerWarning {
+    color: #F87171;
+    font-weight: 600;
+}
+
+QLabel#deletionSummary {
+    background-color: #222B3A;
+    color: #E8EDF5;
+    border: 1px solid #344055;
+    border-radius: 6px;
+    padding: 12px;
+}
 """

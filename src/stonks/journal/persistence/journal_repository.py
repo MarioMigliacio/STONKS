@@ -246,6 +246,54 @@ class JournalRepository:
 
         return cursor.rowcount > 0
 
+    def get_account_deletion_summary(
+        self,
+        account_id: int,
+    ) -> dict[str, int]:
+        """
+        Count financial records associated with a trading account.
+
+        Args:
+            account_id:
+                Identifier of the account being considered for deletion.
+
+        Returns:
+            dict[str, int]:
+                Counts of positions, trade executions, and
+                account transactions belonging to the account.
+        """
+        row = self.m_connection.execute(
+            """
+            SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM positions
+                    WHERE account_id = ?
+                ) AS positions,
+                (
+                    SELECT COUNT(*)
+                    FROM trade_executions
+                    WHERE position_id IN (
+                        SELECT position_id
+                        FROM positions
+                        WHERE account_id = ?
+                    )
+                ) AS executions,
+                (
+                    SELECT COUNT(*)
+                    FROM account_transactions
+                    WHERE account_id = ?
+                ) AS transactions
+            """,
+            (account_id, account_id, account_id),
+        ).fetchone()
+
+        return {
+            "positions": row["positions"],
+            "executions": row["executions"],
+            "transactions": row["transactions"],
+        }
+
     @staticmethod
     def _row_to_trading_account(
         row: sqlite3.Row,

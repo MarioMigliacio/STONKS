@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from stonks.gui.icons import get_icon
 from stonks.gui.pages.create_account_dialog import CreateAccountDialog
+from stonks.gui.pages.delete_account_dialog import DeleteAccountDialog
 from stonks.journal.persistence.journal_repository import JournalRepository
 from stonks.journal.services.journal_service import JournalService
 
@@ -72,6 +73,10 @@ class AccountsPage(QWidget):
             Menu action that restores an archived trading account
             to active status without modifying its historical records
             or default designation.
+
+        m_delete_action:
+            Menu action that opens the permanent account deletion
+            confirmation dialog for an archived trading account.
 
         m_table:
             Table displaying trading account information and managing
@@ -138,11 +143,17 @@ class AccountsPage(QWidget):
         self.m_reactivate_action.setIcon(get_icon("archive-restore"))
         self.m_reactivate_action.setVisible(False)
 
+        self.m_actions_menu.addSeparator()
+
+        self.m_delete_action = self.m_actions_menu.addAction("Delete Account")
+        self.m_delete_action.setIcon(get_icon("trash"))
+
         self.m_actions_button.setMenu(self.m_actions_menu)
         self.m_edit_action.triggered.connect(self._edit_account)
         self.m_default_action.triggered.connect(self._set_default_account)
         self.m_archive_action.triggered.connect(self._archive_account)
         self.m_reactivate_action.triggered.connect(self._reactivate_account)
+        self.m_delete_action.triggered.connect(self._delete_account)
 
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -268,6 +279,8 @@ class AccountsPage(QWidget):
 
             self.m_reactivate_action.setVisible(False)
             self.m_reactivate_action.setEnabled(False)
+
+            self.m_delete_action.setEnabled(False)
             return
 
         account = self.m_repository.get_trading_account(account_id)
@@ -277,6 +290,7 @@ class AccountsPage(QWidget):
             self.m_default_action.setEnabled(False)
             self.m_archive_action.setEnabled(False)
             self.m_reactivate_action.setEnabled(False)
+            self.m_delete_action.setEnabled(False)
             return
 
         self.m_default_action.setEnabled(account.is_active and not account.is_default)
@@ -286,6 +300,10 @@ class AccountsPage(QWidget):
 
         self.m_reactivate_action.setVisible(not account.is_active)
         self.m_reactivate_action.setEnabled(not account.is_active)
+
+        can_delete = account is not None and not account.is_active and not account.is_default
+
+        self.m_delete_action.setEnabled(can_delete)
 
     def _create_account(self) -> None:
         """Open account creation and save accepted entries."""
@@ -481,6 +499,73 @@ class AccountsPage(QWidget):
                 self,
                 "Account Not Found",
                 "The selected account could not be reactivated.",
+            )
+
+        self.refresh_accounts()
+
+    def _delete_account(self) -> None:
+        """
+        Permanently delete a selected archived trading account.
+
+        Requires explicit user confirmation through a dedicated
+        dialog before invoking the journal deletion service.
+        """
+        if self.m_service is None:
+            return
+
+        account_id = self.get_selected_account_id()
+
+        if account_id is None:
+            return
+
+        account = self.m_repository.get_trading_account(account_id)
+
+        if account is None:
+            QMessageBox.warning(
+                self,
+                "Account Not Found",
+                "The selected account no longer exists.",
+            )
+            self.refresh_accounts()
+            return
+
+        if account.is_active or account.is_default:
+            QMessageBox.warning(
+                self,
+                "Account Deletion",
+                "Archive the account before permanently deleting it.",
+            )
+            self.refresh_accounts()
+            return
+
+        summary = self.m_repository.get_account_deletion_summary(account_id)
+
+        dialog = DeleteAccountDialog(
+            account_name=account.name,
+            summary=summary,
+            parent=self,
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        try:
+            deleted = self.m_service.delete_trading_account(account_id)
+
+        except (ValueError, RuntimeError) as error:
+            QMessageBox.warning(
+                self,
+                "Account Deletion Failed",
+                str(error),
+            )
+            self.refresh_accounts()
+            return
+
+        if not deleted:
+            QMessageBox.warning(
+                self,
+                "Account Not Found",
+                "The selected account could not be deleted.",
             )
 
         self.refresh_accounts()
