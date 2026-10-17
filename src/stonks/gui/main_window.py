@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from stonks.gui.navigation.navigation_sidebar import NavigationSidebar
 from stonks.gui.pages.accounts_page import AccountsPage
 from stonks.gui.pages.placeholder_page import PlaceholderPage
+from stonks.gui.pages.positions_page import PositionsPage
 from stonks.journal.journal_context import JournalContext
 
 
@@ -23,7 +24,28 @@ class MainWindow(QMainWindow):
     Represent the primary STONKS desktop application window.
 
     Coordinates the persistent navigation sidebar and central
-    application pages.
+    application pages, including the trading journal and
+    account management interfaces.
+
+    Attributes:
+        m_journal_context:
+            Optional journal application context providing shared
+            repository and service instances.
+
+        m_sidebar:
+            Persistent navigation sidebar used to switch pages.
+
+        m_pages:
+            Stacked widget containing application pages.
+
+        m_page_indices:
+            Mapping of page identifiers to stacked widget indices.
+
+        m_accounts_page:
+            Optional reference to the trading accounts interface.
+
+        m_positions_page:
+            Optional reference to the trading journal interface.
     """
 
     def __init__(
@@ -59,6 +81,10 @@ class MainWindow(QMainWindow):
         self.m_pages = QStackedWidget()
         self.m_page_indices = {}
 
+        # Store references to functional pages for future coordination.
+        self.m_accounts_page: Optional[AccountsPage] = None
+        self.m_positions_page: Optional[PositionsPage] = None
+
         # Define our initial application pages.
         page_definitions = {
             "dashboard": "Dashboard",
@@ -68,13 +94,24 @@ class MainWindow(QMainWindow):
             "cia": "Catalyst Intelligence Analysis",
         }
 
-        # Create a placeholder widget for each page.
+        # Create functional pages where available; otherwise use placeholders.
         for page_name, display_name in page_definitions.items():
             if page_name == "accounts" and self.m_journal_context is not None:
                 page = AccountsPage(
                     repository=self.m_journal_context.m_repository,
                     service=self.m_journal_context.m_service,
                 )
+
+                self.m_accounts_page = page
+
+            elif page_name == "journal" and self.m_journal_context is not None:
+                page = PositionsPage(
+                    repository=self.m_journal_context.m_repository,
+                    service=self.m_journal_context.m_service,
+                )
+
+                self.m_positions_page = page
+
             else:
                 page = PlaceholderPage(display_name)
 
@@ -95,6 +132,10 @@ class MainWindow(QMainWindow):
         """
         Display the requested application page.
 
+        Refreshes journal account selections before showing the
+        journal page so changes made in account management are
+        reflected without restarting the application.
+
         Args:
             page_name:
                 Identifier of the page to display.
@@ -103,5 +144,9 @@ class MainWindow(QMainWindow):
 
         if page_index is None:
             return
+
+        # Synchronize trading accounts before opening the journal.
+        if page_name == "journal" and self.m_positions_page is not None:
+            self.m_positions_page.refresh_accounts()
 
         self.m_pages.setCurrentIndex(page_index)

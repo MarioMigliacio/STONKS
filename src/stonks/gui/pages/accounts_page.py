@@ -120,6 +120,7 @@ class AccountsPage(QWidget):
         title.setObjectName("pageTitle")
 
         self.m_create_button = QPushButton("New Account")
+        self.m_create_button.setIcon(get_icon("plus"))
         self.m_create_button.setEnabled(self.m_service is not None)
         self.m_create_button.clicked.connect(self._create_account)
 

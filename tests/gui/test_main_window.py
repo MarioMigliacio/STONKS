@@ -8,6 +8,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QPushButton
 
 from stonks.gui.main_window import MainWindow
+from stonks.journal.journal_context import JournalContext
+from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.trading_account import TradingAccount
 
 
 @pytest.fixture
@@ -101,3 +104,37 @@ def test_main_window_closes(main_window):
     main_window.close()
 
     assert not main_window.isVisible()
+
+
+def test_main_window_refreshes_journal_accounts_on_navigation(
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    Verify opening the Journal refreshes available trading accounts.
+
+    Account changes made after window initialization must be
+    visible without restarting the application.
+    """
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        window = MainWindow(journal_context=journal)
+        qtbot.addWidget(window)
+
+        positions_page = window.m_positions_page
+
+        assert positions_page is not None
+        assert positions_page.m_account_selector.count() == 0
+
+        # Simulate a new account created elsewhere in the application.
+        account_id = journal.m_service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+        # Navigate to the Journal through MainWindow.
+        window._navigate_to("journal")
+
+        assert positions_page.m_account_selector.count() == 1
+        assert positions_page.get_selected_account_id() == account_id
+
+        # Confirm that the intended page is displayed.
+        assert window.m_pages.currentWidget() is positions_page
