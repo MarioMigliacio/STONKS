@@ -24,6 +24,7 @@ from stonks.gui.icons import get_icon
         "plus",
         "star",
         "trash",
+        "trash-danger",
         "triangle-alert",
         "wallet",
     ],

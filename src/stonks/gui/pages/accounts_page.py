@@ -147,7 +147,7 @@ class AccountsPage(QWidget):
         self.m_actions_menu.addSeparator()
 
         self.m_delete_action = self.m_actions_menu.addAction("Delete Account")
-        self.m_delete_action.setIcon(get_icon("trash"))
+        self.m_delete_action.setIcon(get_icon("trash-danger"))
 
         self.m_actions_button.setMenu(self.m_actions_menu)
         self.m_edit_action.triggered.connect(self._edit_account)

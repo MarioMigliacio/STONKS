@@ -4,7 +4,12 @@
 # =============================================================================
 
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog
 
+from stonks.gui.pages.create_position_dialog import (
+    CreatePositionDialog,
+)
+from stonks.gui.pages.delete_position_dialog import DeletePositionDialog
 from stonks.gui.pages.positions_page import PositionsPage
 from stonks.journal.journal_context import JournalContext
 from stonks.journal.models.account_type import AccountType
@@ -151,3 +156,180 @@ def test_positions_page_preserves_account_selection(qtbot, tmp_path) -> None:
 
         assert page.m_account_selector.count() == 3
         assert page.get_selected_account_id() == cash_id
+
+
+def test_positions_page_creates_position(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify confirmed entry creates a persisted journal position."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        account_id = journal.m_service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+        page = PositionsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        def accept_position(dialog):
+            dialog.m_ticker.setText("AMD")
+            dialog.m_strategy.setText("VWAP Reclaim")
+            return QDialog.Accepted
+
+        monkeypatch.setattr(
+            CreatePositionDialog,
+            "exec",
+            accept_position,
+        )
+
+        page.m_create_button.click()
+
+        positions = journal.m_repository.get_positions(account_id=account_id)
+
+        assert len(positions) == 1
+        assert positions[0].ticker == "AMD"
+        assert positions[0].strategy == "VWAP Reclaim"
+
+        assert page.m_table.rowCount() == 1
+        assert page.m_table.item(0, 0).text() == "AMD"
+
+
+def test_positions_page_cancel_does_not_create(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify cancelling position entry leaves the journal unchanged."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        account_id = journal.m_service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+        page = PositionsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        monkeypatch.setattr(
+            CreatePositionDialog,
+            "exec",
+            lambda self: QDialog.Rejected,
+        )
+
+        page.m_create_button.click()
+
+        assert journal.m_repository.get_positions(account_id) == []
+        assert page.m_table.rowCount() == 0
+
+
+def test_positions_page_edits_position(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify editing persists position changes through the service."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        account_id = journal.m_service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+        position_id = journal.m_service.create_position(Position(ticker="NVDA", account_id=account_id))
+
+        page = PositionsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        page.m_table.selectRow(0)
+
+        def accept_edit(dialog):
+            dialog.m_strategy.setText("VWAP Reclaim")
+            return QDialog.Accepted
+
+        monkeypatch.setattr(
+            CreatePositionDialog,
+            "exec",
+            accept_edit,
+        )
+
+        page.m_edit_action.trigger()
+
+        updated = journal.m_repository.get_position(position_id)
+
+        assert updated is not None
+        assert updated.strategy == "VWAP Reclaim"
+        assert updated.account_id == account_id
+
+        assert page.get_selected_position_id() == position_id
+
+
+def test_positions_page_deletes_empty_position(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify confirmed deletion removes an empty position."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        account_id = journal.m_service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+        position_id = journal.m_service.create_position(Position(ticker="AMD", account_id=account_id))
+
+        page = PositionsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        page.m_table.selectRow(0)
+
+        monkeypatch.setattr(
+            DeletePositionDialog,
+            "exec",
+            lambda self: QDialog.Accepted,
+        )
+
+        page.m_delete_action.trigger()
+
+        assert journal.m_repository.get_position(position_id) is None
+        assert page.m_table.rowCount() == 0
+
+
+def test_positions_page_cancel_delete(
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Verify declining deletion preserves the position."""
+    database_path = tmp_path / "journal.db"
+
+    with JournalContext(database_path) as journal:
+        account_id = journal.m_service.create_trading_account(TradingAccount("Primary IRA", AccountType.ROTH_IRA))
+
+        position_id = journal.m_service.create_position(Position(ticker="AMD", account_id=account_id))
+
+        page = PositionsPage(
+            repository=journal.m_repository,
+            service=journal.m_service,
+        )
+        qtbot.addWidget(page)
+
+        page.m_table.selectRow(0)
+
+        monkeypatch.setattr(
+            DeletePositionDialog,
+            "exec",
+            lambda self: QDialog.Rejected,
+        )
+
+        page.m_delete_action.trigger()
+
+        assert journal.m_repository.get_position(position_id) is not None
+        assert page.m_table.rowCount() == 1
