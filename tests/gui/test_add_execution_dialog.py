@@ -3,6 +3,7 @@
 # Purpose: Pytest file for test_add_execution_dialog.py.
 # =============================================================================
 
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -10,6 +11,7 @@ from PySide6.QtWidgets import QDialog
 
 from stonks.gui.pages.add_execution_dialog import AddExecutionDialog
 from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.trade_execution import TradeExecution
 
 
 @pytest.fixture
@@ -109,3 +111,42 @@ def test_add_execution_dialog_confirm(dialog) -> None:
     dialog.m_save_button.click()
 
     assert dialog.result() == QDialog.Accepted
+
+
+def test_edit_execution_preserves_identity(qtbot) -> None:
+    """Verify editing retains execution and position identity."""
+    original = TradeExecution(
+        execution_id=42,
+        position_id=7,
+        side=ExecutionSide.BUY,
+        executed_at=datetime(
+            2026,
+            10,
+            16,
+            14,
+            30,
+            tzinfo=timezone.utc,
+        ),
+        shares=Decimal("10.375"),
+        price=Decimal("153.1275"),
+        fees=Decimal("0.25"),
+        notes="Original fill",
+    )
+
+    dialog = AddExecutionDialog(
+        position_id=7,
+        ticker="NVDA",
+        execution=original,
+    )
+    qtbot.addWidget(dialog)
+
+    assert dialog.m_shares.text() == "10.375"
+    assert dialog.m_price.text() == "153.1275"
+    assert dialog.m_fees.text() == "0.25"
+
+    updated = dialog.get_execution()
+
+    assert updated.execution_id == 42
+    assert updated.position_id == 7
+    assert updated.side is ExecutionSide.BUY
+    assert updated.notes == "Original fill"

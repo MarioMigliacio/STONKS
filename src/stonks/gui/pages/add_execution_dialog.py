@@ -5,6 +5,7 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
+from typing import Optional
 
 from PySide6.QtCore import QDateTime
 from PySide6.QtWidgets import (
@@ -46,6 +47,9 @@ class AddExecutionDialog(QDialog):
         m_executed_at:
             Date and time when the trade was filled.
 
+        m_execution:
+            Underlying TradeExecution data.
+
         m_shares:
             Text input for the executed share quantity.
 
@@ -70,36 +74,49 @@ class AddExecutionDialog(QDialog):
         position_id: int,
         ticker: str,
         parent=None,
+        execution: Optional[TradeExecution] = None,
     ) -> None:
         """
-        Initialize execution entry for an existing position.
+        Initialize the execution creation or editing form.
 
         Args:
             position_id:
-                Database identifier of the target position.
+                Identifier of the position owning the execution.
 
             ticker:
-                Symbol used to identify the position.
+                Ticker symbol displayed for context.
 
             parent:
                 Optional parent Qt widget.
+
+            execution:
+                Existing execution to edit, or None when creating.
         """
         super().__init__(parent)
 
+        if execution is not None and execution.position_id != position_id:
+            raise ValueError("Execution does not belong to the selected position.")
+
         self.m_position_id = position_id
         self.m_ticker = ticker
+        self.m_execution = execution
 
-        self.setWindowTitle("Add Trade Execution")
+        self.setWindowTitle("Edit Trade Execution" if execution is not None else "Add Trade Execution")
         self.setMinimumWidth(440)
 
         self._setup_ui()
+
+        if self.m_execution is not None:
+            self._populate_fields()
 
     def _setup_ui(self) -> None:
         """Build the execution entry form."""
         layout = QVBoxLayout(self)
         layout.setSpacing(14)
 
-        heading = QLabel(f"Add Execution — {self.m_ticker}")
+        is_editing = self.m_execution is not None
+
+        heading = QLabel(f"{'Edit' if is_editing else 'Add'} Execution — {self.m_ticker}")
         heading.setObjectName("pageTitle")
         layout.addWidget(heading)
 
@@ -232,6 +249,7 @@ class AddExecutionDialog(QDialog):
 
         return TradeExecution(
             position_id=self.m_position_id,
+            execution_id=(self.m_execution.execution_id if self.m_execution is not None else None),
             side=ExecutionSide(self.m_side.currentText()),
             executed_at=executed_at,
             shares=shares,
@@ -253,3 +271,25 @@ class AddExecutionDialog(QDialog):
             return
 
         self.accept()
+
+    def _populate_fields(self) -> None:
+        """Populate the form with an existing trade execution."""
+        execution = self.m_execution
+
+        if execution is None:
+            return
+
+        index = self.m_side.findText(execution.side.value)
+
+        if index >= 0:
+            self.m_side.setCurrentIndex(index)
+
+        # Stored timestamps are UTC; display them in local time.
+        local_datetime = execution.executed_at.astimezone()
+
+        self.m_executed_at.setDateTime(QDateTime.fromSecsSinceEpoch(int(local_datetime.timestamp())))
+
+        self.m_shares.setText(str(execution.shares))
+        self.m_price.setText(str(execution.price))
+        self.m_fees.setText(str(execution.fees))
+        self.m_notes.setPlainText(execution.notes)
