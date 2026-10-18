@@ -31,6 +31,18 @@ QLabel#applicationTitle {
     padding: 12px;
 }
 
+QLabel#journalPageTitle {
+    color: #E8EDF5;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+QLabel#journalSectionLabel {
+    color: #C4D0E1;
+    font-size: 14px;
+    font-weight: bold;
+}
+
 QPushButton {
     background-color: #263346;
     color: #CED7E4;
@@ -153,5 +165,87 @@ QLabel#deletionSummary {
     border: 1px solid #344055;
     border-radius: 6px;
     padding: 12px;
+}
+
+QLabel#metricsHeading {
+    color: #E8EDF5;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QFrame#metricCard,
+QFrame#metricFooter {
+    background-color: #222D3C;
+    border: 1px solid #344055;
+    border-radius: 9px;
+}
+
+QFrame#metricCard {
+    min-height: 70px;
+}
+
+QLabel#metricCaption {
+    color: #A9B5C6;
+    font-size: 12px;
+    background: transparent;
+    border: none;
+}
+
+QLabel#metricValue {
+    color: #E8EDF5;
+    font-size: 22px;
+    font-weight: bold;
+    background: transparent;
+    border: none;
+}
+
+QLabel#metricDescription {
+    color: #8190A5;
+    font-size: 11px;
+    background: transparent;
+    border: none;
+}
+
+QLabel#metricFooterValue {
+    color: #E8EDF5;
+    font-size: 15px;
+    font-weight: bold;
+    background: transparent;
+    border: none;
+}
+
+QLabel#metricValue[performance="profit"] {
+    color: #4ADE80;
+}
+
+QLabel#metricValue[performance="loss"] {
+    color: #F87171;
+}
+
+QLabel#positionStatusBadge {
+    color: #E8EDF5;
+    background-color: #344055;
+    border: 1px solid #45566F;
+    border-radius: 10px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+QLabel#positionStatusBadge[status="OPEN"] {
+    color: #4ADE80;
+    background-color: #1C3B32;
+    border-color: #376B54;
+}
+
+QLabel#positionStatusBadge[status="CLOSED"] {
+    color: #E8EDF5;
+    background-color: #344055;
+    border-color: #45566F;
+}
+
+QLabel#positionStatusBadge[status="DRAFT"] {
+    color: #A9B5C6;
+    background-color: #293344;
 }
 """

@@ -24,6 +24,10 @@ from PySide6.QtWidgets import (
 from stonks.gui.icons import get_icon
 from stonks.gui.pages.add_execution_dialog import AddExecutionDialog
 from stonks.gui.pages.delete_execution_dialog import DeleteExecutionDialog
+from stonks.gui.widgets.position_metrics_widget import PositionMetricsWidget
+from stonks.journal.analytics.position_analytics import (
+    calculate_position_metrics,
+)
 from stonks.journal.models.execution_side import ExecutionSide
 from stonks.journal.persistence.journal_repository import JournalRepository
 from stonks.journal.services.journal_service import JournalService
@@ -53,6 +57,9 @@ class PositionDetailsDialog(QDialog):
 
         m_metadata_label:
             Label displaying position strategy, catalyst, and entry reason.
+
+        m_metrics_widget:
+            Positional Metrics widget for display.
 
         m_add_execution_button:
             Button opening the execution creation dialog.
@@ -109,7 +116,7 @@ class PositionDetailsDialog(QDialog):
         self.m_service = service
 
         self.setWindowTitle("Position Details")
-        self.resize(900, 550)
+        self.resize(900, 800)
         self.setMinimumSize(750, 500)
 
         self._setup_ui()
@@ -132,6 +139,9 @@ class PositionDetailsDialog(QDialog):
         self.m_metadata_label.setWordWrap(True)
 
         layout.addWidget(self.m_metadata_label)
+
+        self.m_metrics_widget = PositionMetricsWidget(self)
+        layout.addWidget(self.m_metrics_widget)
 
         # -------------------------------------------------------------
         # Execution management controls
@@ -334,6 +344,7 @@ class PositionDetailsDialog(QDialog):
             self.m_actions_button.setEnabled(False)
             self.m_edit_action.setEnabled(False)
             self.m_delete_action.setEnabled(False)
+            self.m_metrics_widget.hide()
             return
 
         # -------------------------------------------------------------
@@ -362,6 +373,13 @@ class PositionDetailsDialog(QDialog):
         # Execution history
         # -------------------------------------------------------------
         executions = self.m_repository.get_position_executions(self.m_position_id)
+
+        metrics = calculate_position_metrics(
+            position_id=self.m_position_id,
+            executions=executions,
+        )
+
+        self.m_metrics_widget.update_metrics(metrics)
 
         # Avoid processing intermediate selection changes while
         # rebuilding the table.
@@ -445,6 +463,7 @@ class PositionDetailsDialog(QDialog):
         position = self.m_repository.get_position(self.m_position_id)
 
         if position is None:
+            self.m_metrics_widget.hide()
             self.refresh_details()
             return
 

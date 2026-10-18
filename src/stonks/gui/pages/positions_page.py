@@ -92,7 +92,7 @@ class PositionsPage(QWidget):
         header_layout = QHBoxLayout()
 
         title = QLabel("Trading Journal")
-        title.setObjectName("pageTitle")
+        title.setObjectName("journalPageTitle")
 
         self.m_create_button = QPushButton("New Position")
         self.m_create_button.setIcon(get_icon("plus"))
@@ -123,6 +123,7 @@ class PositionsPage(QWidget):
 
         # Trading account selector.
         account_label = QLabel("Trading Account")
+        account_label.setObjectName("journalSectionLabel")
 
         self.m_account_selector = QComboBox()
         self.m_account_selector.currentIndexChanged.connect(self._on_account_changed)
