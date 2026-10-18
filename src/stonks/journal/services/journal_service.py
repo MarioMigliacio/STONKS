@@ -389,8 +389,12 @@ class JournalService:
         )
 
         with self._transaction():
-            if self.m_repository.get_position(normalized.position_id) is None:
+            position = self.m_repository.get_position(normalized.position_id)
+
+            if position is None:
                 raise ValueError("Position does not exist.")
+
+            self._validate_account_ownership(position.account_id)
 
             execution_id = self.m_repository.create_execution(normalized)
 

@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from stonks.gui.icons import get_icon
 from stonks.gui.pages.create_position_dialog import CreatePositionDialog
 from stonks.gui.pages.delete_position_dialog import DeletePositionDialog
+from stonks.gui.pages.position_details_dialog import PositionDetailsDialog
 from stonks.journal.persistence.journal_repository import JournalRepository
 from stonks.journal.services.journal_service import JournalService
 
@@ -143,14 +144,11 @@ class PositionsPage(QWidget):
         )
 
         self.m_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
         self.m_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-
         self.m_table.setSelectionMode(QAbstractItemView.SingleSelection)
-
         self.m_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
         self.m_table.itemSelectionChanged.connect(self._update_action_state)
+        self.m_table.itemDoubleClicked.connect(self._open_position_details)
 
         layout.addWidget(self.m_table)
 
@@ -509,5 +507,39 @@ class PositionsPage(QWidget):
                 "Position Not Found",
                 "The position could not be deleted.",
             )
+
+        self.refresh_positions()
+
+    def _open_position_details(self, _item=None) -> None:
+        """
+        Open execution history for the selected journal position.
+
+        Args:
+            _item:
+                Optional table item supplied by the double-click signal.
+        """
+        position_id = self.get_selected_position_id()
+
+        if position_id is None:
+            return
+
+        position = self.m_repository.get_position(position_id)
+
+        if position is None:
+            self.refresh_positions()
+            return
+
+        if position.account_id != self.get_selected_account_id():
+            self.refresh_positions()
+            return
+
+        dialog = PositionDetailsDialog(
+            position_id=position_id,
+            repository=self.m_repository,
+            service=self.m_service,
+            parent=self,
+        )
+
+        dialog.exec()
 
         self.refresh_positions()
