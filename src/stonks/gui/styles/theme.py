@@ -347,4 +347,43 @@ QLabel#positionStatusBadge[status="DRAFT"] {
     color: #A9B5C6;
     background-color: #293344;
 }
+
+QLineEdit#journalSearchInput,
+QComboBox#journalStatusFilter {
+    background-color: #263244;
+    color: #E8EDF5;
+    border: 1px solid #42516A;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+QLineEdit#journalSearchInput:hover,
+QComboBox#journalStatusFilter:hover {
+    background-color: #2B394D;
+    border-color: #617B9C;
+}
+
+QLineEdit#journalSearchInput:focus,
+QComboBox#journalStatusFilter:focus {
+    border-color: #59A8FF;
+}
+
+QLineEdit#journalSearchInput {
+    selection-background-color: #235C93;
+    selection-color: #FFFFFF;
+}
+
+QComboBox#journalStatusFilter::drop-down {
+    border: none;
+    width: 30px;
+}
+
+QComboBox#journalStatusFilter QAbstractItemView {
+    background-color: #263244;
+    color: #E8EDF5;
+    border: 1px solid #42516A;
+    selection-background-color: #235C93;
+    selection-color: #FFFFFF;
+}
 """

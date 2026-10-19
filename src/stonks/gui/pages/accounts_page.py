@@ -116,8 +116,17 @@ class AccountsPage(QWidget):
         # Page header.
         header_layout = QHBoxLayout()
 
+        heading_layout = QVBoxLayout()
+        heading_layout.setSpacing(4)
+
         title = QLabel("Trading Accounts")
-        title.setObjectName("pageTitle")
+        title.setObjectName("journalPageTitle")
+
+        subtitle = QLabel("Manage your trading accounts and preferences")
+        subtitle.setObjectName("journalPageSubtitle")
+
+        heading_layout.addWidget(title)
+        heading_layout.addWidget(subtitle)
 
         self.m_create_button = QPushButton("New Account")
         self.m_create_button.setIcon(get_icon("plus"))
@@ -156,7 +165,7 @@ class AccountsPage(QWidget):
         self.m_reactivate_action.triggered.connect(self._reactivate_account)
         self.m_delete_action.triggered.connect(self._delete_account)
 
-        header_layout.addWidget(title)
+        header_layout.addLayout(heading_layout)
         header_layout.addStretch()
         header_layout.addWidget(self.m_create_button)
         header_layout.addWidget(self.m_actions_button)

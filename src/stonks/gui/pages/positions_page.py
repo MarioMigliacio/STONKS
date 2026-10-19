@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QMenu,
     QMessageBox,
     QPushButton,
@@ -72,6 +73,12 @@ class PositionsPage(QWidget):
 
         m_delete_action:
             Menu action that deletes an empty position after confirmation.
+
+        m_search_input:
+            Input for filtering positions by ticker symbol.
+
+        m_status_filter:
+            Dropdown restricting positions by lifecycle status.
 
         m_table:
             Table displaying position status, shares, and realized
@@ -190,6 +197,34 @@ class PositionsPage(QWidget):
         layout.addLayout(account_section)
 
         # -------------------------------------------------------------
+        # Position search and status filtering
+        # -------------------------------------------------------------
+        filter_layout = QHBoxLayout()
+        filter_layout.setSpacing(10)
+
+        self.m_search_input = QLineEdit()
+        self.m_search_input.setObjectName("journalSearchInput")
+        self.m_search_input.setPlaceholderText("Search ticker...")
+        self.m_search_input.setClearButtonEnabled(True)
+        self.m_search_input.setMinimumHeight(42)
+        self.m_search_input.setAccessibleName("Search positions by ticker")
+
+        self.m_status_filter = QComboBox()
+        self.m_status_filter.setObjectName("journalStatusFilter")
+        self.m_status_filter.setMinimumHeight(42)
+        self.m_status_filter.setMinimumWidth(155)
+
+        self.m_status_filter.addItem("All Statuses", userData=None)
+        self.m_status_filter.addItem("Draft", userData=PositionStatus.DRAFT.value)
+        self.m_status_filter.addItem("Open", userData=PositionStatus.OPEN.value)
+        self.m_status_filter.addItem("Closed", userData=PositionStatus.CLOSED.value)
+
+        filter_layout.addWidget(self.m_search_input, 1)
+        filter_layout.addWidget(self.m_status_filter)
+
+        layout.addLayout(filter_layout)
+
+        # -------------------------------------------------------------
         # Positions performance table
         # -------------------------------------------------------------
         self.m_table = QTableWidget()
@@ -231,16 +266,13 @@ class PositionsPage(QWidget):
         # Signals
         # -------------------------------------------------------------
         self.m_account_selector.currentIndexChanged.connect(self._on_account_changed)
-
         self.m_create_button.clicked.connect(self._create_position)
-
         self.m_edit_action.triggered.connect(self._edit_position)
-
         self.m_delete_action.triggered.connect(self._delete_position)
-
         self.m_table.itemSelectionChanged.connect(self._update_action_state)
-
         self.m_table.itemDoubleClicked.connect(self._open_position_details)
+        self.m_search_input.textChanged.connect(self._apply_filters)
+        self.m_status_filter.currentIndexChanged.connect(self._apply_filters)
 
     def refresh_accounts(self) -> None:
         """
@@ -407,6 +439,7 @@ class PositionsPage(QWidget):
 
         try:
             self.m_table.clearSelection()
+            self.m_table.setRowCount(0)
             self.m_table.setRowCount(len(positions))
 
             for row_index, position in enumerate(positions):
@@ -490,9 +523,7 @@ class PositionsPage(QWidget):
         finally:
             self.m_table.blockSignals(False)
 
-        self.m_empty_label.setVisible(len(positions) == 0)
-
-        self._update_action_state()
+        self._apply_filters()
 
     def _update_action_state(self) -> None:
         """
@@ -764,3 +795,62 @@ class PositionsPage(QWidget):
 
         # Execution changes alter status, shares, P&L, and return.
         self.refresh_positions()
+
+    def _apply_filters(self, *_args) -> None:
+        """
+        Filter the loaded position table by ticker and lifecycle status.
+
+        Matching is case-insensitive and restricted to the selected
+        trading account. Clears selections that become hidden and
+        distinguishes an empty account from filtered-out results.
+        """
+        search_text = self.m_search_input.text().strip().casefold()
+        selected_status = self.m_status_filter.currentData()
+
+        total_rows = self.m_table.rowCount()
+        visible_rows = 0
+        selected_position_id = self.get_selected_position_id()
+
+        selected_remains_visible = False
+
+        for row in range(total_rows):
+            ticker_item = self.m_table.item(row, 0)
+            status_item = self.m_table.item(row, 1)
+
+            if ticker_item is None or status_item is None:
+                self.m_table.setRowHidden(row, True)
+                continue
+
+            ticker = ticker_item.text().casefold()
+            status = status_item.text()
+
+            matches_search = search_text in ticker
+            matches_status = selected_status is None or status == selected_status
+
+            matches = matches_search and matches_status
+
+            self.m_table.setRowHidden(row, not matches)
+
+            if matches:
+                visible_rows += 1
+
+                if ticker_item.data(Qt.UserRole) == selected_position_id:
+                    selected_remains_visible = True
+
+        # Hidden positions must not remain actionable.
+        if not selected_remains_visible:
+            self.m_table.clearSelection()
+
+        if total_rows == 0:
+            message = "No positions recorded for this trading account."
+
+        elif visible_rows == 0:
+            message = "No positions match your current search or filters."
+
+        else:
+            message = ""
+
+        self.m_empty_label.setText(message)
+        self.m_empty_label.setVisible(bool(message))
+
+        self._update_action_state()
