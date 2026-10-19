@@ -19,6 +19,8 @@ from stonks.gui.icons import get_icon
         "chevron-left",
         "chevron-right",
         "chevron-up",
+        "ellipsis-vertical",
+        "ellipsis",
         "layout-dashboard",
         "pencil",
         "plus",

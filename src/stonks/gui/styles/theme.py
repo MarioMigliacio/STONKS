@@ -3,6 +3,7 @@
 # Purpose: Defines the centralized visual theme for the STONKS GUI.
 # =============================================================================
 
+
 STONKS_DARK_THEME = """
 QMainWindow {
     background-color: #141A23;
@@ -35,12 +36,26 @@ QLabel#journalPageTitle {
     color: #E8EDF5;
     font-size: 24px;
     font-weight: bold;
+    background: transparent;
+}
+
+QLabel#journalPageSubtitle {
+    color: #91A2B9;
+    font-size: 12px;
+    background: transparent;
 }
 
 QLabel#journalSectionLabel {
     color: #C4D0E1;
     font-size: 14px;
     font-weight: bold;
+}
+
+QLabel#journalAccountLabel {
+    color: #A9B5C6;
+    font-size: 11px;
+    font-weight: bold;
+    background: transparent;
 }
 
 QPushButton {
@@ -65,6 +80,90 @@ QPushButton:checked {
 
 QPushButton:focus {
     outline: none;
+}
+
+QPushButton#journalCreateButton {
+    background-color: #294F7B;
+    border: 1px solid #39699D;
+    border-radius: 8px;
+    padding: 0px;
+    text-align: center;
+}
+
+QPushButton#journalCreateButton:hover {
+    background-color: #356596;
+}
+
+QPushButton#journalCreateButton:pressed {
+    background-color: #203E63;
+}
+
+QPushButton#journalActionsButton {
+    background-color: #344055;
+    color: #E8EDF5;
+    border: 1px solid #45566F;
+    border-radius: 8px;
+    padding: 0px;
+    text-align: center;
+}
+
+QPushButton#journalActionsButton:hover {
+    background-color: #43516A;
+}
+
+QPushButton#journalActionsButton:pressed {
+    background-color: #263244;
+}
+
+QPushButton#journalCreateButton:disabled,
+QPushButton#journalActionsButton:disabled {
+    background-color: #252E3D;
+    border-color: #344055;
+    color: #778397;
+}
+
+QPushButton#journalActionsButton::menu-indicator {
+    image: none;
+    width: 0px;
+    height: 0px;
+}
+
+QComboBox#journalAccountSelector {
+    background-color: #263244;
+    color: #E8EDF5;
+    border: 1px solid #42516A;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+QComboBox#journalAccountSelector:hover {
+    background-color: #2B394D;
+    border-color: #617B9C;
+}
+
+QComboBox#journalAccountSelector:focus {
+    border-color: #59A8FF;
+}
+
+QComboBox#journalAccountSelector:disabled {
+    background-color: #252E3D;
+    color: #778397;
+    border-color: #344055;
+}
+
+QComboBox#journalAccountSelector::drop-down {
+    border: none;
+    width: 32px;
+}
+
+QComboBox#journalAccountSelector QAbstractItemView {
+    background-color: #263244;
+    color: #E8EDF5;
+    border: 1px solid #42516A;
+    selection-background-color: #235C93;
+    selection-color: #FFFFFF;
 }
 
 QTableWidget {
