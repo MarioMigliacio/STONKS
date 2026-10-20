@@ -2,36 +2,25 @@
 
 [← Back to Main README](../README.md)
 
-The STONKS Journal subsystem provides persistent storage, validation, and analytics for trading activity across multiple brokerage accounts.
-
-The journal uses SQLite for structured data storage and separates database access, business logic, and financial analysis.
-
----
-
-## Purpose
-
-The Journal records trading activity and account-level cash transactions to support performance analysis, trading discipline, and historical review.
-
-Its architecture is designed to support a future desktop graphical interface without coupling business logic to the user interface.
+The STONKS Journal provides persistent storage, validation, and financial analytics for trading activity across multiple brokerage accounts. Its SQLite backend supports a PySide6 desktop Trading Journal while keeping database operations, business rules, analytics, and presentation separate.
 
 ---
 
 ## Features
 
-- SQLite database persistence (schema v2)
-- Multiple trading account support
-- Default account selection and account archival
-- Position and trade execution tracking
-- Partial entries and exits
-- Deposits, withdrawals, and account-level transactions
-- Position and account performance analytics
-- Trading pattern analysis
-- Repository and service architecture
-- Account ownership validation
-- Database integrity constraints
-- SQLite database backup and restoration
-- Human-readable CSV exports
-- Automated regression testing
+- SQLite persistence (schema v2) and account-owned financial records
+- Multiple trading accounts, default selection, archival, and reactivation
+- Position and BUY/SELL execution management, including partial entries and exits
+- Account cash transactions, including deposits, withdrawals, fees, adjustments, and transfers (backend)
+- Position, account, and consolidated portfolio analytics
+- Validated repository/service operations and database integrity constraints
+- SQLite backup and restoration, plus human-readable CSV exports
+- Desktop Trading Journal with position analytics, ticker search, and status filters
+- Automated backend and GUI regression tests
+
+**GUI scope:** The desktop application currently provides Trading Accounts, Positions, and Execution Details workflows.
+
+For screen-by-screen instructions and GUI architecture, see [Desktop GUI Guide](gui.md).
 
 ---
 
@@ -39,84 +28,47 @@ Its architecture is designed to support a future desktop graphical interface wit
 
 The Journal uses four primary SQLite tables.
 
-| Table                  | Primary Key      | Purpose                                                      |
-| ---------------------- | ---------------- | ------------------------------------------------------------ |
-| `trading_accounts`     | `account_id`     | Brokerage account information                                |
-| `positions`            | `position_id`    | Individual trading positions                                 |
-| `trade_executions`     | `execution_id`   | BUY and SELL executions                                      |
-| `account_transactions` | `transaction_id` | Deposits, withdrawals, and other account-level cash activity |
+| Table                  | Primary Key      | Purpose                          |
+| ---------------------- | ---------------- | -------------------------------- |
+| `trading_accounts`     | `account_id`     | Brokerage account information    |
+| `positions`            | `position_id`    | Individual trading positions     |
+| `trade_executions`     | `execution_id`   | BUY and SELL executions          |
+| `account_transactions` | `transaction_id` | Non-trade account cash movements |
 
 ### Table Relationships
 
-```text
-trading_accounts
-    |
-    +---- positions
-    |         |
-    |         +---- trade_executions
-    |
-    +---- account_transactions
+```mermaid
+flowchart TD
+    A[trading_accounts] --> B[positions]
+    B --> C[trade_executions]
+    A --> D[account_transactions]
 ```
 
-Each position belongs to one trading account.
-
-Each trade execution belongs to one position and inherits its account association through that position.
-
-Each account transaction belongs directly to one trading account.
-
-The `transaction_id` and `execution_id` fields identify separate record types and do not reference each other.
+Every position belongs to one account. Each execution belongs to a position and inherits that position's account ownership. Account transactions belong directly to an account; their IDs are distinct from execution IDs.
 
 ### Storage
 
-The SQLite database is stored outside the application source tree using the configured journal database path.
+The configured database file is `data/journal/stonks_journal.db`, relative to the project root, as defined in `stonks/config/journal_paths.py`. Runtime journal data is excluded from version control.
 
-Runtime journal data is excluded from Git version control.
-
-SQLite STRICT tables and foreign-key constraints help protect data integrity.
+SQLite STRICT tables, foreign keys, and database triggers protect data integrity. Tests use temporary databases rather than the local journal database.
 
 ---
 
 ## Trading Accounts
 
-Trading accounts represent individual brokerage accounts within the journal.
+Supported account types are Roth IRA, Traditional IRA, Cash, Margin, and Other. Accounts hold a name, type, and optional broker information.
 
-Supported account types include:
+The first active account becomes the default. Default changes are atomic. Archived accounts retain historical records but cannot receive new activity or become the default; the current default must be reassigned before archival.
 
-- Roth IRA
-- Traditional IRA
-- Cash
-- Margin
-- Other
-
-Each account stores identifying information such as its name, account type, and optional broker.
-
-### Default Accounts
-
-The first active trading account automatically becomes the default.
-
-The default account can be changed through the journal service.
-
-Default changes are performed atomically to prevent inconsistent account selection.
-
-### Account Archival
-
-Accounts may be archived without deleting their historical records.
-
-Archived accounts cannot receive new positions or account transactions and cannot become the default account.
-
-A default account must be reassigned before it can be archived.
+The desktop **Trading Accounts** page supports creating and editing accounts, choosing a default, archiving and reactivating accounts, and confirming permanent deletion when allowed by service safeguards. Archived records remain visible.
 
 ---
 
 ## Positions and Trade Executions
 
-A position represents a trading opportunity associated with a ticker and trading account.
+A position represents a trading opportunity for one ticker within one account. It can store a strategy, catalyst, entry and exit reasoning, mistakes, lessons learned, and notes.
 
-Positions may include strategy information, catalyst details, entry reasoning, and notes.
-
-Each position can contain multiple trade executions.
-
-For example:
+A position may have multiple executions, allowing scaling in and out:
 
 ```text
 Position #1 — NVDA
@@ -127,143 +79,99 @@ SELL    75 shares
 SELL    75 shares
 ```
 
-This structure supports scaling into and out of positions while preserving individual execution history.
+Each execution records its BUY/SELL side, timestamp, quantity, price, fees, and optional notes. Monetary values are calculated with `Decimal`, with exact-value text storage in SQLite where applicable.
 
-Each execution records information such as:
+### Desktop Workflow
 
-- Execution side (BUY or SELL)
-- Execution timestamp
-- Share quantity
-- Execution price
-- Trading fees
+On the **Trading Journal** page, choose a trading account and create a position using the plus button. Select a position to edit or delete it through the Actions menu. A position with execution history cannot be deleted from the overview.
 
-Financial quantities use Decimal-based calculations, with exact-value text storage in SQLite where applicable.
+Double-click a position to open **Position Details**. The dialog displays metadata, performance metrics, and chronological execution history. Use **Add Execution** or the execution Actions menu to create, edit, or delete fills. Service validation enforces execution chronology, prevents selling more shares than held, and protects archived accounts against modification.
+
+The overview supports case-insensitive ticker search and **All / Draft / Open / Closed** status filtering. Search and status filters can be combined, and both remain in effect when switching accounts. Positions and executions are persisted through `JournalService`, not directly by GUI widgets.
 
 ---
 
 ## Account Transactions
 
-Account transactions represent cash activity separate from individual trades.
+Account transactions represent cash activity separately from trade executions. `AccountTransactionType` defines:
 
-Examples include deposits and withdrawals.
+| Type           | Effect on account cash |
+| -------------- | ---------------------- |
+| `DEPOSIT`      | Increases cash         |
+| `WITHDRAWAL`   | Decreases cash         |
+| `FEE`          | Decreases cash         |
+| `ADJUSTMENT`   | Signed cash adjustment |
+| `TRANSFER_IN`  | Increases cash         |
+| `TRANSFER_OUT` | Decreases cash         |
 
-Each transaction records:
+Each transaction records its account, category, time, amount, and optional notes. `JournalService` provides validated creation, updates, and deletion; `JournalRepository` persists and retrieves the records.
 
-- Trading account ownership
-- Transaction type
-- Transaction timestamp
-- Amount
-- Optional notes
+**Current GUI limitation:** There is no screen to enter or review these transactions yet. Likewise, the system does not provide a single atomic, linked two-account transfer operation: incoming and outgoing transfer entries are separate records. Avoid representing transfers as ordinary deposits and withdrawals when calculating external contributions.
 
-Separating account transactions from trade executions allows trading performance to be evaluated independently of external cash contributions and withdrawals.
+Account-level analytics reconstruct cash balances from recorded activity and assume complete history with a zero opening balance. For existing accounts, an opening-balance/import approach needs to be established before relying on these totals as a complete historical picture.
 
 ---
 
 ## Account Ownership and Integrity
 
-Schema v2 requires positions and account transactions to belong to valid trading accounts.
+Schema v2 requires valid account ownership for positions and transactions. `JournalService` validates account existence and active status, rejects forbidden changes, and coordinates atomic writes. Database constraints enforce foreign keys, strict column typing, and immutable account ownership; triggers protect against bypassing the service through direct SQL.
 
-Ownership is protected at multiple layers.
-
-### Service Validation
-
-The journal service rejects:
-
-- Missing trading accounts
-- Nonexistent trading accounts
-- Archived accounts receiving new activity
-- Attempts to reassign a position to another account
-
-### Database Constraints
-
-SQLite enforces:
-
-- Required account ownership
-- Foreign-key relationships
-- Strict column typing
-- Immutable position ownership
-- Immutable account transaction ownership
-
-Database triggers prevent ownership reassignment even when SQL operations bypass the journal service.
+The GUI also disables editing controls for archived accounts, but **service and database validation remain the authoritative safeguards**.
 
 ---
 
 ## Application Architecture
 
-The Journal subsystem is organized into six packages, each with a distinct responsibility.
-
-| Package       | Responsibility                                                 |
-| ------------- | -------------------------------------------------------------- |
-| `models`      | Trading entities, enumerations, and domain data                |
-| `analytics`   | Position, account, and portfolio financial calculations        |
-| `persistence` | SQLite database management, repository operations, and backups |
-| `services`    | Business-rule enforcement and transactional operations         |
-| `validation`  | Input validation and trading integrity rules                   |
-| `export`      | Human-readable journal data exports                            |
+| Package       | Responsibility                                |
+| ------------- | --------------------------------------------- |
+| `models`      | Domain entities and enumerations              |
+| `analytics`   | Position, account, and portfolio calculations |
+| `persistence` | SQLite, repositories, and backups             |
+| `services`    | Validated operations and transactions         |
+| `validation`  | Financial and domain integrity rules          |
+| `export`      | CSV record exports                            |
 
 ### Application Bootstrap
 
-`JournalContext` provides a centralized entry point for initializing the journal backend.
+`JournalContext` initializes the SQLite database and connection, exposes `m_repository` and `m_service`, and closes the connection on exit.
 
-It initializes the database, creates a configured SQLite connection, and exposes the repository and service dependencies.
+The GUI entry point is `stonks.gui.app`. It creates `QApplication`, applies the dark stylesheet, constructs `MainWindow` with a shared `JournalContext`, and runs the Qt event loop. `MainWindow` uses a persistent navigation sidebar and stacked pages. Trading Accounts and Trading Journal are implemented; Dashboard, Scanner, and C.I.A. destinations are currently placeholders in the desktop shell.
 
-The context also supports managed connection cleanup.
+To launch the desktop GUI from an activated project environment:
 
-### Repository and Service
+```powershell
+python -m stonks.gui.app
+```
 
-`JournalRepository` handles persistence and data retrieval.
+`python -m stonks` still launches the scanner rather than the desktop GUI. See [Desktop GUI Guide](gui.md) for component details and interaction patterns.
 
-`JournalService` coordinates validated operations and manages atomic database transactions.
+### Repository, Service, and Analytics
 
-Financial analytics remain independent of the user interface.
-
-The future desktop GUI will reuse these components without implementing its own database operations or financial calculations.
+`JournalRepository` handles data access. `JournalService` applies business rules and manages atomic operations. Analytics functions calculate financial values from domain records. The GUI invokes these layers rather than implementing financial calculations or direct SQL itself.
 
 ---
 
 ## Journal Analytics
 
-The Journal provides financial analysis at three levels.
-
 ### Position Analytics
 
-Position analytics calculate:
+The position engine calculates open shares, average entry price for remaining shares, **historical average buy price**, remaining cost basis, realized P&L, realized return percentage, lifecycle status (**Draft / Open / Closed**), and holding duration. It supports partial entries and exits.
 
-- Open share quantity
-- Weighted-average acquisition cost
-- Remaining position cost basis
-- Realized trading profit or loss
-- Position status (Draft, Open, Closed)
-- Holding duration
+The Trading Journal overview displays ticker, status, remaining shares, realized P&L, and realized return. Position Details adds metric cards, including historical average buy price and remaining cost basis.
 
-Partial entries and exits are supported.
+Realized return is measured against the cost basis of shares sold; it is not an unrealized or live-market return.
 
 ### Account Analytics
 
-Account analytics consolidate trading activity and cash transactions for an individual brokerage account.
+Account analytics combine non-trade transactions with execution cash flows and position metrics to derive total deposits, withdrawals, net contributions, cash balance, realized trading P&L, account-level fees, net realized P&L, open position cost basis, and equity at cost basis.
 
-Reported metrics include:
-
-- Total deposits and withdrawals
-- Net contributions
-- Cash balance
-- Realized trading P&L
-- Account-level fees
-- Net realized P&L
-- Open position cost basis
-- Equity at cost basis
+These computations exist in the backend but are not yet presented as a dedicated account-performance screen in the desktop GUI.
 
 ### Portfolio Analytics
 
-`analyze_portfolio()` aggregates financial metrics across multiple trading accounts.
-
-By default, all accounts are included, including archived accounts. Callers may also select specific accounts.
-
-Portfolio analytics preserve account isolation and avoid duplicate account counting.
+`analyze_portfolio()` consolidates financial metrics across trading accounts, optionally restricted to a selected subset. By default it includes archived accounts as well, avoiding duplicate account counting.
 
 ### Financial Consistency
-
-The following accounting relationships are maintained:
 
 - Net contributions = Deposits − Withdrawals
 - Net realized P&L = Realized trading P&L − Account fees
@@ -271,52 +179,23 @@ The following accounting relationships are maintained:
 
 ### Current Limitations
 
-Equity at cost basis is not a live market valuation.
-
-Unrealized gains and losses are not included.
-
-Inter-account transfers are not yet modeled explicitly. Transfers recorded as ordinary deposits and withdrawals may distort consolidated contribution reporting.
-
-Historical equity curves and advanced trading-pattern analysis remain future enhancements.
+Equity at cost basis is **not** live market equity. Unrealized P&L and current market valuations are not included. Transfers have distinct incoming/outgoing transaction types but are not linked as an atomic transfer. Historical equity curves and more advanced trading-pattern analysis remain future enhancements.
 
 ---
 
 ## Journal Backups
 
-The Journal uses SQLite's native backup API to create consistent database backups.
+The Journal uses SQLite's native backup API to make consistent copies of the database, including accounts, positions, executions, transactions, indexes, and triggers.
 
-Unlike the previous CSV-based backup system, SQLite backups preserve the database structure and its records.
+Before restoration, the system checks that the file exists, passes SQLite integrity validation, contains the required tables, and matches the supported schema version. Restoration creates a safety backup of the current database and validates the result afterward.
 
-Backups include:
-
-- Trading accounts
-- Positions
-- Trade executions
-- Account transactions
-- Database indexes and triggers
-
-### Backup Validation
-
-Before restoration, STONKS verifies:
-
-- The backup file exists
-- SQLite integrity checks pass
-- Required journal tables exist
-- The schema version matches the supported version
-
-### Restoration
-
-Restoration creates a safety backup of the current database before replacing its contents.
-
-The restored database is validated after the operation.
+These backup and restore capabilities exist in the backend; they are **not yet exposed as desktop GUI controls**.
 
 ---
 
 ## CSV Exports
 
-The Journal can export database records into human-readable CSV files.
-
-Each export creates a timestamped directory containing:
+The journal can export human-readable records into a timestamped directory:
 
 ```text
 journal_YYYYMMDD_HHMMSS_ffffff/
@@ -326,29 +205,19 @@ journal_YYYYMMDD_HHMMSS_ffffff/
 └── account_transactions.csv
 ```
 
-CSV exports are intended for inspection, external analysis, and record portability.
-
-**SQLite database backups remain the authoritative restoration format.**
+CSV exports support inspection, outside analysis, and portability. **SQLite backups are the authoritative restoration format**, not CSV exports. Desktop export controls are not yet implemented.
 
 ---
 
 ## Testing
 
-The Journal uses Pytest to verify database behavior and business rules.
+Pytest tests cover SQLite initialization and schema rules; account, position, execution, and transaction operations; analytics; financial integrity; backup/restore; and CSV export. GUI tests additionally exercise account and position management, execution dialogs, analytics display, ticker search, status filters, and selection safety. Temporary SQLite databases isolate automated tests from personal journal data.
 
-Regression coverage includes:
+From an activated development environment:
 
-- Database initialization and schema versioning
-- Trading account creation and default selection
-- Account archival restrictions
-- Position and execution persistence
-- Account transaction validation
-- Financial analytics
-- Account ownership enforcement
-- Database foreign keys and triggers
-- Backup creation, validation, and restoration
-- CSV export functionality
+```powershell
+.\scripts\lint.ps1
+.\scripts\test.ps1
+```
 
-Temporary SQLite databases isolate tests from production journal data.
-
----
+See [Desktop GUI Guide](gui.md) for further GUI-specific development information.
