@@ -42,6 +42,8 @@ def calculate_position_metrics(
     has_executions = False
     opened_at = None
     closed_at = None
+    total_bought_shares = Decimal("0")
+    total_purchase_value = Decimal("0")
 
     for execution in executions:
         has_executions = True
@@ -50,6 +52,9 @@ def calculate_position_metrics(
                 opened_at = execution.executed_at
 
             purchase_value = execution.shares * execution.price
+
+            total_bought_shares += execution.shares
+            total_purchase_value += purchase_value
 
             open_shares += execution.shares
             remaining_purchase_value += purchase_value
@@ -79,6 +84,8 @@ def calculate_position_metrics(
                 closed_at = execution.executed_at
 
     average_entry_price = None
+
+    average_buy_price = total_purchase_value / total_bought_shares if total_bought_shares > 0 else None
 
     if open_shares > 0:
         average_entry_price = remaining_purchase_value / open_shares
@@ -111,4 +118,5 @@ def calculate_position_metrics(
         opened_at=opened_at,
         closed_at=closed_at,
         holding_duration=holding_duration,
+        average_buy_price=average_buy_price,
     )

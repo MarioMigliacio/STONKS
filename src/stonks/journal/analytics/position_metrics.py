@@ -54,6 +54,11 @@ class PositionMetrics:
         holding_duration:
             Elapsed time between opening and closing the
             position. None while the position remains open.
+
+        average_buy_price:
+            Weighted-average purchase price across all BUY executions,
+            excluding fees. Retained after the position closes.
+            None if the position has no BUY executions.
     """
 
     position_id: int
@@ -66,3 +71,4 @@ class PositionMetrics:
     opened_at: Optional[datetime]
     closed_at: Optional[datetime]
     holding_duration: Optional[timedelta]
+    average_buy_price: Optional[Decimal] = None

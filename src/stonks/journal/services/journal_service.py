@@ -155,6 +155,48 @@ class JournalService:
 
             return self.m_repository.update_trading_account(normalized)
 
+    def delete_trading_account(
+        self,
+        account_id: int,
+    ) -> bool:
+        """
+        Permanently delete an archived trading account.
+
+        Removes the account, its positions, trade executions,
+        and financial transactions in a single transaction.
+
+        Active and default trading accounts cannot be deleted.
+
+        Args:
+            account_id:
+                Identifier of the trading account to delete.
+
+        Returns:
+            bool:
+                True if the account was deleted, False if it
+                does not exist.
+
+        Raises:
+            ValueError:
+                If the account is active or currently the default.
+
+            RuntimeError:
+                If a transaction is already active.
+        """
+        with self._transaction():
+            account = self.m_repository.get_trading_account(account_id)
+
+            if account is None:
+                return False
+
+            if account.is_default:
+                raise ValueError("Cannot delete the default account. Select another default account first.")
+
+            if account.is_active:
+                raise ValueError("Cannot delete an active account. Archive the account before deleting it.")
+
+            return self.m_repository.delete_trading_account(account_id)
+
     def set_default_trading_account(
         self,
         account_id: int,
@@ -223,6 +265,38 @@ class JournalService:
                 return True
 
             account.is_active = False
+
+            return self.m_repository.update_trading_account(account)
+
+    def reactivate_trading_account(
+        self,
+        account_id: int,
+    ) -> bool:
+        """
+        Reactivate an archived trading account.
+
+        Restores the account to active status without modifying its
+        default designation or historical financial records.
+
+        Args:
+            account_id:
+                Identifier of the trading account to reactivate.
+
+        Returns:
+            bool:
+                True if the account is active after the operation,
+                False if the account does not exist.
+        """
+        with self._transaction():
+            account = self.m_repository.get_trading_account(account_id)
+
+            if account is None:
+                return False
+
+            if account.is_active:
+                return True
+
+            account.is_active = True
 
             return self.m_repository.update_trading_account(account)
 
@@ -315,8 +389,12 @@ class JournalService:
         )
 
         with self._transaction():
-            if self.m_repository.get_position(normalized.position_id) is None:
+            position = self.m_repository.get_position(normalized.position_id)
+
+            if position is None:
                 raise ValueError("Position does not exist.")
+
+            self._validate_account_ownership(position.account_id)
 
             execution_id = self.m_repository.create_execution(normalized)
 
@@ -331,8 +409,9 @@ class JournalService:
         """
         Update an execution while preserving position integrity.
 
-        Revalidates the complete execution history after the
-        modification. Prevents moving executions between positions.
+        Revalidates the complete execution history after modification,
+        prevents moving executions between positions, and prohibits
+        modifications to archived trading accounts.
 
         Args:
             execution:
@@ -340,12 +419,12 @@ class JournalService:
 
         Returns:
             bool:
-                True if updated, False if the execution does
-                not exist.
+                True if updated, False if the execution does not exist.
 
         Raises:
             ValueError:
-                If the update violates trading rules.
+                If the update violates execution validation, account
+                ownership, or chronological position integrity.
         """
         if execution.execution_id is None:
             raise ValueError("Cannot update an execution without an ID.")
@@ -372,8 +451,19 @@ class JournalService:
             if existing.position_id != normalized.position_id:
                 raise ValueError("Cannot move an execution to another position.")
 
+            # The GUI is not the only potential caller. Protect
+            # archived accounts at the service layer as well.
+            position = self.m_repository.get_position(existing.position_id)
+
+            if position is None:
+                raise ValueError("Position does not exist.")
+
+            self._validate_account_ownership(position.account_id)
+
             updated = self.m_repository.update_execution(normalized)
 
+            # Invalid history raises ValueError and rolls back
+            # the entire transaction automatically.
             self.validate_position_history(normalized.position_id)
 
             return updated
@@ -383,7 +473,11 @@ class JournalService:
         execution_id: int,
     ) -> bool:
         """
-        Delete an execution if its position remains valid.
+        Delete an execution if the remaining position history stays valid.
+
+        Prohibits deletion from archived trading accounts and
+        atomically rolls back changes that would invalidate
+        the position's chronological execution history.
 
         Args:
             execution_id:
@@ -391,12 +485,12 @@ class JournalService:
 
         Returns:
             bool:
-                True if deleted, False if the execution
-                does not exist.
+                True if deleted, False if the execution does not exist.
 
         Raises:
             ValueError:
-                If deletion invalidates position history.
+                If the execution belongs to an archived account
+                or deleting it invalidates the remaining history.
         """
         with self._transaction():
             existing = self.m_repository.get_execution(execution_id)
@@ -404,8 +498,19 @@ class JournalService:
             if existing is None:
                 return False
 
+            position = self.m_repository.get_position(existing.position_id)
+
+            if position is None:
+                raise ValueError("Position does not exist.")
+
+            # Protect archived accounts regardless of which
+            # interface requests the deletion.
+            self._validate_account_ownership(position.account_id)
+
             deleted = self.m_repository.delete_execution(execution_id)
 
+            # If this raises ValueError, the transaction manager
+            # restores the execution and leaves history unchanged.
             self.validate_position_history(existing.position_id)
 
             return deleted
