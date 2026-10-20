@@ -591,6 +591,7 @@ class JournalService:
             if existing.account_id != normalized.account_id:
                 raise ValueError("Cannot move a transaction to another trading account.")
 
+            self._validate_account_ownership(existing.account_id)
             return self.m_repository.update_account_transaction(normalized)
 
     def delete_account_transaction(
@@ -609,6 +610,10 @@ class JournalService:
                 True if deleted, False if not found.
         """
         with self._transaction():
+            existing = self.m_repository.get_account_transaction(transaction_id)
+            if existing is None:
+                return False
+            self._validate_account_ownership(existing.account_id)
             return self.m_repository.delete_account_transaction(transaction_id)
 
     def _validate_account_ownership(

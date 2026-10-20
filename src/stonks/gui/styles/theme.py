@@ -386,4 +386,11 @@ QComboBox#journalStatusFilter QAbstractItemView {
     selection-background-color: #235C93;
     selection-color: #FFFFFF;
 }
+
+QLabel#accountMetricsNote {
+    color: #8190A5;
+    font-size: 11px;
+    background: transparent;
+}
+
 """

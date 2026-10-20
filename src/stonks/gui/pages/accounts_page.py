@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from stonks.gui.icons import get_icon
+from stonks.gui.pages.account_details_dialog import AccountDetailsDialog
 from stonks.gui.pages.create_account_dialog import CreateAccountDialog
 from stonks.gui.pages.delete_account_dialog import DeleteAccountDialog
 from stonks.journal.persistence.journal_repository import JournalRepository
@@ -184,6 +185,7 @@ class AccountsPage(QWidget):
         self.m_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         self.m_table.itemSelectionChanged.connect(self._update_action_state)
+        self.m_table.itemDoubleClicked.connect(self._open_account_details)
 
         # Empty database message.
         self.m_empty_label = QLabel("No trading accounts yet. Create your first account to begin.")
@@ -578,4 +580,23 @@ class AccountsPage(QWidget):
                 "The selected account could not be deleted.",
             )
 
+        self.refresh_accounts()
+
+    def _open_account_details(self, _item=None) -> None:
+        """Display details for the selected trading account."""
+        account_id = self.get_selected_account_id()
+        if account_id is None:
+            return
+
+        if self.m_repository.get_trading_account(account_id) is None:
+            self.refresh_accounts()
+            return
+
+        dialog = AccountDetailsDialog(
+            account_id=account_id,
+            repository=self.m_repository,
+            service=self.m_service,
+            parent=self,
+        )
+        dialog.exec()
         self.refresh_accounts()
