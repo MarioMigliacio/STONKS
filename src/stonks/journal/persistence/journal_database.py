@@ -9,7 +9,7 @@ from typing import Optional
 
 from stonks.config.journal_paths import DATABASE_FILE
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def create_connection(
@@ -96,9 +96,10 @@ def initialize_database(
                 f"Journal database schema version {current_version} is newer than supported version {SCHEMA_VERSION}."
             )
 
-        if current_version not in (0, SCHEMA_VERSION):
+        if current_version not in (0, 2, SCHEMA_VERSION):
             raise RuntimeError(
-                f"Unsupported journal database schema version {current_version}. Expected version {SCHEMA_VERSION}."
+                f"Unsupported journal database schema version {current_version}. "
+                f"Expected version {SCHEMA_VERSION}."
             )
 
         if current_version == 0:
@@ -113,6 +114,9 @@ def initialize_database(
 
             if existing_tables:
                 raise RuntimeError("Cannot initialize an unversioned database that already contains tables.")
+
+        if current_version == 2:
+            migrate_v2_to_v3(connection)
 
         with connection:
             create_trading_accounts_table(connection)
@@ -180,7 +184,9 @@ def initialize_database(
                                 'DEPOSIT',
                                 'WITHDRAWAL',
                                 'FEE',
-                                'ADJUSTMENT'
+                                'ADJUSTMENT',
+                                'TRANSFER_IN',
+                                'TRANSFER_OUT'
                             )
                         ),
 
@@ -294,3 +300,99 @@ def create_account_ownership_triggers(
         END
         """
     )
+
+
+def migrate_v2_to_v3(
+    connection: sqlite3.Connection,
+) -> None:
+    """
+    Upgrade journal account transactions to support internal transfers.
+
+    Rebuilds the account_transactions table because SQLite cannot
+    directly modify an existing CHECK constraint. Preserves transaction
+    identifiers, account ownership, amounts, timestamps, and notes.
+
+    The schema replacement and version update are atomic.
+
+    Args:
+        connection:
+            Configured SQLite connection to the existing v2 database.
+
+    Raises:
+        RuntimeError:
+            If the database does not have the expected schema version.
+    """
+    if get_schema_version(connection) != 2:
+        raise RuntimeError("Transfer migration requires schema version 2.")
+
+    with connection:
+        connection.execute(
+            """
+            CREATE TABLE account_transactions_v3 (
+                transaction_id INTEGER PRIMARY KEY,
+                account_id INTEGER NOT NULL,
+
+                transaction_type TEXT NOT NULL
+                    CHECK (
+                        transaction_type IN (
+                            'DEPOSIT',
+                            'WITHDRAWAL',
+                            'FEE',
+                            'ADJUSTMENT',
+                            'TRANSFER_IN',
+                            'TRANSFER_OUT'
+                        )
+                    ),
+
+                occurred_at TEXT NOT NULL,
+                amount TEXT NOT NULL,
+                notes TEXT NOT NULL DEFAULT '',
+
+                FOREIGN KEY (account_id)
+                    REFERENCES trading_accounts(account_id)
+                    ON DELETE RESTRICT
+            ) STRICT
+            """
+        )
+
+        connection.execute(
+            """
+            INSERT INTO account_transactions_v3 (
+                transaction_id,
+                account_id,
+                transaction_type,
+                occurred_at,
+                amount,
+                notes
+            )
+            SELECT
+                transaction_id,
+                account_id,
+                transaction_type,
+                occurred_at,
+                amount,
+                notes
+            FROM account_transactions
+            """
+        )
+
+        connection.execute(
+            """
+            DROP TABLE account_transactions
+            """
+        )
+
+        connection.execute(
+            """
+            ALTER TABLE account_transactions_v3
+            RENAME TO account_transactions
+            """
+        )
+
+        # Dropping the original table also removes its triggers.
+        # Restore account ownership protection on the rebuilt table.
+        create_account_ownership_triggers(connection)
+
+        connection.execute(
+            "PRAGMA user_version = 3"
+        )
