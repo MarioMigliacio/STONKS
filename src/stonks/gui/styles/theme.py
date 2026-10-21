@@ -386,4 +386,129 @@ QComboBox#journalStatusFilter QAbstractItemView {
     selection-background-color: #235C93;
     selection-color: #FFFFFF;
 }
+
+QLabel#accountMetricsNote {
+    color: #8190A5;
+    font-size: 11px;
+    background: transparent;
+}
+
+QDateEdit#journalDateFilter {
+    background-color: #263244;
+    color: #E8EDF5;
+    border: 1px solid #42516A;
+    border-radius: 8px;
+    padding: 8px 10px;
+    selection-background-color: #235C93;
+    selection-color: #FFFFFF;
+}
+
+QDateEdit#journalDateFilter:hover:enabled {
+    background-color: #2B394D;
+    border-color: #617B9C;
+}
+
+QDateEdit#journalDateFilter:focus {
+    border-color: #59A8FF;
+}
+
+QDateEdit#journalDateFilter:disabled {
+    background-color: #222B39;
+    color: #8190A5;
+    border-color: #344055;
+}
+
+QDateEdit#journalDateFilter::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 30px;
+    border: none;
+    background: transparent;
+}
+
+QDateEdit#journalDateFilter::down-arrow {
+    image: url(STONKS_ACCOUNT_CALENDAR_ICON);
+    width: 17px;
+    height: 17px;
+}
+
+QCalendarWidget#accountDateCalendar {
+    background-color: #1C2532;
+    color: #E8EDF5;
+    border: 1px solid #42516A;
+}
+
+QCalendarWidget#accountDateCalendar QWidget#qt_calendar_navigationbar {
+    background-color: #263346;
+    border-bottom: 1px solid #344154;
+}
+
+QCalendarWidget#accountDateCalendar QToolButton {
+    background: transparent;
+    color: #E8EDF5;
+    border: none;
+    border-radius: 5px;
+    padding: 6px;
+    font-weight: 600;
+}
+
+QCalendarWidget#accountDateCalendar QToolButton:hover {
+    background-color: #354761;
+}
+
+QCalendarWidget#accountDateCalendar QMenu {
+    background-color: #1C2532;
+    color: #E8EDF5;
+    border: 1px solid #42516A;
+}
+
+QCalendarWidget#accountDateCalendar QSpinBox {
+    background-color: #263244;
+    color: #E8EDF5;
+    border: 1px solid #42516A;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QCalendarWidget#accountDateCalendar QAbstractItemView {
+    background-color: #1C2532;
+    alternate-background-color: #222D3C;
+    color: #E8EDF5;
+    selection-background-color: #235C93;
+    selection-color: #FFFFFF;
+    border: none;
+    outline: none;
+}
+
+QCalendarWidget#accountDateCalendar QAbstractItemView:enabled:hover {
+    background-color: #263C59;
+}
+
+QFrame#accountFilterSeparator {
+    background-color: #344055;
+    border: none;
+}
+
+QPushButton#accountClearFiltersLink {
+    background: transparent;
+    border: none;
+    color: #59A8FF;
+    padding: 4px 2px;
+    text-align: right;
+    font-weight: 600;
+}
+
+QPushButton#accountClearFiltersLink:hover {
+    color: #8CC5FF;
+    text-decoration: underline;
+}
+
+QPushButton#accountClearFiltersLink:pressed {
+    color: #347DC4;
+}
+
+QPushButton#accountClearFiltersLink:focus {
+    border: none;
+    outline: none;
+}
 """

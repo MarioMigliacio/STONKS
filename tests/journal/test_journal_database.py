@@ -308,15 +308,19 @@ def test_journal_tables_are_strict(tmp_path) -> None:
         connection.close()
 
 
-def test_v2_schema_creates_trading_accounts(tmp_path) -> None:
-    """Verify schema v2 creates the trading accounts table."""
-    database_path = tmp_path / "journal_v2.db"
+def test_v3_schema_creates_trading_accounts(tmp_path) -> None:
+    """Verify schema v3 creates the trading accounts table."""
+    database_path = tmp_path / "journal_v3.db"
+
     initialize_database(database_path)
     connection = create_connection(database_path)
+
     try:
         tables = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+
         assert "trading_accounts" in tables
-        assert get_schema_version(connection) == 2
+        assert get_schema_version(connection) == SCHEMA_VERSION
+
     finally:
         connection.close()
 
@@ -405,3 +409,33 @@ def test_v2_transaction_account_ownership_is_immutable(connection) -> None:
             WHERE transaction_id = 1
             """
         )
+
+
+def test_v2_schema_is_rejected_without_migration(tmp_path) -> None:
+    """Verify schema v2 databases are rejected without modifying them."""
+    database_path = tmp_path / "journal_v2.db"
+
+    initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        with connection:
+            connection.execute("PRAGMA user_version = 2")
+
+    finally:
+        connection.close()
+
+    with pytest.raises(
+        RuntimeError,
+        match="Unsupported journal database schema version 2",
+    ):
+        initialize_database(database_path)
+
+    connection = create_connection(database_path)
+
+    try:
+        assert get_schema_version(connection) == 2
+
+    finally:
+        connection.close()

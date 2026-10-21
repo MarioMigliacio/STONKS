@@ -6,16 +6,21 @@
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import replace
+from datetime import datetime
 from decimal import Decimal
 from typing import Generator, Optional
 
 from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import AccountTransactionType
 from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.opening_cash_balance import OpeningCashBalance
 from stonks.journal.models.position import Position
 from stonks.journal.models.trade_execution import TradeExecution
 from stonks.journal.models.trading_account import TradingAccount
 from stonks.journal.persistence.journal_repository import JournalRepository
+from stonks.journal.persistence.opening_cash_repository import OpeningCashRepository
 from stonks.journal.validation.account_validation import validate_trading_account
+from stonks.journal.validation.cash_history_validation import validate_projected_cash_history
 from stonks.journal.validation.journal_validation import (
     normalize_timestamp,
     validate_account_transaction,
@@ -515,6 +520,371 @@ class JournalService:
 
             return deleted
 
+    def create_account_transfer(
+        self,
+        source_account_id: int,
+        destination_account_id: int,
+        amount: Decimal,
+        occurred_at,
+        notes: str = "",
+    ) -> tuple:
+        """Create a linked internal transfer and both ledger legs atomically.
+
+        Args:
+            source_account_id:
+                Trading account sending cash.
+
+            destination_account_id:
+                Trading account receiving cash.
+
+            amount:
+                Positive, finite Decimal amount to transfer.
+
+            occurred_at:
+                Timezone-aware timestamp for both ledger movements.
+
+            notes:
+                Optional text describing the transfer.
+
+        Returns:
+            tuple:
+                Outgoing and incoming transaction identifiers.
+
+        Raises:
+            ValueError:
+                If accounts, amount, or timestamp are invalid.
+        """
+        if source_account_id == destination_account_id:
+            raise ValueError("Source and destination accounts must differ.")
+        if not isinstance(amount, Decimal) or not amount.is_finite() or amount <= 0:
+            raise ValueError("Transfer amount must be a positive finite Decimal.")
+        timestamp = normalize_timestamp(occurred_at)
+
+        with self._transaction():
+            self._validate_account_ownership(source_account_id)
+            self._validate_account_ownership(destination_account_id)
+
+            validate_projected_cash_history(
+                self.m_repository,
+                self.m_connection,
+                (source_account_id, destination_account_id),
+                (
+                    (source_account_id, timestamp, -amount),
+                    (destination_account_id, timestamp, amount),
+                ),
+            )
+
+            cursor = self.m_connection.execute(
+                """
+                INSERT INTO account_transfers (
+                    source_account_id, destination_account_id, amount,
+                    occurred_at, notes
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    source_account_id,
+                    destination_account_id,
+                    str(amount),
+                    timestamp.isoformat(),
+                    notes,
+                ),
+            )
+            transfer_id = cursor.lastrowid
+            if transfer_id is None:
+                raise RuntimeError("Failed to create account transfer.")
+
+            outgoing = AccountTransaction(
+                account_id=source_account_id,
+                transaction_type=AccountTransactionType.TRANSFER_OUT,
+                amount=amount,
+                occurred_at=timestamp,
+                notes=notes,
+                transfer_id=transfer_id,
+            )
+            incoming = AccountTransaction(
+                account_id=destination_account_id,
+                transaction_type=AccountTransactionType.TRANSFER_IN,
+                amount=amount,
+                occurred_at=timestamp,
+                notes=notes,
+                transfer_id=transfer_id,
+            )
+            outgoing_id = self.m_repository.create_account_transaction(outgoing)
+            incoming_id = self.m_repository.create_account_transaction(incoming)
+            return outgoing_id, incoming_id
+
+    def _get_transfer_pair(self, transfer_id: int):
+        """Retrieve and validate a transfer's outgoing and incoming ledger records.
+
+        Args:
+            transfer_id:
+                Database identifier shared by both transfer legs.
+
+        Returns:
+            tuple:
+                Parent database row, outgoing transaction, and incoming transaction.
+                Returns None when the parent transfer does not exist.
+
+        Raises:
+            ValueError:
+                If persisted transfer legs are incomplete or inconsistent.
+        """
+        parent = self.m_connection.execute(
+            "SELECT * FROM account_transfers WHERE transfer_id = ?",
+            (transfer_id,),
+        ).fetchone()
+        if parent is None:
+            return None
+
+        rows = self.m_connection.execute(
+            "SELECT transaction_id FROM account_transactions WHERE transfer_id = ?",
+            (transfer_id,),
+        ).fetchall()
+        legs = [self.m_repository.get_account_transaction(row["transaction_id"]) for row in rows]
+        if len(legs) != 2 or any(leg is None for leg in legs):
+            raise ValueError("Transfer has incomplete ledger records.")
+
+        outgoing = next(
+            (leg for leg in legs if leg.transaction_type == AccountTransactionType.TRANSFER_OUT),
+            None,
+        )
+        incoming = next(
+            (leg for leg in legs if leg.transaction_type == AccountTransactionType.TRANSFER_IN),
+            None,
+        )
+        if outgoing is None or incoming is None:
+            raise ValueError("Transfer does not contain one incoming and one outgoing leg.")
+
+        expected_time = normalize_timestamp(datetime.fromisoformat(parent["occurred_at"]))
+        expected_amount = Decimal(parent["amount"])
+        if (
+            outgoing.account_id != parent["source_account_id"]
+            or incoming.account_id != parent["destination_account_id"]
+            or outgoing.amount != incoming.amount
+            or outgoing.amount != expected_amount
+            or outgoing.occurred_at != incoming.occurred_at
+            or outgoing.occurred_at != expected_time
+            or outgoing.notes != incoming.notes
+            or outgoing.notes != parent["notes"]
+        ):
+            raise ValueError("Transfer ledger records disagree with the parent transfer.")
+
+        return parent, outgoing, incoming
+
+    def update_account_transfer(self, transfer) -> bool:
+        """Atomically update a transfer's amount, timestamp, and notes.
+
+        Account ownership and direction cannot be changed. Both accounts must
+        remain active. There is no cash-balance-limit enforcement yet.
+
+        Args:
+            transfer:
+                AccountTransfer containing the transfer ID and edited values.
+
+        Returns:
+            bool:
+                True if updated, False when the transfer ID does not exist.
+
+        Raises:
+            ValueError:
+                If the transfer is invalid, incomplete, or involves an archived account.
+        """
+        if transfer.transfer_id is None:
+            raise ValueError("Cannot update a transfer without an ID.")
+        if not isinstance(transfer.amount, Decimal) or not transfer.amount.is_finite() or transfer.amount <= 0:
+            raise ValueError("Transfer amount must be a positive finite Decimal.")
+        timestamp = normalize_timestamp(transfer.occurred_at)
+        if not isinstance(transfer.notes, str):
+            raise ValueError("Transfer notes must be text.")
+
+        with self._transaction():
+            pair = self._get_transfer_pair(transfer.transfer_id)
+            if pair is None:
+                return False
+            parent, outgoing, incoming = pair
+            if (
+                transfer.source_account_id != parent["source_account_id"]
+                or transfer.destination_account_id != parent["destination_account_id"]
+            ):
+                raise ValueError("Cannot change transfer account ownership.")
+
+            self._validate_account_ownership(transfer.source_account_id)
+            self._validate_account_ownership(transfer.destination_account_id)
+
+            validate_projected_cash_history(
+                self.m_repository,
+                self.m_connection,
+                (transfer.source_account_id, transfer.destination_account_id),
+                (
+                    (transfer.source_account_id, timestamp, -transfer.amount),
+                    (transfer.destination_account_id, timestamp, transfer.amount),
+                ),
+                (outgoing.transaction_id, incoming.transaction_id),
+            )
+
+            cursor = self.m_connection.execute(
+                """
+                UPDATE account_transfers
+                SET amount = ?, occurred_at = ?, notes = ?
+                WHERE transfer_id = ?
+                """,
+                (str(transfer.amount), timestamp.isoformat(), transfer.notes, transfer.transfer_id),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("Failed to update parent transfer.")
+
+            for existing in (outgoing, incoming):
+                updated = replace(
+                    existing,
+                    amount=transfer.amount,
+                    occurred_at=timestamp,
+                    notes=transfer.notes,
+                )
+                if not self.m_repository.update_account_transaction(updated):
+                    raise RuntimeError("Failed to update a transfer ledger leg.")
+            return True
+
+    def delete_account_transfer(self, transfer_id: int) -> bool:
+        """Delete the parent transfer and both ledger legs in one transaction.
+
+        Args:
+            transfer_id:
+                Identifier of the linked transfer to delete.
+
+        Returns:
+            bool:
+                True when deleted, False when the transfer does not exist.
+
+        Raises:
+            ValueError:
+                If the pair is incomplete or either account is archived.
+        """
+        with self._transaction():
+            pair = self._get_transfer_pair(transfer_id)
+            if pair is None:
+                return False
+            parent, outgoing, incoming = pair
+            self._validate_account_ownership(parent["source_account_id"])
+            self._validate_account_ownership(parent["destination_account_id"])
+
+            validate_projected_cash_history(
+                self.m_repository,
+                self.m_connection,
+                (parent["source_account_id"], parent["destination_account_id"]),
+                excluded_transaction_ids=(
+                    outgoing.transaction_id,
+                    incoming.transaction_id,
+                ),
+            )
+
+            for leg in (outgoing, incoming):
+                if not self.m_repository.delete_account_transaction(leg.transaction_id):
+                    raise RuntimeError("Failed to delete a transfer ledger leg.")
+
+            cursor = self.m_connection.execute(
+                "DELETE FROM account_transfers WHERE transfer_id = ?",
+                (transfer_id,),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("Failed to delete parent transfer.")
+            return True
+
+    def set_opening_cash(self, opening: OpeningCashBalance) -> None:
+        """Atomically save opening cash without invalidating recorded transfers.
+
+        A dated opening balance is a snapshot, not a contribution. Historical
+        transfers must not precede it, and cash may not go negative at any
+        subsequent ledger timestamp once transfers exist.
+
+        Args:
+            opening:
+                Proposed starting cash amount and effective timestamp.
+
+        Raises:
+            ValueError:
+                If the account is archived, the snapshot is invalid, or
+                existing transfers would precede the snapshot or overdraw cash.
+        """
+        timestamp = normalize_timestamp(opening.effective_at)
+        normalized = OpeningCashBalance(
+            account_id=opening.account_id,
+            amount=opening.amount,
+            effective_at=timestamp,
+        )
+
+        with self._transaction():
+            self._validate_account_ownership(normalized.account_id)
+            transfers = [
+                transaction
+                for transaction in self.m_repository.get_account_transactions(normalized.account_id)
+                if transaction.transfer_id is not None
+            ]
+            if any(normalize_timestamp(item.occurred_at) < timestamp for item in transfers):
+                raise ValueError("Opening cash date cannot be after an existing transfer.")
+
+            opening_repository = OpeningCashRepository(self.m_connection)
+            opening_repository.upsert(normalized)
+            if transfers:
+                validate_projected_cash_history(
+                    self.m_repository,
+                    self.m_connection,
+                    (normalized.account_id,),
+                )
+
+    def _validate_cash_after_transaction_change(
+        self,
+        account_id: int,
+        additions=(),
+        excluded_transaction_ids=(),
+    ) -> None:
+        """Protect existing transfers from unrelated cash-ledger edits.
+
+        Only accounts already containing linked transfers are guarded here.
+        Historical events preceding the opening snapshot are excluded
+        from the reconstructed cash balance.
+
+        Call this method inside an active service write transaction.
+
+        Args:
+            account_id:
+                Trading account whose cash history will change.
+
+            additions:
+                Proposed (account ID, aware timestamp, signed Decimal cash)
+                movements to include in place of excluded records.
+
+            excluded_transaction_ids:
+                Existing transaction IDs to omit from the projection.
+
+        Raises:
+            ValueError:
+                If an edit would invalidate recorded account cash history.
+        """
+        transactions = self.m_repository.get_account_transactions(account_id)
+
+        if not any(transaction.transfer_id is not None for transaction in transactions):
+            return
+
+        opening = OpeningCashRepository(self.m_connection).get(account_id)
+        if opening is None:
+            raise ValueError(f"Account {account_id} needs an opening cash balance before ledger changes.")
+
+        # An opening snapshot supersedes all earlier cash movements.
+        # Avoid treating a corrected pre-snapshot record as a new transfer.
+        relevant_additions = tuple(
+            (changed_account, when, flow)
+            for changed_account, when, flow in additions
+            if normalize_timestamp(when) >= normalize_timestamp(opening.effective_at)
+        )
+
+        validate_projected_cash_history(
+            self.m_repository,
+            self.m_connection,
+            (account_id,),
+            relevant_additions,
+            excluded_transaction_ids,
+        )
+
     def create_account_transaction(
         self,
         transaction: AccountTransaction,
@@ -534,6 +904,16 @@ class JournalService:
             ValueError:
                 If the transaction contains invalid data.
         """
+        if (
+            transaction.transaction_type
+            in (
+                AccountTransactionType.TRANSFER_IN,
+                AccountTransactionType.TRANSFER_OUT,
+            )
+            or transaction.transfer_id is not None
+        ):
+            raise ValueError("Transfers must use create_account_transfer().")
+
         validate_account_transaction(transaction)
 
         normalized = AccountTransaction(
@@ -547,6 +927,16 @@ class JournalService:
 
         with self._transaction():
             self._validate_account_ownership(normalized.account_id)
+            self._validate_cash_after_transaction_change(
+                normalized.account_id,
+                additions=(
+                    (
+                        normalized.account_id,
+                        normalized.occurred_at,
+                        normalized.net_cash_flow,
+                    ),
+                ),
+            )
             return self.m_repository.create_account_transaction(normalized)
 
     def update_account_transaction(
@@ -588,9 +978,27 @@ class JournalService:
             if existing is None:
                 return False
 
+            if existing.transfer_id is not None or normalized.transaction_type in (
+                AccountTransactionType.TRANSFER_IN,
+                AccountTransactionType.TRANSFER_OUT,
+            ):
+                raise ValueError("Cannot edit a transfer leg independently.")
+
             if existing.account_id != normalized.account_id:
                 raise ValueError("Cannot move a transaction to another trading account.")
 
+            self._validate_account_ownership(existing.account_id)
+            self._validate_cash_after_transaction_change(
+                existing.account_id,
+                additions=(
+                    (
+                        normalized.account_id,
+                        normalized.occurred_at,
+                        normalized.net_cash_flow,
+                    ),
+                ),
+                excluded_transaction_ids=(existing.transaction_id,),
+            )
             return self.m_repository.update_account_transaction(normalized)
 
     def delete_account_transaction(
@@ -609,6 +1017,20 @@ class JournalService:
                 True if deleted, False if not found.
         """
         with self._transaction():
+            existing = self.m_repository.get_account_transaction(transaction_id)
+
+            if existing is None:
+                return False
+
+            if existing.transfer_id is not None:
+                raise ValueError("Cannot delete a transfer leg independently.")
+
+            self._validate_account_ownership(existing.account_id)
+            self._validate_cash_after_transaction_change(
+                existing.account_id,
+                excluded_transaction_ids=(existing.transaction_id,),
+            )
+
             return self.m_repository.delete_account_transaction(transaction_id)
 
     def _validate_account_ownership(

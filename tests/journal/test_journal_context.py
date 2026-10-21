@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from stonks.journal.journal_context import JournalContext
-from stonks.journal.persistence.journal_database import get_schema_version
+from stonks.journal.persistence.journal_database import SCHEMA_VERSION, get_schema_version
 
 
 def test_journal_context_initializes_database(
@@ -21,7 +21,7 @@ def test_journal_context_initializes_database(
     with JournalContext(database_path) as journal:
         assert database_path.exists()
 
-        assert get_schema_version(journal.m_connection) == 2
+        assert get_schema_version(journal.m_connection) == SCHEMA_VERSION
 
         assert journal.m_repository.get_trading_accounts() == []
 

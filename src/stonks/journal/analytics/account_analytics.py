@@ -5,12 +5,13 @@
 # =============================================================================
 
 from decimal import Decimal
-from typing import List
+from typing import List, Optional
 
 from stonks.journal.analytics.account_metrics import AccountMetrics
 from stonks.journal.analytics.position_metrics import PositionMetrics
 from stonks.journal.models.account_transaction import AccountTransaction
 from stonks.journal.models.account_transaction_type import AccountTransactionType
+from stonks.journal.models.opening_cash_balance import OpeningCashBalance
 from stonks.journal.models.trade_execution import TradeExecution
 
 
@@ -18,61 +19,57 @@ def calculate_account_metrics(
     transactions: List[AccountTransaction],
     executions: List[TradeExecution],
     positions: List[PositionMetrics],
+    opening_cash: Optional[OpeningCashBalance] = None,
 ) -> AccountMetrics:
     """
     Calculate account cash flow and realized profitability metrics.
 
-    Aggregates account transactions, trade execution cash flows,
-    and previously calculated position metrics.
+    A dated opening cash snapshot replaces the cash ledger history preceding
+    its effective timestamp; it is not a deposit or realized trading profit.
+    Transactions and executions at the exact effective timestamp are included.
 
-    Deposits and withdrawals determine net contributions.
-    Transaction and execution cash flows determine the cash balance.
-    Position metrics determine realized trading profit or loss.
+    Contribution and realized-profit metrics intentionally continue to cover
+    all supplied records, including records preceding the snapshot. The
+    snapshot only changes reconstructed cash and equity at cost basis.
 
-    Standalone account fees are deducted from realized trading
-    profit or loss without double-counting execution fees.
-
-    Cash adjustments affect the cash balance but are excluded
-    from realized trading profitability.
-
-    The calculation assumes complete account history and an
-    opening cash balance of zero. It does not calculate
-    unrealized gains, losses, or market-value account equity.
+    With no opening snapshot, historical behavior is preserved: the cash
+    calculation starts at zero and includes all supplied cash movements.
+    This zero starting point is an assumption, not a verified account balance.
+    No unrealized gains or market-value account equity are calculated.
 
     Args:
         transactions:
-            Account transactions to analyze, including deposits,
-            withdrawals, fees, and adjustments.
-
+            Account transactions to analyze.
         executions:
-            Trade executions used to reconstruct account cash
-            movements.
-
+            Trade executions supplying cash movements.
         positions:
-            Previously calculated position metrics used to
-            aggregate realized trading profit or loss.
+            Previously calculated position metrics.
+
+        opening_cash:
+            Optional opening cash snapshot and UTC-aware effective time.
 
     Returns:
         AccountMetrics:
-            Calculated account contributions, cash balance,
-            realized trading profitability, remaining position
-            cost basis, and equity at cost basis.
+            Calculated contributions, ledger cash, profitability, cost basis,
+            and equity at cost basis.
     """
     total_deposits = Decimal("0")
     total_withdrawals = Decimal("0")
-    cash_balance = Decimal("0")
+    cash_balance = opening_cash.amount if opening_cash is not None else Decimal("0")
+    boundary = opening_cash.effective_at if opening_cash is not None else None
 
     for transaction in transactions:
-        cash_balance += transaction.net_cash_flow
+        if boundary is None or transaction.occurred_at >= boundary:
+            cash_balance += transaction.net_cash_flow
 
         if transaction.transaction_type == AccountTransactionType.DEPOSIT:
             total_deposits += transaction.amount
-
         elif transaction.transaction_type == AccountTransactionType.WITHDRAWAL:
             total_withdrawals += transaction.amount
 
     for execution in executions:
-        cash_balance += execution.net_cash_flow
+        if boundary is None or execution.executed_at >= boundary:
+            cash_balance += execution.net_cash_flow
 
     net_contributions = total_deposits - total_withdrawals
 

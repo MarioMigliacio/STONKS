@@ -9,7 +9,7 @@ from typing import Optional
 
 from stonks.config.journal_paths import DATABASE_FILE
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def create_connection(
@@ -73,10 +73,10 @@ def initialize_database(
     """
     Initialize the journal database schema.
 
-    Creates position, execution, and account transaction
-    tables if they do not already exist.
+    Create the complete schema v3 on a fresh database.
 
-    Existing tables and records are preserved.
+    Preserves existing compatible v3 data. Rejects legacy or
+    provisional schemas rather than silently altering them.
 
     Args:
         database_path:
@@ -114,8 +114,39 @@ def initialize_database(
             if existing_tables:
                 raise RuntimeError("Cannot initialize an unversioned database that already contains tables.")
 
+        if current_version == SCHEMA_VERSION:
+            existing_tables = {
+                row[0]
+                for row in connection.execute(
+                    """
+                    SELECT name FROM sqlite_master
+                    WHERE type = 'table'
+                    AND name NOT LIKE 'sqlite_%'
+                    """
+                )
+            }
+            transaction_columns = {row["name"] for row in connection.execute("PRAGMA table_info(account_transactions)")}
+            if "account_transfers" not in existing_tables or "transfer_id" not in transaction_columns:
+                raise RuntimeError(
+                    "Provisional schema v3 detected without linked transfers. Initialize a fresh development database."
+                )
+
         with connection:
             create_trading_accounts_table(connection)
+
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS account_opening_cash (
+                    account_id INTEGER PRIMARY KEY,
+                    amount TEXT NOT NULL,
+                    effective_at TEXT NOT NULL,
+
+                    FOREIGN KEY (account_id)
+                        REFERENCES trading_accounts(account_id)
+                        ON DELETE CASCADE
+                ) STRICT
+                """
+            )
 
             connection.execute(
                 """
@@ -170,6 +201,30 @@ def initialize_database(
 
             connection.execute(
                 """
+                CREATE TABLE IF NOT EXISTS account_transfers (
+                    transfer_id INTEGER PRIMARY KEY,
+                    source_account_id INTEGER NOT NULL,
+                    destination_account_id INTEGER NOT NULL,
+
+                    amount TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL,
+                    notes TEXT NOT NULL DEFAULT '',
+
+                    CHECK (source_account_id != destination_account_id),
+
+                    FOREIGN KEY (source_account_id)
+                        REFERENCES trading_accounts(account_id)
+                        ON DELETE RESTRICT,
+
+                    FOREIGN KEY (destination_account_id)
+                        REFERENCES trading_accounts(account_id)
+                        ON DELETE RESTRICT
+                ) STRICT
+                """
+            )
+
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS account_transactions (
                     transaction_id INTEGER PRIMARY KEY,
                     account_id INTEGER NOT NULL,
@@ -180,19 +235,46 @@ def initialize_database(
                                 'DEPOSIT',
                                 'WITHDRAWAL',
                                 'FEE',
-                                'ADJUSTMENT'
+                                'ADJUSTMENT',
+                                'TRANSFER_IN',
+                                'TRANSFER_OUT'
                             )
                         ),
 
+                    transfer_id INTEGER DEFAULT NULL,
                     occurred_at TEXT NOT NULL,
                     amount TEXT NOT NULL,
 
                     notes TEXT NOT NULL DEFAULT '',
 
+                    CHECK (
+                        (
+                            transaction_type IN ('TRANSFER_IN', 'TRANSFER_OUT')
+                            AND transfer_id IS NOT NULL
+                        )
+                        OR
+                        (
+                            transaction_type NOT IN ('TRANSFER_IN', 'TRANSFER_OUT')
+                            AND transfer_id IS NULL
+                        )
+                    ),
+
                     FOREIGN KEY (account_id)
                         REFERENCES trading_accounts(account_id)
+                        ON DELETE RESTRICT,
+
+                    FOREIGN KEY (transfer_id)
+                        REFERENCES account_transfers(transfer_id)
                         ON DELETE RESTRICT
                 ) STRICT
+                """
+            )
+
+            connection.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_transfer_leg_type
+                ON account_transactions(transfer_id, transaction_type)
+                WHERE transfer_id IS NOT NULL
                 """
             )
 
