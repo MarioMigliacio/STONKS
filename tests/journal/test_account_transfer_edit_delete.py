@@ -9,7 +9,9 @@ import pytest
 from stonks.journal.journal_context import JournalContext
 from stonks.journal.models.account_transfer import AccountTransfer
 from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.opening_cash_balance import OpeningCashBalance
 from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.persistence.opening_cash_repository import OpeningCashRepository
 
 
 @pytest.fixture
@@ -18,6 +20,14 @@ def journal(tmp_path):
     with JournalContext(tmp_path / "d32.db") as context:
         source = context.m_service.create_trading_account(TradingAccount("Cash", AccountType.CASH))
         destination = context.m_service.create_trading_account(TradingAccount("Roth", AccountType.ROTH_IRA))
+
+        opening_repo = OpeningCashRepository(context.m_connection)
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+        with context.m_connection:
+            opening_repo.upsert(OpeningCashBalance(source, Decimal("10000"), start))
+            opening_repo.upsert(OpeningCashBalance(destination, Decimal("10000"), start))
+
         out_id, in_id = context.m_service.create_account_transfer(
             source, destination, Decimal("100"), datetime(2026, 10, 21, tzinfo=timezone.utc), "Original"
         )

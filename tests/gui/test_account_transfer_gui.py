@@ -3,6 +3,7 @@
 # Purpose: Verify linked account transfer GUI actions and read-only protections.
 # =============================================================================
 
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -12,7 +13,9 @@ from stonks.gui.pages.account_details_dialog import AccountDetailsDialog
 from stonks.gui.pages.account_transfer_dialog import AccountTransferDialog
 from stonks.journal.journal_context import JournalContext
 from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.opening_cash_balance import OpeningCashBalance
 from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.persistence.opening_cash_repository import OpeningCashRepository
 
 
 @pytest.fixture
@@ -21,6 +24,14 @@ def transfer_gui(qtbot, tmp_path):
     with JournalContext(tmp_path / "transfer_gui.db") as journal:
         source = journal.m_service.create_trading_account(TradingAccount("Cash", AccountType.CASH))
         destination = journal.m_service.create_trading_account(TradingAccount("IRA", AccountType.ROTH_IRA))
+
+        opening_repo = OpeningCashRepository(journal.m_connection)
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+        with journal.m_connection:
+            opening_repo.upsert(OpeningCashBalance(source, Decimal("10000"), start))
+            opening_repo.upsert(OpeningCashBalance(destination, Decimal("10000"), start))
+
         details = AccountDetailsDialog(source, journal.m_repository, journal.m_service)
         qtbot.addWidget(details)
         yield journal, source, destination, details

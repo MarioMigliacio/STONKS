@@ -18,6 +18,7 @@ from stonks.journal.models.trade_execution import TradeExecution
 from stonks.journal.models.trading_account import TradingAccount
 from stonks.journal.persistence.journal_repository import JournalRepository
 from stonks.journal.validation.account_validation import validate_trading_account
+from stonks.journal.validation.cash_history_validation import validate_projected_cash_history
 from stonks.journal.validation.journal_validation import (
     normalize_timestamp,
     validate_account_transaction,
@@ -530,12 +531,16 @@ class JournalService:
         Args:
             source_account_id:
                 Trading account sending cash.
+
             destination_account_id:
                 Trading account receiving cash.
+
             amount:
                 Positive, finite Decimal amount to transfer.
+
             occurred_at:
                 Timezone-aware timestamp for both ledger movements.
+
             notes:
                 Optional text describing the transfer.
 
@@ -556,6 +561,16 @@ class JournalService:
         with self._transaction():
             self._validate_account_ownership(source_account_id)
             self._validate_account_ownership(destination_account_id)
+
+            validate_projected_cash_history(
+                self.m_repository,
+                self.m_connection,
+                (source_account_id, destination_account_id),
+                (
+                    (source_account_id, timestamp, -amount),
+                    (destination_account_id, timestamp, amount),
+                ),
+            )
 
             cursor = self.m_connection.execute(
                 """
@@ -693,6 +708,17 @@ class JournalService:
 
             self._validate_account_ownership(transfer.source_account_id)
             self._validate_account_ownership(transfer.destination_account_id)
+
+            validate_projected_cash_history(
+                self.m_repository,
+                self.m_connection,
+                (transfer.source_account_id, transfer.destination_account_id),
+                (
+                    (transfer.source_account_id, timestamp, -transfer.amount),
+                    (transfer.destination_account_id, timestamp, transfer.amount),
+                ),
+                (outgoing.transaction_id, incoming.transaction_id),
+            )
 
             cursor = self.m_connection.execute(
                 """
@@ -864,15 +890,15 @@ class JournalService:
         with self._transaction():
             existing = self.m_repository.get_account_transaction(transaction_id)
 
-        if existing is None:
-            return False
+            if existing is None:
+                return False
 
-        if existing.transfer_id is not None:
-            raise ValueError("Cannot delete a transfer leg independently.")
+            if existing.transfer_id is not None:
+                raise ValueError("Cannot delete a transfer leg independently.")
 
-        self._validate_account_ownership(existing.account_id)
+            self._validate_account_ownership(existing.account_id)
 
-        return self.m_repository.delete_account_transaction(transaction_id)
+            return self.m_repository.delete_account_transaction(transaction_id)
 
     def _validate_account_ownership(
         self,

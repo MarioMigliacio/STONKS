@@ -14,17 +14,27 @@ from stonks.journal.models.account_transaction import AccountTransaction
 from stonks.journal.models.account_transaction_type import AccountTransactionType
 from stonks.journal.models.account_transfer import AccountTransfer
 from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.opening_cash_balance import OpeningCashBalance
 from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.persistence.opening_cash_repository import OpeningCashRepository
 
 OCCURRED_AT = datetime(2026, 10, 21, 16, 0, tzinfo=timezone.utc)
 
 
 @pytest.fixture
 def journal(tmp_path):
-    """Provide a clean v3 journal containing two tracked accounts."""
+    """Provide a clean v3 journal containing two funded accounts."""
     with JournalContext(tmp_path / "financial_integrity.db") as context:
         source = context.m_service.create_trading_account(TradingAccount("Cash", AccountType.CASH))
         destination = context.m_service.create_trading_account(TradingAccount("Roth IRA", AccountType.ROTH_IRA))
+
+        opening_repo = OpeningCashRepository(context.m_connection)
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+        with context.m_connection:
+            opening_repo.upsert(OpeningCashBalance(source, Decimal("10000"), start))
+            opening_repo.upsert(OpeningCashBalance(destination, Decimal("10000"), start))
+
         yield context, source, destination
 
 
@@ -87,17 +97,22 @@ def test_transfer_changes_account_cash_not_contributions_or_pnl(journal):
     assert sending.cash_balance + receiving.cash_balance == Decimal("1000.00")
 
 
-def test_transfer_without_recorded_opening_cash_is_allowed_and_neutral(journal):
-    """No balance-limit rule applies until opening balances are supported."""
+def test_transfer_without_opening_cash_is_rejected(journal):
+    """Transfers require verified opening cash for both accounts."""
     context, source, destination = journal
-    transfer_pair(context, source, destination, Decimal("123.45"))
 
-    sending = metrics(context, source)
-    receiving = metrics(context, destination)
-    assert sending.cash_balance == Decimal("-123.45")
-    assert receiving.cash_balance == Decimal("123.45")
-    assert sending.cash_balance + receiving.cash_balance == Decimal("0")
-    assert sending.net_contributions + receiving.net_contributions == Decimal("0")
+    with context.m_connection:
+        context.m_connection.execute("DELETE FROM account_opening_cash")
+
+    with pytest.raises(ValueError):
+        transfer_pair(
+            context,
+            source,
+            destination,
+            Decimal("123.45"),
+        )
+
+    assert context.m_repository.get_account_transactions() == []
 
 
 def test_editing_transfer_preserves_portfolio_cash_and_contributions(journal):

@@ -10,6 +10,7 @@ from decimal import Decimal
 import pytest
 
 from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.opening_cash_balance import OpeningCashBalance
 from stonks.journal.models.trading_account import TradingAccount
 from stonks.journal.persistence.journal_database import (
     SCHEMA_VERSION,
@@ -17,7 +18,24 @@ from stonks.journal.persistence.journal_database import (
     get_schema_version,
     initialize_database,
 )
+from stonks.journal.persistence.opening_cash_repository import OpeningCashRepository
 from stonks.journal.services.journal_service import JournalService
+
+
+def fund_test_accounts(connection, *account_ids):
+    """Create opening cash snapshots for accounts used in transfer tests."""
+    opening_repo = OpeningCashRepository(connection)
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+    with connection:
+        for account_id in account_ids:
+            opening_repo.upsert(
+                OpeningCashBalance(
+                    account_id=account_id,
+                    amount=Decimal("10000"),
+                    effective_at=start,
+                )
+            )
 
 
 def test_v3_creates_transfer_relationships(tmp_path) -> None:
@@ -49,6 +67,7 @@ def test_transfer_is_paired_and_balanced(tmp_path) -> None:
         service = JournalService(connection)
         source = service.create_trading_account(TradingAccount("Cash", AccountType.CASH))
         destination = service.create_trading_account(TradingAccount("IRA", AccountType.ROTH_IRA))
+        fund_test_accounts(connection, source, destination)
         outgoing_id, incoming_id = service.create_account_transfer(
             source, destination, Decimal("125.25"), datetime.now(timezone.utc)
         )
@@ -78,6 +97,7 @@ def test_v3_rejects_missing_or_duplicate_transfer_leg(tmp_path) -> None:
         service = JournalService(connection)
         source = service.create_trading_account(TradingAccount("Cash", AccountType.CASH))
         destination = service.create_trading_account(TradingAccount("IRA", AccountType.ROTH_IRA))
+        fund_test_accounts(connection, source, destination)
         outgoing, incoming = service.create_account_transfer(
             source, destination, Decimal("15"), datetime.now(timezone.utc)
         )

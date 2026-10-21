@@ -8,15 +8,25 @@ import pytest
 from stonks.journal.journal_context import JournalContext
 from stonks.journal.models.account_transaction_type import AccountTransactionType
 from stonks.journal.models.account_type import AccountType
+from stonks.journal.models.opening_cash_balance import OpeningCashBalance
 from stonks.journal.models.trading_account import TradingAccount
+from stonks.journal.persistence.opening_cash_repository import OpeningCashRepository
 
 
 @pytest.fixture
 def transfer_journal(tmp_path):
-    """Provide a fresh journal containing two active trading accounts."""
+    """Provide two funded trading accounts for transfer tests."""
     with JournalContext(tmp_path / "transfer.db") as context:
         source = context.m_service.create_trading_account(TradingAccount("Cash", AccountType.CASH))
         destination = context.m_service.create_trading_account(TradingAccount("IRA", AccountType.ROTH_IRA))
+
+        opening_repo = OpeningCashRepository(context.m_connection)
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+        with context.m_connection:
+            opening_repo.upsert(OpeningCashBalance(source, Decimal("10000"), start))
+            opening_repo.upsert(OpeningCashBalance(destination, Decimal("10000"), start))
+
         yield context, source, destination
 
 
