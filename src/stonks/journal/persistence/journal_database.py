@@ -136,6 +136,20 @@ def initialize_database(
 
             connection.execute(
                 """
+                CREATE TABLE IF NOT EXISTS account_opening_cash (
+                    account_id INTEGER PRIMARY KEY,
+                    amount TEXT NOT NULL,
+                    effective_at TEXT NOT NULL,
+
+                    FOREIGN KEY (account_id)
+                        REFERENCES trading_accounts(account_id)
+                        ON DELETE CASCADE
+                ) STRICT
+                """
+            )
+
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS positions (
                     position_id INTEGER PRIMARY KEY,
                     account_id INTEGER NOT NULL,
