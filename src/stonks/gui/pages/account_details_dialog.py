@@ -31,12 +31,14 @@ from stonks.gui.icons import get_icon
 from stonks.gui.pages.account_transaction_dialog import AccountTransactionDialog
 from stonks.gui.pages.account_transfer_dialog import AccountTransferDialog
 from stonks.gui.pages.delete_account_transaction_dialog import DeleteAccountTransactionDialog
+from stonks.gui.pages.opening_cash_dialog import OpeningCashDialog
 from stonks.gui.widgets.account_metrics_widget import AccountMetricsWidget
 from stonks.journal.analytics.account_analytics import calculate_account_metrics
 from stonks.journal.analytics.position_analytics import calculate_position_metrics
 from stonks.journal.models.account_transaction_type import AccountTransactionType
 from stonks.journal.models.account_transfer import AccountTransfer
 from stonks.journal.persistence.journal_repository import JournalRepository
+from stonks.journal.persistence.opening_cash_repository import OpeningCashRepository
 from stonks.journal.services.journal_service import JournalService
 
 
@@ -100,6 +102,12 @@ class AccountDetailsDialog(QDialog):
 
         m_empty_label:
             Message for empty history, no matches, or an invalid range.
+
+        m_opening_cash_label:
+            String representation for the label accompanying the opening cash of account.
+
+        m_opening_cash_button:
+            Button for opening cash of account.
     """
 
     def __init__(
@@ -146,6 +154,16 @@ class AccountDetailsDialog(QDialog):
         self.m_metadata.setWordWrap(True)
         layout.addWidget(self.m_title)
         layout.addWidget(self.m_metadata)
+
+        opening_row = QHBoxLayout()
+        self.m_opening_cash_label = QLabel("Opening Cash: Not set")
+        self.m_opening_cash_label.setObjectName("journalPageSubtitle")
+        opening_row.addWidget(self.m_opening_cash_label)
+        opening_row.addStretch()
+        self.m_opening_cash_button = QPushButton("Set Opening Cash")
+        self.m_opening_cash_button.clicked.connect(self._edit_opening_cash)
+        opening_row.addWidget(self.m_opening_cash_button)
+        layout.addLayout(opening_row)
 
         self.m_metrics = AccountMetricsWidget(self)
         layout.addWidget(self.m_metrics)
@@ -397,6 +415,8 @@ class AccountDetailsDialog(QDialog):
             self.m_empty_label.hide()
             self.m_metrics.hide()
             self._update_action_state()
+            self.m_opening_cash_button.setEnabled(False)
+            self.m_opening_cash_label.setText("Opening Cash: Unavailable")
             return
 
         self.m_title.setText(account.name)
@@ -405,6 +425,19 @@ class AccountDetailsDialog(QDialog):
             f"{account.account_type.value.replace('_', ' ').title()}"
             f"  ·  {account.broker or 'Broker not specified'}  ·  {state}"
         )
+
+        opening_cash = OpeningCashRepository(self.m_repository.m_connection).get(self.m_account_id)
+        if opening_cash is None:
+            self.m_opening_cash_label.setText("Opening Cash: Not set — cash is unverified")
+            self.m_opening_cash_button.setText("Set Opening Cash")
+        else:
+            when = opening_cash.effective_at.astimezone(timezone.utc)
+            self.m_opening_cash_label.setText(
+                f"Opening Cash: ${opening_cash.amount:,.2f} · Effective {when:%Y-%m-%d %H:%M} UTC"
+            )
+            self.m_opening_cash_button.setText("Edit Opening Cash")
+        self.m_opening_cash_button.setEnabled(self._account_is_active())
+
         self.m_add_button.setEnabled(self._account_is_active())
         self.m_transfer_button.setEnabled(
             self._account_is_active()
@@ -427,6 +460,7 @@ class AccountDetailsDialog(QDialog):
             transactions,
             executions,
             position_metrics,
+            opening_cash=opening_cash,
         )
         self.m_metrics.update_metrics(metrics)
 
@@ -622,6 +656,24 @@ class AccountDetailsDialog(QDialog):
             notes=row["notes"],
             transfer_id=row["transfer_id"],
         )
+
+    def _edit_opening_cash(self) -> None:
+        """Edit the current account's opening cash through validated service logic."""
+        if not self._account_is_active():
+            return
+
+        existing = OpeningCashRepository(self.m_repository.m_connection).get(self.m_account_id)
+        dialog = OpeningCashDialog(self.m_account_id, opening=existing, parent=self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        try:
+            self.m_service.set_opening_cash(dialog.get_opening_cash())
+        except (ValueError, RuntimeError) as error:
+            QMessageBox.warning(self, "Opening Cash Validation", str(error))
+            return
+
+        self.refresh_details()
 
     def _create_transfer(self) -> None:
         """Open a form and atomically create both legs of an internal transfer."""

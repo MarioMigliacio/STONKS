@@ -13,10 +13,12 @@ from typing import Generator, Optional
 from stonks.journal.models.account_transaction import AccountTransaction
 from stonks.journal.models.account_transaction_type import AccountTransactionType
 from stonks.journal.models.execution_side import ExecutionSide
+from stonks.journal.models.opening_cash_balance import OpeningCashBalance
 from stonks.journal.models.position import Position
 from stonks.journal.models.trade_execution import TradeExecution
 from stonks.journal.models.trading_account import TradingAccount
 from stonks.journal.persistence.journal_repository import JournalRepository
+from stonks.journal.persistence.opening_cash_repository import OpeningCashRepository
 from stonks.journal.validation.account_validation import validate_trading_account
 from stonks.journal.validation.cash_history_validation import validate_projected_cash_history
 from stonks.journal.validation.journal_validation import (
@@ -776,6 +778,48 @@ class JournalService:
             if cursor.rowcount != 1:
                 raise RuntimeError("Failed to delete parent transfer.")
             return True
+
+    def set_opening_cash(self, opening: OpeningCashBalance) -> None:
+        """Atomically save opening cash without invalidating recorded transfers.
+
+        A dated opening balance is a snapshot, not a contribution. Historical
+        transfers must not precede it, and cash may not go negative at any
+        subsequent ledger timestamp once transfers exist.
+
+        Args:
+            opening:
+                Proposed starting cash amount and effective timestamp.
+
+        Raises:
+            ValueError:
+                If the account is archived, the snapshot is invalid, or
+                existing transfers would precede the snapshot or overdraw cash.
+        """
+        timestamp = normalize_timestamp(opening.effective_at)
+        normalized = OpeningCashBalance(
+            account_id=opening.account_id,
+            amount=opening.amount,
+            effective_at=timestamp,
+        )
+
+        with self._transaction():
+            self._validate_account_ownership(normalized.account_id)
+            transfers = [
+                transaction
+                for transaction in self.m_repository.get_account_transactions(normalized.account_id)
+                if transaction.transfer_id is not None
+            ]
+            if any(normalize_timestamp(item.occurred_at) < timestamp for item in transfers):
+                raise ValueError("Opening cash date cannot be after an existing transfer.")
+
+            opening_repository = OpeningCashRepository(self.m_connection)
+            opening_repository.upsert(normalized)
+            if transfers:
+                validate_projected_cash_history(
+                    self.m_repository,
+                    self.m_connection,
+                    (normalized.account_id,),
+                )
 
     def create_account_transaction(
         self,
