@@ -767,6 +767,16 @@ class JournalService:
             self._validate_account_ownership(parent["source_account_id"])
             self._validate_account_ownership(parent["destination_account_id"])
 
+            validate_projected_cash_history(
+                self.m_repository,
+                self.m_connection,
+                (parent["source_account_id"], parent["destination_account_id"]),
+                excluded_transaction_ids=(
+                    outgoing.transaction_id,
+                    incoming.transaction_id,
+                ),
+            )
+
             for leg in (outgoing, incoming):
                 if not self.m_repository.delete_account_transaction(leg.transaction_id):
                     raise RuntimeError("Failed to delete a transfer ledger leg.")
@@ -821,6 +831,60 @@ class JournalService:
                     (normalized.account_id,),
                 )
 
+    def _validate_cash_after_transaction_change(
+        self,
+        account_id: int,
+        additions=(),
+        excluded_transaction_ids=(),
+    ) -> None:
+        """Protect existing transfers from unrelated cash-ledger edits.
+
+        Only accounts already containing linked transfers are guarded here.
+        Historical events preceding the opening snapshot are excluded
+        from the reconstructed cash balance.
+
+        Call this method inside an active service write transaction.
+
+        Args:
+            account_id:
+                Trading account whose cash history will change.
+
+            additions:
+                Proposed (account ID, aware timestamp, signed Decimal cash)
+                movements to include in place of excluded records.
+
+            excluded_transaction_ids:
+                Existing transaction IDs to omit from the projection.
+
+        Raises:
+            ValueError:
+                If an edit would invalidate recorded account cash history.
+        """
+        transactions = self.m_repository.get_account_transactions(account_id)
+
+        if not any(transaction.transfer_id is not None for transaction in transactions):
+            return
+
+        opening = OpeningCashRepository(self.m_connection).get(account_id)
+        if opening is None:
+            raise ValueError(f"Account {account_id} needs an opening cash balance before ledger changes.")
+
+        # An opening snapshot supersedes all earlier cash movements.
+        # Avoid treating a corrected pre-snapshot record as a new transfer.
+        relevant_additions = tuple(
+            (changed_account, when, flow)
+            for changed_account, when, flow in additions
+            if normalize_timestamp(when) >= normalize_timestamp(opening.effective_at)
+        )
+
+        validate_projected_cash_history(
+            self.m_repository,
+            self.m_connection,
+            (account_id,),
+            relevant_additions,
+            excluded_transaction_ids,
+        )
+
     def create_account_transaction(
         self,
         transaction: AccountTransaction,
@@ -863,6 +927,16 @@ class JournalService:
 
         with self._transaction():
             self._validate_account_ownership(normalized.account_id)
+            self._validate_cash_after_transaction_change(
+                normalized.account_id,
+                additions=(
+                    (
+                        normalized.account_id,
+                        normalized.occurred_at,
+                        normalized.net_cash_flow,
+                    ),
+                ),
+            )
             return self.m_repository.create_account_transaction(normalized)
 
     def update_account_transaction(
@@ -914,6 +988,17 @@ class JournalService:
                 raise ValueError("Cannot move a transaction to another trading account.")
 
             self._validate_account_ownership(existing.account_id)
+            self._validate_cash_after_transaction_change(
+                existing.account_id,
+                additions=(
+                    (
+                        normalized.account_id,
+                        normalized.occurred_at,
+                        normalized.net_cash_flow,
+                    ),
+                ),
+                excluded_transaction_ids=(existing.transaction_id,),
+            )
             return self.m_repository.update_account_transaction(normalized)
 
     def delete_account_transaction(
@@ -941,6 +1026,10 @@ class JournalService:
                 raise ValueError("Cannot delete a transfer leg independently.")
 
             self._validate_account_ownership(existing.account_id)
+            self._validate_cash_after_transaction_change(
+                existing.account_id,
+                excluded_transaction_ids=(existing.transaction_id,),
+            )
 
             return self.m_repository.delete_account_transaction(transaction_id)
 
