@@ -73,10 +73,10 @@ def initialize_database(
     """
     Initialize the journal database schema.
 
-    Creates position, execution, and account transaction
-    tables if they do not already exist.
+    Create the complete schema v3 on a fresh database.
 
-    Existing tables and records are preserved.
+    Preserves existing compatible v3 data. Rejects legacy or
+    provisional schemas rather than silently altering them.
 
     Args:
         database_path:
@@ -96,10 +96,9 @@ def initialize_database(
                 f"Journal database schema version {current_version} is newer than supported version {SCHEMA_VERSION}."
             )
 
-        if current_version not in (0, 2, SCHEMA_VERSION):
+        if current_version not in (0, SCHEMA_VERSION):
             raise RuntimeError(
-                f"Unsupported journal database schema version {current_version}. "
-                f"Expected version {SCHEMA_VERSION}."
+                f"Unsupported journal database schema version {current_version}. Expected version {SCHEMA_VERSION}."
             )
 
         if current_version == 0:
@@ -115,8 +114,22 @@ def initialize_database(
             if existing_tables:
                 raise RuntimeError("Cannot initialize an unversioned database that already contains tables.")
 
-        if current_version == 2:
-            migrate_v2_to_v3(connection)
+        if current_version == SCHEMA_VERSION:
+            existing_tables = {
+                row[0]
+                for row in connection.execute(
+                    """
+                    SELECT name FROM sqlite_master
+                    WHERE type = 'table'
+                    AND name NOT LIKE 'sqlite_%'
+                    """
+                )
+            }
+            transaction_columns = {row["name"] for row in connection.execute("PRAGMA table_info(account_transactions)")}
+            if "account_transfers" not in existing_tables or "transfer_id" not in transaction_columns:
+                raise RuntimeError(
+                    "Provisional schema v3 detected without linked transfers. Initialize a fresh development database."
+                )
 
         with connection:
             create_trading_accounts_table(connection)
@@ -174,6 +187,30 @@ def initialize_database(
 
             connection.execute(
                 """
+                CREATE TABLE IF NOT EXISTS account_transfers (
+                    transfer_id INTEGER PRIMARY KEY,
+                    source_account_id INTEGER NOT NULL,
+                    destination_account_id INTEGER NOT NULL,
+
+                    amount TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL,
+                    notes TEXT NOT NULL DEFAULT '',
+
+                    CHECK (source_account_id != destination_account_id),
+
+                    FOREIGN KEY (source_account_id)
+                        REFERENCES trading_accounts(account_id)
+                        ON DELETE RESTRICT,
+
+                    FOREIGN KEY (destination_account_id)
+                        REFERENCES trading_accounts(account_id)
+                        ON DELETE RESTRICT
+                ) STRICT
+                """
+            )
+
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS account_transactions (
                     transaction_id INTEGER PRIMARY KEY,
                     account_id INTEGER NOT NULL,
@@ -190,15 +227,40 @@ def initialize_database(
                             )
                         ),
 
+                    transfer_id INTEGER DEFAULT NULL,
                     occurred_at TEXT NOT NULL,
                     amount TEXT NOT NULL,
 
                     notes TEXT NOT NULL DEFAULT '',
 
+                    CHECK (
+                        (
+                            transaction_type IN ('TRANSFER_IN', 'TRANSFER_OUT')
+                            AND transfer_id IS NOT NULL
+                        )
+                        OR
+                        (
+                            transaction_type NOT IN ('TRANSFER_IN', 'TRANSFER_OUT')
+                            AND transfer_id IS NULL
+                        )
+                    ),
+
                     FOREIGN KEY (account_id)
                         REFERENCES trading_accounts(account_id)
+                        ON DELETE RESTRICT,
+
+                    FOREIGN KEY (transfer_id)
+                        REFERENCES account_transfers(transfer_id)
                         ON DELETE RESTRICT
                 ) STRICT
+                """
+            )
+
+            connection.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_transfer_leg_type
+                ON account_transactions(transfer_id, transaction_type)
+                WHERE transfer_id IS NOT NULL
                 """
             )
 
@@ -300,99 +362,3 @@ def create_account_ownership_triggers(
         END
         """
     )
-
-
-def migrate_v2_to_v3(
-    connection: sqlite3.Connection,
-) -> None:
-    """
-    Upgrade journal account transactions to support internal transfers.
-
-    Rebuilds the account_transactions table because SQLite cannot
-    directly modify an existing CHECK constraint. Preserves transaction
-    identifiers, account ownership, amounts, timestamps, and notes.
-
-    The schema replacement and version update are atomic.
-
-    Args:
-        connection:
-            Configured SQLite connection to the existing v2 database.
-
-    Raises:
-        RuntimeError:
-            If the database does not have the expected schema version.
-    """
-    if get_schema_version(connection) != 2:
-        raise RuntimeError("Transfer migration requires schema version 2.")
-
-    with connection:
-        connection.execute(
-            """
-            CREATE TABLE account_transactions_v3 (
-                transaction_id INTEGER PRIMARY KEY,
-                account_id INTEGER NOT NULL,
-
-                transaction_type TEXT NOT NULL
-                    CHECK (
-                        transaction_type IN (
-                            'DEPOSIT',
-                            'WITHDRAWAL',
-                            'FEE',
-                            'ADJUSTMENT',
-                            'TRANSFER_IN',
-                            'TRANSFER_OUT'
-                        )
-                    ),
-
-                occurred_at TEXT NOT NULL,
-                amount TEXT NOT NULL,
-                notes TEXT NOT NULL DEFAULT '',
-
-                FOREIGN KEY (account_id)
-                    REFERENCES trading_accounts(account_id)
-                    ON DELETE RESTRICT
-            ) STRICT
-            """
-        )
-
-        connection.execute(
-            """
-            INSERT INTO account_transactions_v3 (
-                transaction_id,
-                account_id,
-                transaction_type,
-                occurred_at,
-                amount,
-                notes
-            )
-            SELECT
-                transaction_id,
-                account_id,
-                transaction_type,
-                occurred_at,
-                amount,
-                notes
-            FROM account_transactions
-            """
-        )
-
-        connection.execute(
-            """
-            DROP TABLE account_transactions
-            """
-        )
-
-        connection.execute(
-            """
-            ALTER TABLE account_transactions_v3
-            RENAME TO account_transactions
-            """
-        )
-
-        # Dropping the original table also removes its triggers.
-        # Restore account ownership protection on the rebuilt table.
-        create_account_ownership_triggers(connection)
-
-        connection.execute(
-            "PRAGMA user_version = 3"
-        )

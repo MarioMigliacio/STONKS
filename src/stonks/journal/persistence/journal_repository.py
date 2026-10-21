@@ -785,12 +785,13 @@ class JournalRepository:
         cursor = self.m_connection.execute(
             """
             INSERT INTO account_transactions (
-                account_id, transaction_type, occurred_at, amount, notes
-            ) VALUES (?, ?, ?, ?, ?)
+                account_id, transaction_type, transfer_id, occurred_at, amount, notes
+            ) VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
                 transaction.account_id,
                 transaction.transaction_type.value,
+                transaction.transfer_id,
                 transaction.occurred_at.isoformat(),
                 str(transaction.amount),
                 transaction.notes,
@@ -955,4 +956,5 @@ class JournalRepository:
             occurred_at=datetime.fromisoformat(row["occurred_at"]),
             amount=Decimal(row["amount"]),
             notes=row["notes"],
+            transfer_id=row["transfer_id"],
         )

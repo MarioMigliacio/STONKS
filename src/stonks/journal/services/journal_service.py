@@ -10,6 +10,7 @@ from decimal import Decimal
 from typing import Generator, Optional
 
 from stonks.journal.models.account_transaction import AccountTransaction
+from stonks.journal.models.account_transaction_type import AccountTransactionType
 from stonks.journal.models.execution_side import ExecutionSide
 from stonks.journal.models.position import Position
 from stonks.journal.models.trade_execution import TradeExecution
@@ -515,6 +516,85 @@ class JournalService:
 
             return deleted
 
+    def create_account_transfer(
+        self,
+        source_account_id: int,
+        destination_account_id: int,
+        amount: Decimal,
+        occurred_at,
+        notes: str = "",
+    ) -> tuple:
+        """Create a linked internal transfer and both ledger legs atomically.
+
+        Args:
+            source_account_id:
+                Trading account sending cash.
+            destination_account_id:
+                Trading account receiving cash.
+            amount:
+                Positive, finite Decimal amount to transfer.
+            occurred_at:
+                Timezone-aware timestamp for both ledger movements.
+            notes:
+                Optional text describing the transfer.
+
+        Returns:
+            tuple:
+                Outgoing and incoming transaction identifiers.
+
+        Raises:
+            ValueError:
+                If accounts, amount, or timestamp are invalid.
+        """
+        if source_account_id == destination_account_id:
+            raise ValueError("Source and destination accounts must differ.")
+        if not isinstance(amount, Decimal) or not amount.is_finite() or amount <= 0:
+            raise ValueError("Transfer amount must be a positive finite Decimal.")
+        timestamp = normalize_timestamp(occurred_at)
+
+        with self._transaction():
+            self._validate_account_ownership(source_account_id)
+            self._validate_account_ownership(destination_account_id)
+
+            cursor = self.m_connection.execute(
+                """
+                INSERT INTO account_transfers (
+                    source_account_id, destination_account_id, amount,
+                    occurred_at, notes
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    source_account_id,
+                    destination_account_id,
+                    str(amount),
+                    timestamp.isoformat(),
+                    notes,
+                ),
+            )
+            transfer_id = cursor.lastrowid
+            if transfer_id is None:
+                raise RuntimeError("Failed to create account transfer.")
+
+            outgoing = AccountTransaction(
+                account_id=source_account_id,
+                transaction_type=AccountTransactionType.TRANSFER_OUT,
+                amount=amount,
+                occurred_at=timestamp,
+                notes=notes,
+                transfer_id=transfer_id,
+            )
+            incoming = AccountTransaction(
+                account_id=destination_account_id,
+                transaction_type=AccountTransactionType.TRANSFER_IN,
+                amount=amount,
+                occurred_at=timestamp,
+                notes=notes,
+                transfer_id=transfer_id,
+            )
+            outgoing_id = self.m_repository.create_account_transaction(outgoing)
+            incoming_id = self.m_repository.create_account_transaction(incoming)
+            return outgoing_id, incoming_id
+
     def create_account_transaction(
         self,
         transaction: AccountTransaction,
@@ -534,6 +614,16 @@ class JournalService:
             ValueError:
                 If the transaction contains invalid data.
         """
+        if (
+            transaction.transaction_type
+            in (
+                AccountTransactionType.TRANSFER_IN,
+                AccountTransactionType.TRANSFER_OUT,
+            )
+            or transaction.transfer_id is not None
+        ):
+            raise ValueError("Transfers must use create_account_transfer().")
+
         validate_account_transaction(transaction)
 
         normalized = AccountTransaction(
@@ -588,6 +678,12 @@ class JournalService:
             if existing is None:
                 return False
 
+            if existing.transfer_id is not None or normalized.transaction_type in (
+                AccountTransactionType.TRANSFER_IN,
+                AccountTransactionType.TRANSFER_OUT,
+            ):
+                raise ValueError("Cannot edit a transfer leg independently.")
+
             if existing.account_id != normalized.account_id:
                 raise ValueError("Cannot move a transaction to another trading account.")
 
@@ -610,6 +706,9 @@ class JournalService:
                 True if deleted, False if not found.
         """
         with self._transaction():
+            existing = self.m_repository.get_account_transaction(transaction_id)
+            if existing is not None and existing.transfer_id is not None:
+                raise ValueError("Cannot delete a transfer leg independently.")
             existing = self.m_repository.get_account_transaction(transaction_id)
             if existing is None:
                 return False

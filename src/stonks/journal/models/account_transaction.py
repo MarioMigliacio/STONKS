@@ -41,6 +41,10 @@ class AccountTransaction:
 
         notes:
             Additional information about the transaction.
+
+        transfer_id:
+            Shared identifier for an internal transfer pair, or None for
+            independent cash activity.
     """
 
     transaction_type: AccountTransactionType
@@ -50,6 +54,7 @@ class AccountTransaction:
     transaction_id: Optional[int] = None
     account_id: Optional[int] = None
     notes: str = ""
+    transfer_id: Optional[int] = None
 
     @property
     def net_cash_flow(self) -> Decimal:
