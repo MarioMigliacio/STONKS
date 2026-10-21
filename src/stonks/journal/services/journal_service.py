@@ -6,6 +6,7 @@
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import replace
+from datetime import datetime
 from decimal import Decimal
 from typing import Generator, Optional
 
@@ -595,6 +596,161 @@ class JournalService:
             incoming_id = self.m_repository.create_account_transaction(incoming)
             return outgoing_id, incoming_id
 
+    def _get_transfer_pair(self, transfer_id: int):
+        """Retrieve and validate a transfer's outgoing and incoming ledger records.
+
+        Args:
+            transfer_id:
+                Database identifier shared by both transfer legs.
+
+        Returns:
+            tuple:
+                Parent database row, outgoing transaction, and incoming transaction.
+                Returns None when the parent transfer does not exist.
+
+        Raises:
+            ValueError:
+                If persisted transfer legs are incomplete or inconsistent.
+        """
+        parent = self.m_connection.execute(
+            "SELECT * FROM account_transfers WHERE transfer_id = ?",
+            (transfer_id,),
+        ).fetchone()
+        if parent is None:
+            return None
+
+        rows = self.m_connection.execute(
+            "SELECT transaction_id FROM account_transactions WHERE transfer_id = ?",
+            (transfer_id,),
+        ).fetchall()
+        legs = [self.m_repository.get_account_transaction(row["transaction_id"]) for row in rows]
+        if len(legs) != 2 or any(leg is None for leg in legs):
+            raise ValueError("Transfer has incomplete ledger records.")
+
+        outgoing = next(
+            (leg for leg in legs if leg.transaction_type == AccountTransactionType.TRANSFER_OUT),
+            None,
+        )
+        incoming = next(
+            (leg for leg in legs if leg.transaction_type == AccountTransactionType.TRANSFER_IN),
+            None,
+        )
+        if outgoing is None or incoming is None:
+            raise ValueError("Transfer does not contain one incoming and one outgoing leg.")
+
+        expected_time = normalize_timestamp(datetime.fromisoformat(parent["occurred_at"]))
+        expected_amount = Decimal(parent["amount"])
+        if (
+            outgoing.account_id != parent["source_account_id"]
+            or incoming.account_id != parent["destination_account_id"]
+            or outgoing.amount != incoming.amount
+            or outgoing.amount != expected_amount
+            or outgoing.occurred_at != incoming.occurred_at
+            or outgoing.occurred_at != expected_time
+            or outgoing.notes != incoming.notes
+            or outgoing.notes != parent["notes"]
+        ):
+            raise ValueError("Transfer ledger records disagree with the parent transfer.")
+
+        return parent, outgoing, incoming
+
+    def update_account_transfer(self, transfer) -> bool:
+        """Atomically update a transfer's amount, timestamp, and notes.
+
+        Account ownership and direction cannot be changed. Both accounts must
+        remain active. There is no cash-balance-limit enforcement yet.
+
+        Args:
+            transfer:
+                AccountTransfer containing the transfer ID and edited values.
+
+        Returns:
+            bool:
+                True if updated, False when the transfer ID does not exist.
+
+        Raises:
+            ValueError:
+                If the transfer is invalid, incomplete, or involves an archived account.
+        """
+        if transfer.transfer_id is None:
+            raise ValueError("Cannot update a transfer without an ID.")
+        if not isinstance(transfer.amount, Decimal) or not transfer.amount.is_finite() or transfer.amount <= 0:
+            raise ValueError("Transfer amount must be a positive finite Decimal.")
+        timestamp = normalize_timestamp(transfer.occurred_at)
+        if not isinstance(transfer.notes, str):
+            raise ValueError("Transfer notes must be text.")
+
+        with self._transaction():
+            pair = self._get_transfer_pair(transfer.transfer_id)
+            if pair is None:
+                return False
+            parent, outgoing, incoming = pair
+            if (
+                transfer.source_account_id != parent["source_account_id"]
+                or transfer.destination_account_id != parent["destination_account_id"]
+            ):
+                raise ValueError("Cannot change transfer account ownership.")
+
+            self._validate_account_ownership(transfer.source_account_id)
+            self._validate_account_ownership(transfer.destination_account_id)
+
+            cursor = self.m_connection.execute(
+                """
+                UPDATE account_transfers
+                SET amount = ?, occurred_at = ?, notes = ?
+                WHERE transfer_id = ?
+                """,
+                (str(transfer.amount), timestamp.isoformat(), transfer.notes, transfer.transfer_id),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("Failed to update parent transfer.")
+
+            for existing in (outgoing, incoming):
+                updated = replace(
+                    existing,
+                    amount=transfer.amount,
+                    occurred_at=timestamp,
+                    notes=transfer.notes,
+                )
+                if not self.m_repository.update_account_transaction(updated):
+                    raise RuntimeError("Failed to update a transfer ledger leg.")
+            return True
+
+    def delete_account_transfer(self, transfer_id: int) -> bool:
+        """Delete the parent transfer and both ledger legs in one transaction.
+
+        Args:
+            transfer_id:
+                Identifier of the linked transfer to delete.
+
+        Returns:
+            bool:
+                True when deleted, False when the transfer does not exist.
+
+        Raises:
+            ValueError:
+                If the pair is incomplete or either account is archived.
+        """
+        with self._transaction():
+            pair = self._get_transfer_pair(transfer_id)
+            if pair is None:
+                return False
+            parent, outgoing, incoming = pair
+            self._validate_account_ownership(parent["source_account_id"])
+            self._validate_account_ownership(parent["destination_account_id"])
+
+            for leg in (outgoing, incoming):
+                if not self.m_repository.delete_account_transaction(leg.transaction_id):
+                    raise RuntimeError("Failed to delete a transfer ledger leg.")
+
+            cursor = self.m_connection.execute(
+                "DELETE FROM account_transfers WHERE transfer_id = ?",
+                (transfer_id,),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("Failed to delete parent transfer.")
+            return True
+
     def create_account_transaction(
         self,
         transaction: AccountTransaction,
@@ -707,13 +863,16 @@ class JournalService:
         """
         with self._transaction():
             existing = self.m_repository.get_account_transaction(transaction_id)
-            if existing is not None and existing.transfer_id is not None:
-                raise ValueError("Cannot delete a transfer leg independently.")
-            existing = self.m_repository.get_account_transaction(transaction_id)
-            if existing is None:
-                return False
-            self._validate_account_ownership(existing.account_id)
-            return self.m_repository.delete_account_transaction(transaction_id)
+
+        if existing is None:
+            return False
+
+        if existing.transfer_id is not None:
+            raise ValueError("Cannot delete a transfer leg independently.")
+
+        self._validate_account_ownership(existing.account_id)
+
+        return self.m_repository.delete_account_transaction(transaction_id)
 
     def _validate_account_ownership(
         self,
