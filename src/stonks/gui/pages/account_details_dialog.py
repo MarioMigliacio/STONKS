@@ -3,7 +3,6 @@
 # Purpose: Account-level financial overview and journal transaction management.
 # =============================================================================
 
-
 from datetime import date, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
@@ -30,11 +29,13 @@ from PySide6.QtWidgets import (
 
 from stonks.gui.icons import get_icon
 from stonks.gui.pages.account_transaction_dialog import AccountTransactionDialog
+from stonks.gui.pages.account_transfer_dialog import AccountTransferDialog
 from stonks.gui.pages.delete_account_transaction_dialog import DeleteAccountTransactionDialog
 from stonks.gui.widgets.account_metrics_widget import AccountMetricsWidget
 from stonks.journal.analytics.account_analytics import calculate_account_metrics
 from stonks.journal.analytics.position_analytics import calculate_position_metrics
 from stonks.journal.models.account_transaction_type import AccountTransactionType
+from stonks.journal.models.account_transfer import AccountTransfer
 from stonks.journal.persistence.journal_repository import JournalRepository
 from stonks.journal.services.journal_service import JournalService
 
@@ -160,6 +161,10 @@ class AccountDetailsDialog(QDialog):
         self.m_add_button.clicked.connect(self._create_transaction)
 
         header.addWidget(self.m_add_button)
+        self.m_transfer_button = QPushButton("Transfer Funds")
+        self.m_transfer_button.setIcon(get_icon("plus"))
+        self.m_transfer_button.clicked.connect(self._create_transfer)
+        header.addWidget(self.m_transfer_button)
         self.m_actions_button = QPushButton("Actions")
         self.m_menu = QMenu(self)
         self.m_edit_action = self.m_menu.addAction("Edit Transaction")
@@ -167,7 +172,14 @@ class AccountDetailsDialog(QDialog):
         self.m_menu.addSeparator()
         self.m_delete_action = self.m_menu.addAction("Delete Transaction")
         self.m_delete_action.setIcon(get_icon("trash-danger"))
+        self.m_menu.addSeparator()
+        self.m_edit_transfer_action = self.m_menu.addAction("Edit Transfer")
+        self.m_edit_transfer_action.setIcon(get_icon("pencil"))
+        self.m_delete_transfer_action = self.m_menu.addAction("Delete Transfer")
+        self.m_delete_transfer_action.setIcon(get_icon("trash-danger"))
         self.m_actions_button.setMenu(self.m_menu)
+        self.m_edit_transfer_action.triggered.connect(self._edit_transfer)
+        self.m_delete_transfer_action.triggered.connect(self._delete_transfer)
 
         self.m_edit_action.triggered.connect(self._edit_transaction)
         self.m_delete_action.triggered.connect(self._delete_transaction)
@@ -284,9 +296,7 @@ class AccountDetailsDialog(QDialog):
         self.m_table.setSelectionMode(QAbstractItemView.SingleSelection)
         header_view = self.m_table.horizontalHeader()
         header_view.setSectionResizeMode(QHeaderView.Interactive)
-        header_view.setMinimumSectionSize(60)
-
-        # Set the initial column widths.
+        header_view.setMinimumSectionSize(70)
         for index, width in enumerate((175, 135, 125, 265, 115)):
             self.m_table.setColumnWidth(index, width)
 
@@ -309,7 +319,7 @@ class AccountDetailsDialog(QDialog):
 
         self.m_type_filter.currentIndexChanged.connect(self._apply_filters)
         self.m_table.itemSelectionChanged.connect(self._update_action_state)
-        self.m_table.itemDoubleClicked.connect(self._edit_transaction)
+        self.m_table.itemDoubleClicked.connect(self._edit_selected_entry)
 
     @staticmethod
     def _configure_date_editor(editor: QDateEdit) -> None:
@@ -352,18 +362,18 @@ class AccountDetailsDialog(QDialog):
         return self.m_service is not None and account is not None and account.is_active
 
     def _update_action_state(self) -> None:
-        """Disable edit/delete for missing or archived accounts and hidden rows."""
-        transaction_id = self.get_selected_transaction_id()
-        transaction = self.m_repository.get_account_transaction(transaction_id) if transaction_id is not None else None
-        can_edit = (
-            self._account_is_active()
-            and transaction is not None
-            and transaction.account_id == self.m_account_id
-            and transaction.transaction_type in AccountTransactionDialog.SUPPORTED_TYPES
+        """Enable actions appropriate to the selected ledger entry."""
+        transaction = self._get_selected_transaction()
+        active = self._account_is_active()
+        is_transfer = transaction is not None and transaction.transfer_id is not None
+        is_regular = (
+            transaction is not None and transaction.transaction_type in AccountTransactionDialog.SUPPORTED_TYPES
         )
-        self.m_edit_action.setEnabled(can_edit)
-        self.m_delete_action.setEnabled(can_edit)
-        self.m_actions_button.setEnabled(can_edit)
+        self.m_edit_action.setEnabled(active and is_regular)
+        self.m_delete_action.setEnabled(active and is_regular)
+        self.m_edit_transfer_action.setEnabled(active and is_transfer)
+        self.m_delete_transfer_action.setEnabled(active and is_transfer)
+        self.m_actions_button.setEnabled(active and (is_regular or is_transfer))
 
     @staticmethod
     def _format_flow(value: Decimal) -> str:
@@ -383,6 +393,7 @@ class AccountDetailsDialog(QDialog):
             self.m_metadata.setText("This trading account no longer exists.")
             self.m_table.setRowCount(0)
             self.m_add_button.setEnabled(False)
+            self.m_transfer_button.setEnabled(False)
             self.m_empty_label.hide()
             self.m_metrics.hide()
             self._update_action_state()
@@ -395,6 +406,10 @@ class AccountDetailsDialog(QDialog):
             f"  ·  {account.broker or 'Broker not specified'}  ·  {state}"
         )
         self.m_add_button.setEnabled(self._account_is_active())
+        self.m_transfer_button.setEnabled(
+            self._account_is_active()
+            and sum(account.is_active for account in self.m_repository.get_trading_accounts()) >= 2
+        )
         self.m_metrics.show()
 
         transactions = self.m_repository.get_account_transactions(account_id=self.m_account_id)
@@ -584,4 +599,106 @@ class AccountDetailsDialog(QDialog):
             return
         if not deleted:
             QMessageBox.warning(self, "Transaction Not Found", "The selected transaction no longer exists.")
+        self.refresh_details()
+
+    def _selected_transfer(self) -> Optional[AccountTransfer]:
+        """Resolve a selected transfer from its persisted parent and paired legs."""
+        transaction = self._get_selected_transaction()
+        if transaction is None or transaction.transfer_id is None:
+            return None
+        row = self.m_repository.m_connection.execute(
+            "SELECT * FROM account_transfers WHERE transfer_id = ?",
+            (transaction.transfer_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        from datetime import datetime
+
+        return AccountTransfer(
+            source_account_id=row["source_account_id"],
+            destination_account_id=row["destination_account_id"],
+            amount=Decimal(row["amount"]),
+            occurred_at=datetime.fromisoformat(row["occurred_at"]),
+            notes=row["notes"],
+            transfer_id=row["transfer_id"],
+        )
+
+    def _create_transfer(self) -> None:
+        """Open a form and atomically create both legs of an internal transfer."""
+        if not self._account_is_active():
+            return
+        dialog = AccountTransferDialog(self.m_repository, self.m_account_id, parent=self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+        transfer = dialog.get_transfer()
+        try:
+            self.m_service.create_account_transfer(
+                transfer.source_account_id,
+                transfer.destination_account_id,
+                transfer.amount,
+                transfer.occurred_at,
+                transfer.notes,
+            )
+        except (ValueError, RuntimeError) as error:
+            QMessageBox.warning(self, "Transfer Validation", str(error))
+            return
+        self.refresh_details()
+
+    def _edit_selected_entry(self, *_args) -> None:
+        """Route a double-click to the matching editor."""
+        transaction = self._get_selected_transaction()
+        if transaction is not None and transaction.transfer_id is not None:
+            self._edit_transfer()
+        else:
+            self._edit_transaction()
+
+    def _edit_transfer(self, *_args) -> None:
+        """Update the parent transfer and both legs through the journal service."""
+        if not self._account_is_active():
+            return
+        transfer = self._selected_transfer()
+        if transfer is None:
+            return
+        dialog = AccountTransferDialog(self.m_repository, self.m_account_id, transfer=transfer, parent=self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+        try:
+            updated = self.m_service.update_account_transfer(dialog.get_transfer())
+        except (ValueError, RuntimeError) as error:
+            QMessageBox.warning(self, "Transfer Validation", str(error))
+            return
+        if not updated:
+            QMessageBox.warning(self, "Transfer Not Found", "This transfer no longer exists.")
+        self.refresh_details()
+
+    def _delete_transfer(self) -> None:
+        """Delete a complete transfer only after explicit confirmation."""
+        if not self._account_is_active():
+            return
+        transfer = self._selected_transfer()
+        if transfer is None:
+            return
+        source = self.m_repository.get_trading_account(transfer.source_account_id)
+        destination = self.m_repository.get_trading_account(transfer.destination_account_id)
+        response = QMessageBox.question(
+            self,
+            "Delete Transfer",
+            (
+                f"Permanently delete transfer #{transfer.transfer_id}?\n\n"
+                f"{source.name if source else 'Unknown'} → {destination.name if destination else 'Unknown'}\n"
+                f"Amount: ${transfer.amount:,.2f}\n\n"
+                "Both linked ledger entries will be deleted. This cannot be undone."
+            ),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if response != QMessageBox.Yes:
+            return
+        try:
+            deleted = self.m_service.delete_account_transfer(transfer.transfer_id)
+        except (ValueError, RuntimeError) as error:
+            QMessageBox.warning(self, "Transfer Deletion", str(error))
+            return
+        if not deleted:
+            QMessageBox.warning(self, "Transfer Not Found", "This transfer no longer exists.")
         self.refresh_details()
