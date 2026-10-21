@@ -16,7 +16,6 @@ from stonks.journal.models.account_transfer import AccountTransfer
 from stonks.journal.models.account_type import AccountType
 from stonks.journal.models.trading_account import TradingAccount
 
-
 OCCURRED_AT = datetime(2026, 10, 21, 16, 0, tzinfo=timezone.utc)
 
 
@@ -24,12 +23,8 @@ OCCURRED_AT = datetime(2026, 10, 21, 16, 0, tzinfo=timezone.utc)
 def journal(tmp_path):
     """Provide a clean v3 journal containing two tracked accounts."""
     with JournalContext(tmp_path / "financial_integrity.db") as context:
-        source = context.m_service.create_trading_account(
-            TradingAccount("Cash", AccountType.CASH)
-        )
-        destination = context.m_service.create_trading_account(
-            TradingAccount("Roth IRA", AccountType.ROTH_IRA)
-        )
+        source = context.m_service.create_trading_account(TradingAccount("Cash", AccountType.CASH))
+        destination = context.m_service.create_trading_account(TradingAccount("Roth IRA", AccountType.ROTH_IRA))
         yield context, source, destination
 
 
@@ -145,9 +140,7 @@ def test_deleting_transfer_restores_cash_allocation(journal):
     assert receiving.cash_balance == Decimal("0")
     assert sending.net_contributions == Decimal("1000.00")
     assert receiving.net_contributions == Decimal("0")
-    assert context.m_connection.execute(
-        "SELECT COUNT(*) FROM account_transfers"
-    ).fetchone()[0] == 0
+    assert context.m_connection.execute("SELECT COUNT(*) FROM account_transfers").fetchone()[0] == 0
 
 
 def test_multiple_transfers_are_net_zero_across_accounts(journal):
