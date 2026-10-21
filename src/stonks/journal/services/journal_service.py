@@ -12,6 +12,7 @@ from typing import Generator, Optional
 
 from stonks.journal.models.account_transaction import AccountTransaction
 from stonks.journal.models.account_transaction_type import AccountTransactionType
+from stonks.journal.models.account_type import AccountType
 from stonks.journal.models.execution_side import ExecutionSide
 from stonks.journal.models.opening_cash_balance import OpeningCashBalance
 from stonks.journal.models.position import Position
@@ -404,6 +405,7 @@ class JournalService:
             execution_id = self.m_repository.create_execution(normalized)
 
             self.validate_position_history(normalized.position_id)
+            self._validate_cash_after_execution_change(position.account_id)
 
             return execution_id
 
@@ -470,6 +472,7 @@ class JournalService:
             # Invalid history raises ValueError and rolls back
             # the entire transaction automatically.
             self.validate_position_history(normalized.position_id)
+            self._validate_cash_after_execution_change(position.account_id)
 
             return updated
 
@@ -517,6 +520,7 @@ class JournalService:
             # If this raises ValueError, the transaction manager
             # restores the execution and leaves history unchanged.
             self.validate_position_history(existing.position_id)
+            self._validate_cash_after_execution_change(position.account_id)
 
             return deleted
 
@@ -824,12 +828,66 @@ class JournalService:
 
             opening_repository = OpeningCashRepository(self.m_connection)
             opening_repository.upsert(normalized)
-            if transfers:
+            if self._cash_guard_is_required(normalized.account_id):
                 validate_projected_cash_history(
                     self.m_repository,
                     self.m_connection,
                     (normalized.account_id,),
                 )
+
+    def _cash_guard_is_required(self, account_id: int) -> bool:
+        """Determine whether account history requires strict cash validation.
+
+        Cash-style accounts with dated opening balances always receive
+        overdraft protection. Other accounts retain existing linked-transfer
+        safeguards without imposing non-margin brokerage assumptions.
+
+        Args:
+            account_id:
+                Trading account whose verified cash policy is requested.
+
+        Returns:
+            bool:
+                Whether a chronological cash validation is required.
+        """
+        account = self.m_repository.get_trading_account(account_id)
+
+        if account is None:
+            raise ValueError(f"Trading account {account_id} does not exist.")
+
+        transactions = self.m_repository.get_account_transactions(account_id)
+        has_transfers = any(transaction.transfer_id is not None for transaction in transactions)
+
+        if has_transfers:
+            return True
+
+        cash_account_types = (
+            AccountType.CASH,
+            AccountType.ROTH_IRA,
+            AccountType.TRADITIONAL_IRA,
+        )
+
+        if account.account_type not in cash_account_types:
+            return False
+
+        return OpeningCashRepository(self.m_connection).get(account_id) is not None
+
+    def _validate_cash_after_execution_change(self, account_id: int) -> None:
+        """Validate the complete persisted ledger after a trade-fill mutation.
+
+        Called after the execution write but before transaction commit, so
+        the service's existing transaction manager rolls back invalid fills.
+
+        Args:
+            account_id:
+                Owner of the trade execution being changed.
+        """
+        if self._cash_guard_is_required(account_id):
+            validate_projected_cash_history(
+                self.m_repository,
+                self.m_connection,
+                (account_id,),
+            )
 
     def _validate_cash_after_transaction_change(
         self,
@@ -839,9 +897,7 @@ class JournalService:
     ) -> None:
         """Protect existing transfers from unrelated cash-ledger edits.
 
-        Only accounts already containing linked transfers are guarded here.
-        Historical events preceding the opening snapshot are excluded
-        from the reconstructed cash balance.
+        Validate accounts with linked transfers or verified cash-style opening balances.
 
         Call this method inside an active service write transaction.
 
@@ -860,9 +916,7 @@ class JournalService:
             ValueError:
                 If an edit would invalidate recorded account cash history.
         """
-        transactions = self.m_repository.get_account_transactions(account_id)
-
-        if not any(transaction.transfer_id is not None for transaction in transactions):
+        if not self._cash_guard_is_required(account_id):
             return
 
         opening = OpeningCashRepository(self.m_connection).get(account_id)

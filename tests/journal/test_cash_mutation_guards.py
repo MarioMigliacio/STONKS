@@ -137,11 +137,21 @@ def test_new_negative_adjustment_cannot_undermine_transfer(journal):
     assert not context.m_connection.in_transaction
 
 
-def test_ordinary_transaction_without_transfers_is_unchanged(journal):
-    """D3.6A does not yet enforce overdrafts on accounts without transfers."""
+def test_ordinary_transaction_without_transfers_enforces_cash_balance(journal):
+    """Reject overdrafts in funded cash accounts, even without transfers."""
     context, (source, _, _) = journal
-    tx_id = add_transaction(context, source, AccountTransactionType.WITHDRAWAL, "120", 1)
-    assert context.m_repository.get_account_transaction(tx_id) is not None
+
+    with pytest.raises(ValueError, match="Insufficient recorded cash"):
+        add_transaction(
+            context,
+            source,
+            AccountTransactionType.WITHDRAWAL,
+            "120",
+            1,
+        )
+
+    assert context.m_repository.get_account_transactions(source) == []
+    assert not context.m_connection.in_transaction
 
 
 def test_pre_snapshot_deposit_edit_does_not_rewrite_starting_cash(journal):
