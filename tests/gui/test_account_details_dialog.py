@@ -1,10 +1,13 @@
-"""GUI and backend regression tests for Account Details & Transactions."""
+# =============================================================================
+# File: test_account_details_dialog.py
+# Purpose: Pytest file for test_account_details_dialog.py.
+# =============================================================================
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QDialog
 
 from stonks.gui.pages.account_details_dialog import AccountDetailsDialog
@@ -60,37 +63,89 @@ def test_account_details_shows_backend_metrics(account_details):
     assert dialog.m_metrics.m_realized_pnl.text() == "-$10.00"
 
 
-def test_account_details_filters_by_type_and_notes(account_details):
-    """Verify type selection and free-text query combine correctly."""
+def test_account_details_type_and_custom_date_range(account_details):
+    """Filter transaction types and inclusive UTC date boundaries together."""
     journal, account_id, dialog = account_details
-    journal.m_service.create_account_transaction(
-        make_transaction(account_id, AccountTransactionType.DEPOSIT, "1000", "Opening cash")
+    records = (
+        (AccountTransactionType.DEPOSIT, "100", datetime(2026, 10, 1, tzinfo=timezone.utc)),
+        (AccountTransactionType.FEE, "5", datetime(2026, 10, 15, tzinfo=timezone.utc)),
+        (AccountTransactionType.DEPOSIT, "200", datetime(2026, 10, 31, tzinfo=timezone.utc)),
+        (AccountTransactionType.WITHDRAWAL, "10", datetime(2026, 11, 1, tzinfo=timezone.utc)),
     )
-    journal.m_service.create_account_transaction(
-        make_transaction(account_id, AccountTransactionType.FEE, "5", "Account maintenance")
-    )
+    for kind, amount, occurred_at in records:
+        transaction = make_transaction(account_id, kind, amount)
+        transaction.occurred_at = occurred_at
+        journal.m_service.create_account_transaction(transaction)
     dialog.refresh_details()
-    dialog.m_search_input.setText("account")
-    assert visible_types(dialog) == ["Fee"]
+    assert visible_types(dialog) == ["Deposit", "Fee", "Deposit", "Withdrawal"]
+
+    custom = dialog.m_date_preset.findData("custom")
+    dialog.m_date_preset.setCurrentIndex(custom)
+    dialog.m_start_date.setDate(QDate(2026, 10, 1))
+    dialog.m_end_date.setDate(QDate(2026, 10, 31))
+    assert visible_types(dialog) == ["Deposit", "Fee", "Deposit"]
     deposit_index = dialog.m_type_filter.findData("DEPOSIT")
     dialog.m_type_filter.setCurrentIndex(deposit_index)
+    assert visible_types(dialog) == ["Deposit", "Deposit"]
+    assert dialog.m_results_label.text() == "Showing 2 of 4 transactions"
+
+    dialog.m_start_date.setDate(QDate(2026, 11, 2))
     assert visible_types(dialog) == []
-    assert not dialog.m_empty_label.isHidden()
-    dialog.m_search_input.clear()
-    assert visible_types(dialog) == ["Deposit"]
+    assert dialog.m_empty_label.text() == "Start date must not be after end date."
+    dialog.m_clear_filters_button.click()
+    assert visible_types(dialog) == ["Deposit", "Fee", "Deposit", "Withdrawal"]
+    assert dialog.m_date_preset.currentData() == "all"
+    assert dialog.m_type_filter.currentData() is None
+    assert not dialog.m_start_date.isEnabled()
+    assert not dialog.m_end_date.isEnabled()
+
+
+def test_account_details_preset_ranges(account_details):
+    """Use rolling inclusive calendar windows and the current year."""
+    journal, account_id, dialog = account_details
+    today = date.today()
+    for offset in (0, 6, 7, 29, 30, 89, 90):
+        transaction = make_transaction(account_id, AccountTransactionType.DEPOSIT, "1")
+        transaction.occurred_at = datetime.combine(today - timedelta(days=offset), time(12), timezone.utc)
+        journal.m_service.create_account_transaction(transaction)
+    dialog.refresh_details()
+    for preset, expected in (("7", 2), ("30", 4), ("90", 6)):
+        dialog.m_date_preset.setCurrentIndex(dialog.m_date_preset.findData(preset))
+        assert len(visible_types(dialog)) == expected
+    dialog.m_date_preset.setCurrentIndex(dialog.m_date_preset.findData("year"))
+    assert len(visible_types(dialog)) == sum(
+        (today - timedelta(days=offset)).year == today.year for offset in (0, 6, 7, 29, 30, 89, 90)
+    )
 
 
 def test_account_details_filters_clear_selected_actions(account_details):
-    """Verify hidden transactions cannot remain selected for mutation."""
+    """A transaction hidden by date filters cannot remain editable."""
     journal, account_id, dialog = account_details
     journal.m_service.create_account_transaction(make_transaction(account_id, AccountTransactionType.DEPOSIT, "1000"))
     dialog.refresh_details()
     dialog.m_table.selectRow(0)
     assert dialog.m_actions_button.isEnabled()
-    dialog.m_search_input.setText("fee")
+    dialog.m_date_preset.setCurrentIndex(dialog.m_date_preset.findData("custom"))
+    dialog.m_start_date.setDate(QDate(2026, 11, 1))
+    dialog.m_end_date.setDate(QDate(2026, 11, 30))
     assert dialog.get_selected_transaction_id() is None
     assert not dialog.m_edit_action.isEnabled()
     assert not dialog.m_delete_action.isEnabled()
+
+
+def test_date_filters_do_not_change_account_metrics(account_details):
+    """Date filtering only affects the table, never all-time account totals."""
+    journal, account_id, dialog = account_details
+    journal.m_service.create_account_transaction(make_transaction(account_id, AccountTransactionType.DEPOSIT, "5000"))
+    dialog.refresh_details()
+    expected_cash = dialog.m_metrics.m_cash_balance.text()
+    expected_contributions = dialog.m_metrics.m_contributions.text()
+    dialog.m_date_preset.setCurrentIndex(dialog.m_date_preset.findData("custom"))
+    dialog.m_start_date.setDate(QDate(2026, 11, 1))
+    dialog.m_end_date.setDate(QDate(2026, 11, 30))
+    assert visible_types(dialog) == []
+    assert dialog.m_metrics.m_cash_balance.text() == expected_cash
+    assert dialog.m_metrics.m_contributions.text() == expected_contributions
 
 
 def test_account_details_creates_transaction(account_details, monkeypatch):
@@ -174,3 +229,19 @@ def test_accounts_page_opens_details_on_double_click(qtbot, tmp_path, monkeypatc
         page._open_account_details()
         assert observed == [account_id]
         assert page.m_table.item(0, 0).data(Qt.UserRole) == account_id
+
+
+def test_account_date_fields_use_calendar_styling(account_details):
+    """Verify date editors use centralized theme selectors and calendar popups."""
+    _, _, dialog = account_details
+
+    for editor in (dialog.m_start_date, dialog.m_end_date):
+        assert editor.calendarPopup()
+        assert editor.objectName() == "journalDateFilter"
+
+        calendar = editor.calendarWidget()
+
+        assert calendar.objectName() == "accountDateCalendar"
+
+    assert dialog.m_clear_filters_button.isFlat()
+    assert dialog.m_clear_filters_button.objectName() == "accountClearFiltersLink"

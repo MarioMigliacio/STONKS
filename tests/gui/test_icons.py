@@ -15,6 +15,7 @@ from stonks.gui.icons import get_icon
         "archive",
         "arrow-left",
         "arrow-right",
+        "calendar-days",
         "chevron-down",
         "chevron-left",
         "chevron-right",

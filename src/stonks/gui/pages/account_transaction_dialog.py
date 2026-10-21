@@ -1,4 +1,7 @@
-"""Create or edit a journal account cash transaction."""
+# =============================================================================
+# File: account_transaction_dialog.py
+# Purpose: Create or edit a journal account cash transaction.
+# =============================================================================
 
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation

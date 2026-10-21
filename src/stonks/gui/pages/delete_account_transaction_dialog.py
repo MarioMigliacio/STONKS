@@ -1,4 +1,7 @@
-"""Confirm deletion of a single non-trade account transaction."""
+# =============================================================================
+# File: delete_account_dialog.py
+# Purpose: Confirm deletion of a single non-trade account transaction.
+# =============================================================================
 
 from datetime import timezone
 

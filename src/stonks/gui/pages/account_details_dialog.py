@@ -1,19 +1,25 @@
-"""Account-level financial overview and journal transaction management."""
+# =============================================================================
+# File: account_details_dialog.py
+# Purpose: Account-level financial overview and journal transaction management.
+# =============================================================================
 
-from datetime import timezone
+
+from datetime import date, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QDate, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QCalendarWidget,
     QComboBox,
+    QDateEdit,
     QDialog,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit,
     QMenu,
     QMessageBox,
     QPushButton,
@@ -34,21 +40,65 @@ from stonks.journal.services.journal_service import JournalService
 
 
 class AccountDetailsDialog(QDialog):
-    """Show account metrics, searchable transaction history, and ledger CRUD.
+    """Display account metrics, date-filtered history, and ledger transactions.
 
     Attributes:
-        m_account_id: Immutable account being inspected.
-        m_repository: Source of accounts, positions, and transaction history.
-        m_service: Optional validator/persistence service.
-        m_title: Trading account name heading.
-        m_metadata: Account type, broker, and activity state.
-        m_metrics: Reusable financial metric card grid.
-        m_add_button: Opens the new-transaction dialog.
-        m_actions_button: Contains edit and deletion actions.
-        m_search_input: Case-insensitive search over type and notes.
-        m_type_filter: Type-specific transaction filter.
-        m_table: Persisted account transaction history table.
-        m_empty_label: No-data/no-match message.
+        m_account_id:
+            Identifier of the trading account being inspected.
+
+        m_repository:
+            Repository used to retrieve accounts, positions, and transactions.
+
+        m_service:
+            Optional journal service for validated transaction writes.
+
+        m_title:
+            Label displaying the selected account name.
+
+        m_metadata:
+            Account type, broker, and active or archived state.
+
+        m_metrics:
+            Reusable account financial metrics widget.
+
+        m_add_button:
+            Button opening the transaction creation dialog.
+
+        m_actions_button:
+            Button opening the transaction management menu.
+
+        m_menu:
+            Menu containing edit and delete actions.
+
+        m_edit_action:
+            Action for editing the selected transaction.
+
+        m_delete_action:
+            Action for deleting the selected transaction.
+
+        m_type_filter:
+            Filter for transaction type.
+
+        m_date_preset:
+            Preset for the history date range.
+
+        m_start_date:
+            Inclusive start of the custom date range.
+
+        m_end_date:
+            Inclusive end of the custom date range.
+
+        m_clear_filters_button:
+            Link-style button restoring the default filters.
+
+        m_results_label:
+            Count of visible transactions after filtering.
+
+        m_table:
+            Persisted account transaction history table.
+
+        m_empty_label:
+            Message for empty history, no matches, or an invalid range.
     """
 
     def __init__(
@@ -58,14 +108,28 @@ class AccountDetailsDialog(QDialog):
         service: Optional[JournalService] = None,
         parent=None,
     ) -> None:
-        """Create account details using the established position-dialog layout."""
+        """Initialize a trading account detail and transaction history dialog.
+
+        Args:
+            account_id:
+                Identifier of the selected trading account.
+            repository:
+                Journal repository used for retrieving persisted records.
+            service:
+                Optional service for validated transaction operations.
+            parent:
+                Optional parent Qt widget.
+        """
         super().__init__(parent)
+
         self.m_account_id = account_id
         self.m_repository = repository
         self.m_service = service
+
         self.setWindowTitle("Account Details")
         self.resize(900, 800)
         self.setMinimumSize(750, 500)
+
         self._setup_ui()
         self.refresh_details()
 
@@ -73,6 +137,7 @@ class AccountDetailsDialog(QDialog):
         """Build the metric cards, filter toolbar, ledger grid, and actions."""
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
+
         self.m_title = QLabel("Account Details")
         self.m_title.setObjectName("journalPageTitle")
         self.m_metadata = QLabel()
@@ -87,11 +152,13 @@ class AccountDetailsDialog(QDialog):
         header = QHBoxLayout()
         heading = QLabel("Transaction History")
         heading.setObjectName("metricsHeading")
+
         header.addWidget(heading)
         header.addStretch()
         self.m_add_button = QPushButton("New Transaction")
         self.m_add_button.setIcon(get_icon("plus"))
         self.m_add_button.clicked.connect(self._create_transaction)
+
         header.addWidget(self.m_add_button)
         self.m_actions_button = QPushButton("Actions")
         self.m_menu = QMenu(self)
@@ -101,42 +168,131 @@ class AccountDetailsDialog(QDialog):
         self.m_delete_action = self.m_menu.addAction("Delete Transaction")
         self.m_delete_action.setIcon(get_icon("trash-danger"))
         self.m_actions_button.setMenu(self.m_menu)
+
         self.m_edit_action.triggered.connect(self._edit_transaction)
         self.m_delete_action.triggered.connect(self._delete_transaction)
         header.addWidget(self.m_actions_button)
         layout.addLayout(header)
 
+        # Transaction type and date-preset filters.
         filters = QHBoxLayout()
         filters.setSpacing(10)
-        self.m_search_input = QLineEdit()
-        self.m_search_input.setObjectName("journalSearchInput")
-        self.m_search_input.setPlaceholderText("Search transactions or notes...")
-        self.m_search_input.setClearButtonEnabled(True)
-        self.m_search_input.setAccessibleName("Search transactions")
-        self.m_search_input.setMinimumHeight(42)
         self.m_type_filter = QComboBox()
         self.m_type_filter.setObjectName("journalStatusFilter")
         self.m_type_filter.setMinimumHeight(42)
         self.m_type_filter.setMinimumWidth(160)
         self.m_type_filter.addItem("All Types", userData=None)
         for kind in AccountTransactionType:
-            self.m_type_filter.addItem(kind.value.replace("_", " ").title(), userData=kind.value)
-        filters.addWidget(self.m_search_input, 1)
+            label = kind.value.replace("_", " ").title()
+            self.m_type_filter.addItem(label, userData=kind.value)
+
+        self.m_date_preset = QComboBox()
+        self.m_date_preset.setObjectName("journalStatusFilter")
+        self.m_date_preset.setMinimumHeight(42)
+        self.m_date_preset.setMinimumWidth(155)
+
+        for label, key in (
+            ("All Time", "all"),
+            ("Last 7 Days", "7"),
+            ("Last 30 Days", "30"),
+            ("Last 90 Days", "90"),
+            ("This Year", "year"),
+            ("Custom Range", "custom"),
+        ):
+            self.m_date_preset.addItem(label, userData=key)
+
         filters.addWidget(self.m_type_filter)
+        filters.addWidget(self.m_date_preset)
+        filters.addStretch()
         layout.addLayout(filters)
 
+        # Inclusive custom date range; labels are above the inputs.
+        date_range = QHBoxLayout()
+        date_range.setSpacing(10)
+        start_label = QLabel("From")
+        start_label.setObjectName("journalAccountLabel")
+        self.m_start_date = QDateEdit()
+        self.m_start_date.setObjectName("journalDateFilter")
+        self.m_start_date.setCalendarPopup(True)
+        self.m_start_date.setDisplayFormat("yyyy-MM-dd")
+        self.m_start_date.setDate(QDate.currentDate().addDays(-29))
+        self.m_start_date.setEnabled(False)
+        self._configure_date_editor(self.m_start_date)
+        end_label = QLabel("To")
+        end_label.setObjectName("journalAccountLabel")
+        self.m_end_date = QDateEdit()
+        self.m_end_date.setObjectName("journalDateFilter")
+        self.m_end_date.setCalendarPopup(True)
+        self.m_end_date.setDisplayFormat("yyyy-MM-dd")
+        self.m_end_date.setDate(QDate.currentDate())
+        self.m_end_date.setEnabled(False)
+        self._configure_date_editor(self.m_end_date)
+
+        start_column = QVBoxLayout()
+        start_column.setSpacing(6)
+        start_column.addWidget(start_label)
+        start_column.addWidget(self.m_start_date)
+
+        end_column = QVBoxLayout()
+        end_column.setSpacing(6)
+        end_column.addWidget(end_label)
+        end_column.addWidget(self.m_end_date)
+
+        date_range.addLayout(start_column)
+        date_range.addLayout(end_column)
+        date_range.addStretch()
+        layout.addLayout(date_range)
+
+        separator = QFrame(self)
+        separator.setObjectName("accountFilterSeparator")
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFixedHeight(1)
+        layout.addWidget(separator)
+
+        # History count and reset action.
+        filter_footer = QHBoxLayout()
+        self.m_results_label = QLabel("Showing 0 transactions")
+        self.m_results_label.setObjectName("journalPageSubtitle")
+        self.m_clear_filters_button = QPushButton("Clear Filters")
+        self.m_clear_filters_button.setObjectName("accountClearFiltersLink")
+        self.m_clear_filters_button.setCursor(Qt.PointingHandCursor)
+        self.m_clear_filters_button.setFlat(True)
+        self.m_clear_filters_button.clicked.connect(self._clear_filters)
+        filter_footer.addWidget(self.m_results_label)
+        filter_footer.addStretch()
+        filter_footer.addWidget(self.m_clear_filters_button)
+        layout.addLayout(filter_footer)
+
+        self.m_date_preset.currentIndexChanged.connect(self._on_date_preset_changed)
+        self.m_start_date.dateChanged.connect(self._apply_filters)
+        self.m_end_date.dateChanged.connect(self._apply_filters)
+        # Read-only chronological ledger.
         self.m_table = QTableWidget()
         self.m_table.setObjectName("journalPositionsTable")
         self.m_table.setColumnCount(5)
-        self.m_table.setHorizontalHeaderLabels(["Date / Time (UTC)", "Type", "Amount", "Notes", "Transaction ID"])
+        self.m_table.setHorizontalHeaderLabels(
+            [
+                "Date / Time (UTC)",
+                "Type",
+                "Amount",
+                "Notes",
+                "Transaction ID",
+            ]
+        )
         self.m_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.m_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.m_table.setSelectionMode(QAbstractItemView.SingleSelection)
         header_view = self.m_table.horizontalHeader()
         header_view.setSectionResizeMode(QHeaderView.Interactive)
-        header_view.setMinimumSectionSize(70)
+        header_view.setMinimumSectionSize(60)
+
+        # Set the initial column widths.
         for index, width in enumerate((175, 135, 125, 265, 115)):
             self.m_table.setColumnWidth(index, width)
+
+        # Stretch the Notes column to fill unused horizontal space.
+        header_view.setSectionResizeMode(3, QHeaderView.Stretch)
+
         self.m_table.verticalHeader().setVisible(False)
         self.m_table.verticalHeader().setDefaultSectionSize(40)
         layout.addWidget(self.m_table)
@@ -151,21 +307,44 @@ class AccountDetailsDialog(QDialog):
         footer.addWidget(close)
         layout.addLayout(footer)
 
-        self.m_search_input.textChanged.connect(self._apply_filters)
         self.m_type_filter.currentIndexChanged.connect(self._apply_filters)
         self.m_table.itemSelectionChanged.connect(self._update_action_state)
         self.m_table.itemDoubleClicked.connect(self._edit_transaction)
 
+    @staticmethod
+    def _configure_date_editor(editor: QDateEdit) -> None:
+        """Configure a date field and its popup without embedding visual styles.
+
+        All colors, borders, focus states, and calendar SVG styling are
+        defined centrally in ``stonks.gui.styles.theme``.
+
+        Args:
+            editor:
+                Date editor used for an inclusive history filter.
+        """
+        editor.setMinimumHeight(42)
+        editor.setMinimumWidth(155)
+        editor.setCursor(Qt.PointingHandCursor)
+
+        calendar = editor.calendarWidget()
+        calendar.setObjectName("accountDateCalendar")
+        calendar.setVerticalHeaderFormat(QCalendarWidget.NoVerticalHeader)
+        calendar.setGridVisible(False)
+
     def get_selected_transaction_id(self) -> Optional[int]:
         """Return the persistent identifier for the selected ledger entry."""
         rows = self.m_table.selectionModel().selectedRows()
+
         if not rows:
             return None
+
         item = self.m_table.item(rows[0].row(), 0)
+
         if item is None:
             return None
-        result = item.data(Qt.UserRole)
-        return result if type(result) is int else None
+
+        transaction_id = item.data(Qt.UserRole)
+        return transaction_id if type(transaction_id) is int else None
 
     def _account_is_active(self) -> bool:
         """Check whether writes are allowed to this trading account."""
@@ -220,13 +399,20 @@ class AccountDetailsDialog(QDialog):
 
         transactions = self.m_repository.get_account_transactions(account_id=self.m_account_id)
         positions = self.m_repository.get_positions(account_id=self.m_account_id)
+
         executions = []
         position_metrics = []
+
         for position in positions:
             fills = self.m_repository.get_position_executions(position.position_id)
             executions.extend(fills)
             position_metrics.append(calculate_position_metrics(position.position_id, fills))
-        metrics = calculate_account_metrics(transactions, executions, position_metrics)
+
+        metrics = calculate_account_metrics(
+            transactions,
+            executions,
+            position_metrics,
+        )
         self.m_metrics.update_metrics(metrics)
 
         self.m_table.blockSignals(True)
@@ -267,38 +453,71 @@ class AccountDetailsDialog(QDialog):
             self.m_table.blockSignals(False)
         self._apply_filters()
 
+    def _on_date_preset_changed(self, *_args) -> None:
+        """Enable date editors only for custom ranges and refresh the ledger."""
+        custom = self.m_date_preset.currentData() == "custom"
+        self.m_start_date.setEnabled(custom)
+        self.m_end_date.setEnabled(custom)
+        self._apply_filters()
+
+    def _clear_filters(self) -> None:
+        """Return the ledger to its complete, unfiltered account history."""
+        self.m_type_filter.setCurrentIndex(0)
+        self.m_date_preset.setCurrentIndex(0)
+        self._apply_filters()
+
+    def _selected_date_range(self):
+        """Return inclusive UTC calendar dates, or None for all-time history."""
+        preset = self.m_date_preset.currentData()
+        today = date.today()
+        if preset == "all":
+            return None
+        if preset == "custom":
+            return (
+                self.m_start_date.date().toPython(),
+                self.m_end_date.date().toPython(),
+            )
+        if preset == "year":
+            return date(today.year, 1, 1), today
+        days = int(preset)
+        return today - timedelta(days=days - 1), today
+
     def _apply_filters(self, *_args) -> None:
-        """Apply combined type and text filters to the selected account."""
-        needle = self.m_search_input.text().strip().casefold()
+        """Filter displayed UTC transaction dates and types, without changing metrics."""
         kind = self.m_type_filter.currentData()
+        date_range = self._selected_date_range()
+        invalid_range = date_range is not None and date_range[0] > date_range[1]
         visible = 0
         selected_id = self.get_selected_transaction_id()
         selected_visible = False
         for row in range(self.m_table.rowCount()):
+            date_item = self.m_table.item(row, 0)
             type_item = self.m_table.item(row, 1)
-            note_item = self.m_table.item(row, 3)
-            if type_item is None or note_item is None:
+            if date_item is None or type_item is None:
                 self.m_table.setRowHidden(row, True)
                 continue
-            type_text = type_item.text()
-            record_kind = type_text.replace(" ", "_").upper()
-            matches = (not needle or needle in type_text.casefold() or needle in note_item.text().casefold()) and (
-                kind is None or kind == record_kind
-            )
+            record_kind = type_item.text().replace(" ", "_").upper()
+            record_date = date.fromisoformat(date_item.text()[:10])
+            matches_type = kind is None or kind == record_kind
+            matches_date = date_range is None or (not invalid_range and date_range[0] <= record_date <= date_range[1])
+            matches = matches_type and matches_date
             self.m_table.setRowHidden(row, not matches)
             if matches:
                 visible += 1
-                if self.m_table.item(row, 0).data(Qt.UserRole) == selected_id:
+                if date_item.data(Qt.UserRole) == selected_id:
                     selected_visible = True
         if not selected_visible:
             self.m_table.clearSelection()
         total = self.m_table.rowCount()
-        self.m_empty_label.setText(
-            "No account transactions recorded yet."
-            if total == 0
-            else "No transactions match your current search or filters."
-        )
-        self.m_empty_label.setVisible(total == 0 or visible == 0)
+        self.m_results_label.setText(f"Showing {visible} of {total} transactions")
+        if invalid_range:
+            message = "Start date must not be after end date."
+        elif total == 0:
+            message = "No account transactions recorded yet."
+        else:
+            message = "No transactions match your current filters."
+        self.m_empty_label.setText(message)
+        self.m_empty_label.setVisible(invalid_range or total == 0 or visible == 0)
         self._update_action_state()
 
     def _get_selected_transaction(self):
@@ -332,7 +551,11 @@ class AccountDetailsDialog(QDialog):
         transaction = self._get_selected_transaction()
         if transaction is None or transaction.transaction_type not in AccountTransactionDialog.SUPPORTED_TYPES:
             return
-        dialog = AccountTransactionDialog(self.m_account_id, transaction=transaction, parent=self)
+        dialog = AccountTransactionDialog(
+            self.m_account_id,
+            transaction=transaction,
+            parent=self,
+        )
         if dialog.exec() != QDialog.Accepted:
             return
         try:
