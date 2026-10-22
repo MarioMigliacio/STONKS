@@ -257,6 +257,7 @@ class PositionDetailsDialog(QDialog):
         self.m_add_execution_button.clicked.connect(self._add_execution)
 
         self.m_executions_table.itemSelectionChanged.connect(self._update_action_state)
+        self.m_executions_table.itemDoubleClicked.connect(self._on_execution_double_clicked)
 
         self.m_edit_action.triggered.connect(self._edit_execution)
 
@@ -501,6 +502,22 @@ class PositionDetailsDialog(QDialog):
             return
 
         self.refresh_details()
+
+    def _on_execution_double_clicked(self, item: QTableWidgetItem) -> None:
+        """Edit the clicked execution when editing is permitted.
+
+        Args:
+            item:
+                Table item that received the double-click.
+        """
+        if item is None:
+            return
+
+        self.m_executions_table.selectRow(item.row())
+        self._update_action_state()
+
+        if self.m_edit_action.isEnabled():
+            self._edit_execution()
 
     def _edit_execution(self) -> None:
         """
