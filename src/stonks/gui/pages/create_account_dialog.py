@@ -20,7 +20,7 @@ from stonks.journal.models.trading_account import TradingAccount
 
 class CreateAccountDialog(QDialog):
     """
-    Collect the information needed to create a trading account.
+    Collect account information for creating or editing a trading account.
 
     Attributes:
         m_name:
@@ -36,7 +36,15 @@ class CreateAccountDialog(QDialog):
         parent=None,
         account: Optional[TradingAccount] = None,
     ) -> None:
-        """Initialize the dialog for creating or editing an account."""
+        """Initialize account fields for creation or editing.
+
+        Args:
+            parent:
+                Optional parent Qt widget.
+
+            account:
+                Existing account to edit, or None when creating an account.
+        """
         super().__init__(parent)
 
         self.m_existing_account = account

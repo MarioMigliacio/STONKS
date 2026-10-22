@@ -38,8 +38,8 @@ class PositionDetailsDialog(QDialog):
     Display position metadata and manage its trade execution history.
 
     Retrieves persisted position information and chronological BUY/SELL
-    executions. Supports creating and editing executions through the
-    journal service while protecting archived trading accounts.
+    executions. Supports creating, editing, and deleting executions through
+    the journal service while protecting archived trading accounts.
 
     Attributes:
         m_position_id:
@@ -74,7 +74,7 @@ class PositionDetailsDialog(QDialog):
             Action opening the selected execution for editing.
 
         m_delete_action:
-            Reserved action for deleting an execution in C3.4C.2.
+            Action for deleting the selected execution after confirmation.
 
         m_executions_table:
             Table showing chronological execution history.
@@ -169,7 +169,7 @@ class PositionDetailsDialog(QDialog):
         self.m_delete_action = self.m_actions_menu.addAction("Delete Execution")
         self.m_delete_action.setIcon(get_icon("trash-danger"))
 
-        # Deletion is introduced in C3.4C.2.
+        # Actions remain disabled until a valid editable row is selected.
         self.m_delete_action.setEnabled(False)
 
         self.m_actions_button.setMenu(self.m_actions_menu)

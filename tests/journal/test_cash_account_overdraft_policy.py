@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_cash_account_overdraft_policy.py
-# Purpose: Verify strict cash policy for funded non-margin journal accounts.
+# Purpose: Pytest file for test_cash_account_overdraft_policy.py.
 # =============================================================================
 
 from dataclasses import replace

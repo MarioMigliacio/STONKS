@@ -122,10 +122,13 @@ class AccountDetailsDialog(QDialog):
         Args:
             account_id:
                 Identifier of the selected trading account.
+
             repository:
                 Journal repository used for retrieving persisted records.
+
             service:
                 Optional service for validated transaction operations.
+
             parent:
                 Optional parent Qt widget.
         """

@@ -1,5 +1,5 @@
 # =============================================================================
-# File: delete_account_dialog.py
+# File: delete_account_transaction_dialog.py
 # Purpose: Confirm deletion of a single non-trade account transaction.
 # =============================================================================
 
@@ -19,7 +19,15 @@ class DeleteAccountTransactionDialog(QDialog):
     """
 
     def __init__(self, transaction: AccountTransaction, parent=None) -> None:
-        """Build a cancellation-first destructive-action confirmation."""
+        """Build the cancellation-first transaction deletion confirmation.
+
+        Args:
+            transaction:
+                Persisted non-transfer transaction selected for deletion.
+
+            parent:
+                Optional parent Qt widget.
+        """
         super().__init__(parent)
         self.m_transaction = transaction
         self.setWindowTitle("Delete Account Transaction")

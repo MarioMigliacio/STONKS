@@ -12,10 +12,10 @@ class AccountTransactionType(str, Enum):
 
     Values:
         DEPOSIT:
-            Funds transferred into the trading account.
+            External funds deposited into the trading account.
 
         WITHDRAWAL:
-            Funds transferred out of the trading account.
+            External funds withdrawn from the trading account.
 
         FEE:
             Account-level expenses unrelated to executions.

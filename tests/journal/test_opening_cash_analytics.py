@@ -1,4 +1,7 @@
-"""Regression tests for cash snapshots and financial analytics."""
+# =============================================================================
+# File: test_opening_cash_analytics.py
+# Purpose: Pytest file for test_opening_cash_analytics.py.
+# =============================================================================
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal

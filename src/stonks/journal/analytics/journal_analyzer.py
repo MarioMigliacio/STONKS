@@ -12,6 +12,7 @@ from stonks.journal.analytics.portfolio_analytics import calculate_portfolio_met
 from stonks.journal.analytics.portfolio_metrics import PortfolioMetrics
 from stonks.journal.analytics.position_analytics import calculate_position_metrics
 from stonks.journal.persistence.journal_repository import JournalRepository
+from stonks.journal.persistence.opening_cash_repository import OpeningCashRepository
 
 
 def analyze_account(
@@ -23,6 +24,9 @@ def analyze_account(
 
     Retrieves account-owned journal records and delegates
     calculations to the existing analytics modules.
+
+    Uses the account's persisted dated opening-cash snapshot when available.
+    Without a snapshot, cash remains an unverified sum of recorded movements.
 
     Archived accounts remain eligible for historical analysis.
 
@@ -49,6 +53,7 @@ def analyze_account(
     positions = repository.get_positions(account_id=account_id)
     executions = repository.get_executions(account_id=account_id)
     transactions = repository.get_account_transactions(account_id=account_id)
+    opening_cash = OpeningCashRepository(repository.m_connection).get(account_id)
 
     # Group account executions by position to avoid repeated database queries.
     executions_by_position = defaultdict(list)
@@ -68,6 +73,7 @@ def analyze_account(
         transactions=transactions,
         executions=executions,
         positions=position_metrics,
+        opening_cash=opening_cash,
     )
 
 

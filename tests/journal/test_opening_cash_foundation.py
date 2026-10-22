@@ -1,4 +1,7 @@
-"""Tests for the D3.5A opening cash storage foundation."""
+# =============================================================================
+# File: test_opening_cash_foundation.py
+# Purpose: Pytest file for test_opening_cash_foundation.py.
+# =============================================================================
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal

@@ -1,4 +1,7 @@
-"""Present account-level financial metrics using the journal's card styling."""
+# =============================================================================
+# File: account_metrics_widget.py
+# Purpose: Display account financial metrics in reusable summary cards.
+# =============================================================================
 
 from decimal import Decimal
 

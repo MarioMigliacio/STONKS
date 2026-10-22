@@ -32,18 +32,25 @@ class AccountTransferDialog(QDialog):
     Attributes:
         m_repository:
             Repository used to populate the account selectors.
+
         m_transfer:
             Persisted transfer to edit, or None for a new transfer.
+
         m_source:
             Source account selector.
+
         m_destination:
             Destination account selector.
+
         m_amount:
             Positive, finite Decimal input.
+
         m_occurred_at:
             Local date and time editor.
+
         m_notes:
             Optional transfer notes.
+
         m_save_button:
             Submit button, enabled only when appropriate accounts exist.
     """
@@ -55,7 +62,21 @@ class AccountTransferDialog(QDialog):
         transfer: Optional[AccountTransfer] = None,
         parent=None,
     ) -> None:
-        """Build the modal transfer form scoped to the current account."""
+        """Build a transfer form for creating or updating an internal transfer.
+
+        Args:
+            repository:
+                Journal repository providing available trading accounts.
+
+            current_account_id:
+                Account used to initialize the selection controls.
+
+            transfer:
+                Existing transfer to edit, or None for a new transfer.
+
+            parent:
+                Optional parent Qt widget.
+        """
         super().__init__(parent)
         self.m_repository = repository
         self.m_transfer = transfer

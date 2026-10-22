@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_account_transfer_financial_integrity.py
-# Purpose: Verify financial neutrality and integrity of internal cash transfers.
+# Purpose: Pytest file for test_account_transfer_financial_integrity.py.
 # =============================================================================
 
 from datetime import datetime, timezone
