@@ -16,10 +16,12 @@ from stonks.config.journal_paths import (
 )
 
 JOURNAL_TABLES = (
-    "trading_accounts",
+    "account_opening_cash",
+    "account_transactions",
+    "account_transfers",
     "positions",
     "trade_executions",
-    "account_transactions",
+    "trading_accounts",
 )
 
 
