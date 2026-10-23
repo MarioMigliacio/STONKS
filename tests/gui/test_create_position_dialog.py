@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_create_position_dialog.py
-# Purpose: Verify journal position entry dialog behavior.
+# Purpose: Pytest file for test_create_position_dialog.py.
 # =============================================================================
 
 from PySide6.QtWidgets import QDialog

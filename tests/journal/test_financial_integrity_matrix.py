@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_financial_integrity_matrix.py
-# Purpose: Stress-test journal cash integrity across interacting operations.
+# Purpose: Pytest file for test_financial_integrity_matrix.py.
 # =============================================================================
 
 from dataclasses import replace

@@ -30,12 +30,23 @@ class AccountTransactionDialog(QDialog):
     """Edit deposits, withdrawals, standalone fees, or signed adjustments.
 
     Attributes:
-        m_account_id: Immutable owning account ID.
-        m_transaction: Optional persisted record being edited.
-        m_type: Non-transfer transaction type selector.
-        m_occurred_at: User-local transaction date and time field.
-        m_amount: Decimal currency amount entry.
-        m_notes: Optional transaction notes entry.
+        m_account_id:
+            Immutable owning account ID.
+
+        m_transaction:
+            Optional persisted record being edited.
+
+        m_type:
+            Non-transfer transaction type selector.
+
+        m_occurred_at:
+            User-local transaction date and time field.
+
+        m_amount:
+            Decimal currency amount entry.
+
+        m_notes:
+            Optional transaction notes entry.
     """
 
     SUPPORTED_TYPES = (
@@ -65,12 +76,14 @@ class AccountTransactionDialog(QDialog):
         """Create validated inputs and modal save/cancel actions."""
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
+
         title = QLabel("Edit Transaction" if self.m_transaction else "New Transaction")
         title.setObjectName("journalSectionLabel")
         layout.addWidget(title)
 
         form = QFormLayout()
         self.m_type = QComboBox()
+
         for kind in self.SUPPORTED_TYPES:
             self.m_type.addItem(kind.value.replace("_", " ").title(), userData=kind.value)
         form.addRow("Type", self.m_type)
@@ -102,10 +115,13 @@ class AccountTransactionDialog(QDialog):
 
         footer = QHBoxLayout()
         footer.addStretch()
+
         cancel = QPushButton("Cancel")
         cancel.clicked.connect(self.reject)
+
         self.m_save_button = QPushButton("Save Changes" if self.m_transaction else "Add Transaction")
         self.m_save_button.clicked.connect(self._validate_and_accept)
+
         footer.addWidget(cancel)
         footer.addWidget(self.m_save_button)
         layout.addLayout(footer)
@@ -115,7 +131,9 @@ class AccountTransactionDialog(QDialog):
         transaction = self.m_transaction
         if transaction is None:
             return
+
         index = self.m_type.findData(transaction.transaction_type.value)
+
         if index >= 0:
             self.m_type.setCurrentIndex(index)
         self.m_occurred_at.setDateTime(QDateTime.fromSecsSinceEpoch(int(transaction.occurred_at.timestamp())))

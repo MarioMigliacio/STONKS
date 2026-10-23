@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_journal_analyzer_opening_cash.py
-# Purpose: Verify analyzer cash metrics honor persisted opening snapshots.
+# Purpose: Pytest file for test_journal_analyzer_opening_cash.py.
 # =============================================================================
 
 from datetime import datetime, timedelta, timezone

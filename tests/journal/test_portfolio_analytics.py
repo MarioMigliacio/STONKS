@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_portfolio_analytics.py
-# Purpose: Verify portfolio-level financial metric aggregation.
+# Purpose: Pytest file for test_portfolio_analytics.py.
 # =============================================================================
 
 from decimal import Decimal

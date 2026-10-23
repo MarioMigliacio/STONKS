@@ -25,8 +25,10 @@ class CreateAccountDialog(QDialog):
     Attributes:
         m_name:
             Input field for the account name.
+
         m_account_type:
             Dropdown for the brokerage account classification.
+
         m_broker:
             Input field for the brokerage name.
     """

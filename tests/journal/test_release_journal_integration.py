@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_release_journal_integration.py
-# Purpose: Validate end-to-end persisted journal cash and performance workflows.
+# Purpose: Pytest file for test_release_journal_integration.py.
 # =============================================================================
 
 from datetime import datetime, timedelta, timezone

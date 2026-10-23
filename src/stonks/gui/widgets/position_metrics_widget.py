@@ -74,11 +74,8 @@ class PositionMetricsWidget(QWidget):
         grid.setSpacing(10)
 
         self.m_open_shares = self._add_metric(grid, 0, 0, "Remaining Shares")
-
         self.m_average_entry = self._add_metric(grid, 0, 1, "Avg Buy Price")
-
         self.m_realized_pnl = self._add_metric(grid, 1, 0, "Realized P&L", "After fees")
-
         self.m_realized_return = self._add_metric(grid, 1, 1, "Realized Return", "On shares sold")
 
         layout.addLayout(grid)
@@ -226,9 +223,7 @@ class PositionMetricsWidget(QWidget):
         average_buy = metrics.average_buy_price
 
         self.m_average_entry.setText(self._format_money(average_buy) if average_buy is not None else "—")
-
         self.m_cost_basis.setText(self._format_money(metrics.remaining_cost_basis))
-
         self.m_realized_pnl.setText(self._format_money(metrics.realized_pnl, signed=True))
 
         self._set_performance_style(

@@ -14,10 +14,17 @@ class AccountMetricsWidget(QWidget):
     """Display book-value account metrics without estimating market equity.
 
     Attributes:
-        m_cash_balance: Ledger-derived cash value.
-        m_contributions: External deposits minus withdrawals.
-        m_realized_pnl: Realized trading P&L net of standalone fees.
-        m_equity: Equity measured at historical cost basis.
+        m_cash_balance:
+            Ledger-derived cash value.
+
+        m_contributions:
+            External deposits minus withdrawals.
+
+        m_realized_pnl:
+            Realized trading P&L net of standalone fees.
+
+        m_equity:
+            Equity measured at historical cost basis.
     """
 
     def __init__(self, parent=None) -> None:
@@ -57,6 +64,7 @@ class AccountMetricsWidget(QWidget):
         content.addWidget(label)
         content.addWidget(value)
         grid.addWidget(card, row, column)
+
         return value
 
     @staticmethod
@@ -64,8 +72,10 @@ class AccountMetricsWidget(QWidget):
         """Format an exact decimal as currency for presentation."""
         if signed and value > 0:
             return f"+${value:,.2f}"
+
         if value < 0:
             return f"-${abs(value):,.2f}"
+
         return f"${value:,.2f}"
 
     def update_metrics(self, metrics: AccountMetrics) -> None:
