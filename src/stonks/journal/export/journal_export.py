@@ -87,14 +87,12 @@ def export_journal_to_csv(
             If the journal database does not exist.
     """
     source_path = database_path if database_path is not None else DATABASE_FILE
-
     destination_directory = export_directory if export_directory is not None else EXPORT_DIRECTORY
 
     if not source_path.exists():
         raise FileNotFoundError(f"Journal database does not exist: {source_path}")
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-
     export_path = destination_directory / f"journal_{timestamp}"
 
     export_path.mkdir(

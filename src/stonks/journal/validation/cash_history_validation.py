@@ -35,17 +35,21 @@ def validate_projected_cash_history(
     no arbitrary transaction ID order decides an overdraft.
 
     This is a pure read/validation operation. Callers making writes must run
-    it INSIDE the same service transaction as the eventual changes.
+    it INSIDE the same service transaction.
 
     Args:
         repository:
             JournalRepository used to read account transactions and executions.
+
         connection:
             Shared SQLite connection containing opening snapshots.
+
         account_ids:
             Tracked account identifiers whose projected cash will be checked.
+
         additions:
             Replacement or proposed (account_id, timestamp, signed flow) events.
+
         excluded_transaction_ids:
             Persisted ledger transaction IDs to exclude (for transfer editing).
 
