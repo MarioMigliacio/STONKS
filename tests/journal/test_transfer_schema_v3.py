@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_transfer_schema_v3.py
-# Purpose: Validate transfer pairing and fresh schema-v3 initialization.
+# Purpose: Pytest file for test_transfer_schema_v3.py.
 # =============================================================================
 
 import sqlite3

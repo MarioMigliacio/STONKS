@@ -17,14 +17,19 @@ class TradingAccount:
     Attributes:
         name:
             User-defined display name for the trading account.
+
         account_type:
             Classification of the brokerage account.
+
         broker:
             Name of the brokerage provider.
+
         account_id:
             Database-generated unique account identifier.
+
         is_active:
             Whether the account accepts new journal activity.
+
         is_default:
             Whether the account is the preferred account for new entries.
     """

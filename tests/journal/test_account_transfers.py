@@ -1,4 +1,7 @@
-"""Atomic inter-account transfer tests for the STONKS journal backend."""
+# =============================================================================
+# File: test_account_transfer.py
+# Purpose: Pytest file for test_account_transfer.py.
+# =============================================================================
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal

@@ -16,8 +16,9 @@ def calculate_portfolio_metrics(
     """
     Aggregate financial metrics across multiple trading accounts.
 
-    This calculation combines account-level ledger values without
-    applying market valuations or internal transfer adjustments.
+    This calculation sums the supplied account-level metrics without
+    calculating market valuations. Internal transfers are already
+    represented as offsetting cash movements across accounts.
 
     Args:
         accounts:

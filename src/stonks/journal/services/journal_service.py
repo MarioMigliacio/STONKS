@@ -679,7 +679,8 @@ class JournalService:
         """Atomically update a transfer's amount, timestamp, and notes.
 
         Account ownership and direction cannot be changed. Both accounts must
-        remain active. There is no cash-balance-limit enforcement yet.
+        remain active. Proposed changes are validated against the dated cash
+        histories of both accounts before any ledger records are updated.
 
         Args:
             transfer:
@@ -691,7 +692,8 @@ class JournalService:
 
         Raises:
             ValueError:
-                If the transfer is invalid, incomplete, or involves an archived account.
+                If the transfer is invalid, incomplete, involves an archived
+                account, or would overdraw recorded cash history.
         """
         if transfer.transfer_id is None:
             raise ValueError("Cannot update a transfer without an ID.")
@@ -749,7 +751,7 @@ class JournalService:
             return True
 
     def delete_account_transfer(self, transfer_id: int) -> bool:
-        """Delete the parent transfer and both ledger legs in one transaction.
+        """Delete a paired transfer atomically when remaining cash is valid.
 
         Args:
             transfer_id:
@@ -761,7 +763,8 @@ class JournalService:
 
         Raises:
             ValueError:
-                If the pair is incomplete or either account is archived.
+                If the pair is incomplete, either account is archived,
+                or deleting the transfer would overdraw later cash history.
         """
         with self._transaction():
             pair = self._get_transfer_pair(transfer_id)
@@ -895,9 +898,10 @@ class JournalService:
         additions=(),
         excluded_transaction_ids=(),
     ) -> None:
-        """Protect existing transfers from unrelated cash-ledger edits.
+        """Validate projected cash after a standalone ledger mutation.
 
-        Validate accounts with linked transfers or verified cash-style opening balances.
+        Protect linked transfers and enforce overdraft rules for cash-style
+        accounts with verified opening balances.
 
         Call this method inside an active service write transaction.
 

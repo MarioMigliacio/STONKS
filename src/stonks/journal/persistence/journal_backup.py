@@ -100,10 +100,12 @@ def validate_database_backup(
         raise FileNotFoundError(f"Journal backup does not exist: {backup_path}")
 
     required_tables = {
-        "trading_accounts",
+        "account_opening_cash",
+        "account_transactions",
+        "account_transfers",
         "positions",
         "trade_executions",
-        "account_transactions",
+        "trading_accounts",
     }
 
     try:

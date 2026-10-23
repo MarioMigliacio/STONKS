@@ -35,16 +35,17 @@ The project combines market scanning, public-float analysis, catalyst intelligen
 
 The **Trading Journal** and **Trading Accounts** pages are functional. Dashboard, Market Scanner, and C.I.A. sidebar destinations are currently placeholders in the desktop application; their existing command-line subsystems remain available separately.
 
-Account deposits, withdrawals, fees, adjustments, and transfers are supported by the journal **backend**, but do not yet have entry and history controls in the GUI. Account Details & Transactions is planned as part of the remaining v2.1.0 integration work. Transfers are currently represented by separate incoming and outgoing records rather than an automatically linked, atomic transfer operation.
+Account Details provides opening cash snapshots, deposits, withdrawals, fees, adjustments, dated transaction history, and linked internal transfers. Transfers update both account ledgers atomically and are excluded from external contribution totals. The GUI also displays opening-aware account performance metrics.
 
 See the [Desktop GUI Guide](docs/gui.md) for workflows and architecture, and the [Journal Subsystem](docs/journal.md) for persistence, accounting, and backend behavior.
 
 ### Journal Backend
 
-- SQLite-based persistence (schema v2), with multi-account ownership and integrity rules
+- SQLite-based persistence (schema v3), with multi-account ownership and integrity rules
 - Roth IRA, Traditional IRA, Cash, Margin, and Other account types
 - Position and trade-execution history, including partial entries and exits
-- Account transactions for deposits, withdrawals, fees, adjustments, and transfer-in/transfer-out records
+- Account transactions for deposits, withdrawals, fees, adjustments, and atomic linked transfers.
+- Dated opening cash snapshots and chronological cash safeguards.
 - Weighted-average position cost and realized P&L analytics
 - Account cash-flow, performance, and consolidated portfolio analytics
 - Repository, service, validation, and analytics architecture
@@ -205,9 +206,11 @@ python -m stonks.gui.app
 The GUI initializes its journal database and repository/service dependencies, applies the dark stylesheet, and opens the desktop shell.
 
 1. Open **Trading Accounts** to create an account and set or change the default account.
-2. Open **Trading Journal** and select the trading account.
-3. Create a position, then double-click it to view its details and record BUY/SELL executions.
-4. Review realized performance, search by ticker, and filter positions by Draft, Open, or Closed status.
+2. Double-click an account to open **Account Details**, where you can set opening cash, record account transactions, and manage linked transfers.
+3. Open **Trading Journal** and select the trading account.
+4. Create a position, then double-click it to view its details and record BUY/SELL executions.
+5. Double-click a trade execution in **Position Details** to edit it, or use its Actions menu.
+6. Review realized performance, search by ticker, and filter positions by Draft, Open, or Closed status.
 
 Archived accounts remain viewable but are not editable. The dashboard, scanner, and C.I.A. destinations in the desktop sidebar are placeholders for future integration.
 
@@ -265,7 +268,7 @@ The journal database is stored by default at `data/journal/stonks_journal.db`, a
 
 SQLite backup/restore and CSV export support are implemented in the backend. A complete desktop workflow for account transactions and data lifecycle management remains part of release integration.
 
-Account and portfolio calculations assume complete recorded history and an opening cash balance of zero. **Equity at cost basis is not live market equity**; unrealized price changes are not included. See the [Journal Subsystem](docs/journal.md) for financial definitions and limitations.
+Account and portfolio cash calculations use a saved dated opening cash snapshot when present. Events before that snapshot do not change reconstructed cash; without a snapshot, cash starts from an unverified zero assumption. Contributions and realized P&L retain their all-record history. Equity at cost basis is not live market equity. **Equity at cost basis is not live market equity**; unrealized price changes are not included. See the [Journal Subsystem](docs/journal.md) for financial definitions and limitations.
 
 ---
 

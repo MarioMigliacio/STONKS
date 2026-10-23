@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_opening_cash_gui.py
-# Purpose: Validate opening cash controls and opening-aware account metrics.
+# Purpose: Pytest file for test_opening_cash_gui.py.
 # =============================================================================
 
 from datetime import datetime, timezone

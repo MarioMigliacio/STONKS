@@ -38,8 +38,8 @@ class PositionDetailsDialog(QDialog):
     Display position metadata and manage its trade execution history.
 
     Retrieves persisted position information and chronological BUY/SELL
-    executions. Supports creating and editing executions through the
-    journal service while protecting archived trading accounts.
+    executions. Supports creating, editing, and deleting executions through
+    the journal service while protecting archived trading accounts.
 
     Attributes:
         m_position_id:
@@ -74,7 +74,7 @@ class PositionDetailsDialog(QDialog):
             Action opening the selected execution for editing.
 
         m_delete_action:
-            Reserved action for deleting an execution in C3.4C.2.
+            Action for deleting the selected execution after confirmation.
 
         m_executions_table:
             Table showing chronological execution history.
@@ -127,9 +127,7 @@ class PositionDetailsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
 
-        # -------------------------------------------------------------
         # Position heading and metadata
-        # -------------------------------------------------------------
         self.m_title = QLabel("Position Details")
         self.m_title.setObjectName("pageTitle")
 
@@ -143,9 +141,7 @@ class PositionDetailsDialog(QDialog):
         self.m_metrics_widget = PositionMetricsWidget(self)
         layout.addWidget(self.m_metrics_widget)
 
-        # -------------------------------------------------------------
         # Execution management controls
-        # -------------------------------------------------------------
         header_layout = QHBoxLayout()
 
         heading = QLabel("Trade Executions")
@@ -169,7 +165,7 @@ class PositionDetailsDialog(QDialog):
         self.m_delete_action = self.m_actions_menu.addAction("Delete Execution")
         self.m_delete_action.setIcon(get_icon("trash-danger"))
 
-        # Deletion is introduced in C3.4C.2.
+        # Actions remain disabled until a valid editable row is selected.
         self.m_delete_action.setEnabled(False)
 
         self.m_actions_button.setMenu(self.m_actions_menu)
@@ -181,9 +177,7 @@ class PositionDetailsDialog(QDialog):
 
         layout.addLayout(header_layout)
 
-        # -------------------------------------------------------------
         # Execution history table
-        # -------------------------------------------------------------
         self.m_executions_table = QTableWidget()
         self.m_executions_table.setColumnCount(7)
 
@@ -200,9 +194,7 @@ class PositionDetailsDialog(QDialog):
         )
 
         self.m_executions_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
         self.m_executions_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-
         self.m_executions_table.setSelectionMode(QAbstractItemView.SingleSelection)
 
         # Allow users to resize columns manually.
@@ -231,17 +223,13 @@ class PositionDetailsDialog(QDialog):
 
         layout.addWidget(self.m_executions_table)
 
-        # -------------------------------------------------------------
         # Empty state
-        # -------------------------------------------------------------
         self.m_empty_label = QLabel("No trade executions recorded for this position.")
         self.m_empty_label.setObjectName("emptyState")
 
         layout.addWidget(self.m_empty_label)
 
-        # -------------------------------------------------------------
         # Footer
-        # -------------------------------------------------------------
         footer_layout = QHBoxLayout()
         footer_layout.addStretch()
 
@@ -251,15 +239,11 @@ class PositionDetailsDialog(QDialog):
         footer_layout.addWidget(self.m_close_button)
         layout.addLayout(footer_layout)
 
-        # -------------------------------------------------------------
         # Signals
-        # -------------------------------------------------------------
         self.m_add_execution_button.clicked.connect(self._add_execution)
-
         self.m_executions_table.itemSelectionChanged.connect(self._update_action_state)
-
+        self.m_executions_table.itemDoubleClicked.connect(self._on_execution_double_clicked)
         self.m_edit_action.triggered.connect(self._edit_execution)
-
         self.m_delete_action.triggered.connect(self._delete_execution)
 
     def get_selected_execution_id(self) -> Optional[int]:
@@ -347,9 +331,7 @@ class PositionDetailsDialog(QDialog):
             self.m_metrics_widget.hide()
             return
 
-        # -------------------------------------------------------------
         # Position metadata
-        # -------------------------------------------------------------
         self.m_title.setText(f"{position.ticker} — Position Details")
 
         self.m_metadata_label.setText(
@@ -358,9 +340,7 @@ class PositionDetailsDialog(QDialog):
             f"Entry Reason: {position.entry_reason or '—'}"
         )
 
-        # -------------------------------------------------------------
         # Account permissions
-        # -------------------------------------------------------------
         account = (
             self.m_repository.get_trading_account(position.account_id) if position.account_id is not None else None
         )
@@ -369,9 +349,7 @@ class PositionDetailsDialog(QDialog):
 
         self.m_add_execution_button.setEnabled(can_add_execution)
 
-        # -------------------------------------------------------------
         # Execution history
-        # -------------------------------------------------------------
         executions = self.m_repository.get_position_executions(self.m_position_id)
 
         metrics = calculate_position_metrics(
@@ -501,6 +479,22 @@ class PositionDetailsDialog(QDialog):
             return
 
         self.refresh_details()
+
+    def _on_execution_double_clicked(self, item: QTableWidgetItem) -> None:
+        """Edit the clicked execution when editing is permitted.
+
+        Args:
+            item:
+                Table item that received the double-click.
+        """
+        if item is None:
+            return
+
+        self.m_executions_table.selectRow(item.row())
+        self._update_action_state()
+
+        if self.m_edit_action.isEnabled():
+            self._edit_execution()
 
     def _edit_execution(self) -> None:
         """

@@ -15,8 +15,10 @@ class OpeningCashBalance:
     Attributes:
         account_id:
             Identifier of the tracked trading account.
+
         amount:
             Finite, non-negative cash amount at the snapshot timestamp.
+
         effective_at:
             Timezone-aware timestamp marking the start of the cash ledger.
     """

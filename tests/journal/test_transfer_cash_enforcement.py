@@ -1,4 +1,7 @@
-"""Integration regression tests for opening-cash-backed transfer enforcement."""
+# =============================================================================
+# File: test_transfer_cash_enforcement.py
+# Purpose: Pytest file for test_transfer_cash_enforcement.py.
+# =============================================================================
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal

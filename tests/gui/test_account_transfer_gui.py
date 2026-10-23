@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_account_transfer_gui.py
-# Purpose: Verify linked account transfer GUI actions and read-only protections.
+# Purpose: Pytest file for test_account_transfer_gui.py
 # =============================================================================
 
 from datetime import datetime, timezone

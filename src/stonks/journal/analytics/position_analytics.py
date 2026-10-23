@@ -47,6 +47,7 @@ def calculate_position_metrics(
 
     for execution in executions:
         has_executions = True
+
         if execution.side == ExecutionSide.BUY:
             if opened_at is None:
                 opened_at = execution.executed_at
@@ -62,8 +63,7 @@ def calculate_position_metrics(
             remaining_cost_basis += purchase_value + execution.fees
 
         elif execution.side == ExecutionSide.SELL:
-            # Allocate the existing cost basis proportionally
-            # to the number of shares being sold.
+            # Allocate the existing cost basis proportionally to the number of shares being sold.
             cost_of_shares_sold = remaining_cost_basis * execution.shares / open_shares
 
             total_cost_of_shares_sold += cost_of_shares_sold

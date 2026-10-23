@@ -116,9 +116,7 @@ class PositionsPage(QWidget):
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
-        # -------------------------------------------------------------
         # Journal heading and primary actions
-        # -------------------------------------------------------------
         header_layout = QHBoxLayout()
         header_layout.setSpacing(10)
 
@@ -178,9 +176,7 @@ class PositionsPage(QWidget):
 
         layout.addLayout(header_layout)
 
-        # -------------------------------------------------------------
         # Trading account selector
-        # -------------------------------------------------------------
         account_section = QVBoxLayout()
         account_section.setSpacing(8)
 
@@ -196,9 +192,7 @@ class PositionsPage(QWidget):
 
         layout.addLayout(account_section)
 
-        # -------------------------------------------------------------
         # Position search and status filtering
-        # -------------------------------------------------------------
         filter_layout = QHBoxLayout()
         filter_layout.setSpacing(10)
 
@@ -224,9 +218,7 @@ class PositionsPage(QWidget):
 
         layout.addLayout(filter_layout)
 
-        # -------------------------------------------------------------
         # Positions performance table
-        # -------------------------------------------------------------
         self.m_table = QTableWidget()
         self.m_table.setObjectName("journalPositionsTable")
 
@@ -242,29 +234,21 @@ class PositionsPage(QWidget):
         )
 
         self.m_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
         self.m_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-
         self.m_table.setSelectionMode(QAbstractItemView.SingleSelection)
-
         self.m_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
         self.m_table.verticalHeader().setVisible(False)
         self.m_table.verticalHeader().setDefaultSectionSize(40)
 
         layout.addWidget(self.m_table)
 
-        # -------------------------------------------------------------
         # Empty state
-        # -------------------------------------------------------------
         self.m_empty_label = QLabel("No positions recorded for this trading account.")
         self.m_empty_label.setObjectName("emptyState")
 
         layout.addWidget(self.m_empty_label)
 
-        # -------------------------------------------------------------
         # Signals
-        # -------------------------------------------------------------
         self.m_account_selector.currentIndexChanged.connect(self._on_account_changed)
         self.m_create_button.clicked.connect(self._create_position)
         self.m_edit_action.triggered.connect(self._edit_position)

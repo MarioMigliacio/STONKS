@@ -1,6 +1,6 @@
 # =============================================================================
 # File: account_metrics.py
-# Purpose: Represents calculated account deposits and withdrawal metrics.
+# Purpose: Represents calculated trading account financial metrics.
 # =============================================================================
 
 from dataclasses import dataclass

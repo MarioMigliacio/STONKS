@@ -122,10 +122,13 @@ class AccountDetailsDialog(QDialog):
         Args:
             account_id:
                 Identifier of the selected trading account.
+
             repository:
                 Journal repository used for retrieving persisted records.
+
             service:
                 Optional service for validated transaction operations.
+
             parent:
                 Optional parent Qt widget.
         """
@@ -149,19 +152,25 @@ class AccountDetailsDialog(QDialog):
 
         self.m_title = QLabel("Account Details")
         self.m_title.setObjectName("journalPageTitle")
+
         self.m_metadata = QLabel()
         self.m_metadata.setObjectName("journalPageSubtitle")
         self.m_metadata.setWordWrap(True)
+
         layout.addWidget(self.m_title)
         layout.addWidget(self.m_metadata)
 
         opening_row = QHBoxLayout()
+
         self.m_opening_cash_label = QLabel("Opening Cash: Not set")
         self.m_opening_cash_label.setObjectName("journalPageSubtitle")
+
         opening_row.addWidget(self.m_opening_cash_label)
         opening_row.addStretch()
+
         self.m_opening_cash_button = QPushButton("Set Opening Cash")
         self.m_opening_cash_button.clicked.connect(self._edit_opening_cash)
+
         opening_row.addWidget(self.m_opening_cash_button)
         layout.addLayout(opening_row)
 
@@ -174,15 +183,17 @@ class AccountDetailsDialog(QDialog):
 
         header.addWidget(heading)
         header.addStretch()
+
         self.m_add_button = QPushButton("New Transaction")
         self.m_add_button.setIcon(get_icon("plus"))
         self.m_add_button.clicked.connect(self._create_transaction)
-
         header.addWidget(self.m_add_button)
+
         self.m_transfer_button = QPushButton("Transfer Funds")
         self.m_transfer_button.setIcon(get_icon("plus"))
         self.m_transfer_button.clicked.connect(self._create_transfer)
         header.addWidget(self.m_transfer_button)
+
         self.m_actions_button = QPushButton("Actions")
         self.m_menu = QMenu(self)
         self.m_edit_action = self.m_menu.addAction("Edit Transaction")
@@ -201,6 +212,7 @@ class AccountDetailsDialog(QDialog):
 
         self.m_edit_action.triggered.connect(self._edit_transaction)
         self.m_delete_action.triggered.connect(self._delete_transaction)
+
         header.addWidget(self.m_actions_button)
         layout.addLayout(header)
 
@@ -212,6 +224,7 @@ class AccountDetailsDialog(QDialog):
         self.m_type_filter.setMinimumHeight(42)
         self.m_type_filter.setMinimumWidth(160)
         self.m_type_filter.addItem("All Types", userData=None)
+
         for kind in AccountTransactionType:
             label = kind.value.replace("_", " ").title()
             self.m_type_filter.addItem(label, userData=kind.value)
@@ -239,17 +252,21 @@ class AccountDetailsDialog(QDialog):
         # Inclusive custom date range; labels are above the inputs.
         date_range = QHBoxLayout()
         date_range.setSpacing(10)
+
         start_label = QLabel("From")
         start_label.setObjectName("journalAccountLabel")
+
         self.m_start_date = QDateEdit()
         self.m_start_date.setObjectName("journalDateFilter")
         self.m_start_date.setCalendarPopup(True)
         self.m_start_date.setDisplayFormat("yyyy-MM-dd")
         self.m_start_date.setDate(QDate.currentDate().addDays(-29))
         self.m_start_date.setEnabled(False)
+
         self._configure_date_editor(self.m_start_date)
         end_label = QLabel("To")
         end_label.setObjectName("journalAccountLabel")
+
         self.m_end_date = QDateEdit()
         self.m_end_date.setObjectName("journalDateFilter")
         self.m_end_date.setCalendarPopup(True)
@@ -281,13 +298,16 @@ class AccountDetailsDialog(QDialog):
 
         # History count and reset action.
         filter_footer = QHBoxLayout()
+
         self.m_results_label = QLabel("Showing 0 transactions")
         self.m_results_label.setObjectName("journalPageSubtitle")
+
         self.m_clear_filters_button = QPushButton("Clear Filters")
         self.m_clear_filters_button.setObjectName("accountClearFiltersLink")
         self.m_clear_filters_button.setCursor(Qt.PointingHandCursor)
         self.m_clear_filters_button.setFlat(True)
         self.m_clear_filters_button.clicked.connect(self._clear_filters)
+
         filter_footer.addWidget(self.m_results_label)
         filter_footer.addStretch()
         filter_footer.addWidget(self.m_clear_filters_button)
@@ -296,6 +316,7 @@ class AccountDetailsDialog(QDialog):
         self.m_date_preset.currentIndexChanged.connect(self._on_date_preset_changed)
         self.m_start_date.dateChanged.connect(self._apply_filters)
         self.m_end_date.dateChanged.connect(self._apply_filters)
+
         # Read-only chronological ledger.
         self.m_table = QTableWidget()
         self.m_table.setObjectName("journalPositionsTable")
@@ -309,12 +330,15 @@ class AccountDetailsDialog(QDialog):
                 "Transaction ID",
             ]
         )
+
         self.m_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.m_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.m_table.setSelectionMode(QAbstractItemView.SingleSelection)
+
         header_view = self.m_table.horizontalHeader()
         header_view.setSectionResizeMode(QHeaderView.Interactive)
         header_view.setMinimumSectionSize(70)
+
         for index, width in enumerate((175, 135, 125, 265, 115)):
             self.m_table.setColumnWidth(index, width)
 
@@ -328,8 +352,10 @@ class AccountDetailsDialog(QDialog):
         self.m_empty_label = QLabel("No account transactions recorded yet.")
         self.m_empty_label.setObjectName("emptyState")
         layout.addWidget(self.m_empty_label)
+
         footer = QHBoxLayout()
         footer.addStretch()
+
         close = QPushButton("Close")
         close.clicked.connect(self.accept)
         footer.addWidget(close)
@@ -383,10 +409,12 @@ class AccountDetailsDialog(QDialog):
         """Enable actions appropriate to the selected ledger entry."""
         transaction = self._get_selected_transaction()
         active = self._account_is_active()
+
         is_transfer = transaction is not None and transaction.transfer_id is not None
         is_regular = (
             transaction is not None and transaction.transaction_type in AccountTransactionDialog.SUPPORTED_TYPES
         )
+
         self.m_edit_action.setEnabled(active and is_regular)
         self.m_delete_action.setEnabled(active and is_regular)
         self.m_edit_transfer_action.setEnabled(active and is_transfer)
@@ -406,6 +434,7 @@ class AccountDetailsDialog(QDialog):
         """Refresh account metadata, backend analytics, and transaction history."""
         selected_id = self.get_selected_transaction_id()
         account = self.m_repository.get_trading_account(self.m_account_id)
+
         if account is None:
             self.m_title.setText("Account Not Found")
             self.m_metadata.setText("This trading account no longer exists.")
@@ -427,6 +456,7 @@ class AccountDetailsDialog(QDialog):
         )
 
         opening_cash = OpeningCashRepository(self.m_repository.m_connection).get(self.m_account_id)
+
         if opening_cash is None:
             self.m_opening_cash_label.setText("Opening Cash: Not set — cash is unverified")
             self.m_opening_cash_button.setText("Set Opening Cash")
@@ -436,6 +466,7 @@ class AccountDetailsDialog(QDialog):
                 f"Opening Cash: ${opening_cash.amount:,.2f} · Effective {when:%Y-%m-%d %H:%M} UTC"
             )
             self.m_opening_cash_button.setText("Edit Opening Cash")
+
         self.m_opening_cash_button.setEnabled(self._account_is_active())
 
         self.m_add_button.setEnabled(self._account_is_active())
@@ -469,6 +500,7 @@ class AccountDetailsDialog(QDialog):
             self.m_table.clearSelection()
             self.m_table.setRowCount(0)
             self.m_table.setRowCount(len(transactions))
+
             for row, transaction in enumerate(transactions):
                 when = transaction.occurred_at.astimezone(timezone.utc)
                 values = (
@@ -478,9 +510,11 @@ class AccountDetailsDialog(QDialog):
                     transaction.notes,
                     str(transaction.transaction_id),
                 )
+
                 for column, value in enumerate(values):
                     item = QTableWidgetItem(value)
                     item.setData(Qt.UserRole, transaction.transaction_id)
+
                     if column == 2:
                         flow = transaction.net_cash_flow
                         if flow > 0:
@@ -492,6 +526,7 @@ class AccountDetailsDialog(QDialog):
                         item.setFont(font)
                         item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     self.m_table.setItem(row, column, item)
+
             if selected_id is not None:
                 for row in range(self.m_table.rowCount()):
                     item = self.m_table.item(row, 0)
@@ -519,6 +554,7 @@ class AccountDetailsDialog(QDialog):
         """Return inclusive UTC calendar dates, or None for all-time history."""
         preset = self.m_date_preset.currentData()
         today = date.today()
+
         if preset == "all":
             return None
         if preset == "custom":
@@ -526,8 +562,10 @@ class AccountDetailsDialog(QDialog):
                 self.m_start_date.date().toPython(),
                 self.m_end_date.date().toPython(),
             )
+
         if preset == "year":
             return date(today.year, 1, 1), today
+
         days = int(preset)
         return today - timedelta(days=days - 1), today
 
@@ -539,9 +577,11 @@ class AccountDetailsDialog(QDialog):
         visible = 0
         selected_id = self.get_selected_transaction_id()
         selected_visible = False
+
         for row in range(self.m_table.rowCount()):
             date_item = self.m_table.item(row, 0)
             type_item = self.m_table.item(row, 1)
+
             if date_item is None or type_item is None:
                 self.m_table.setRowHidden(row, True)
                 continue
@@ -551,6 +591,7 @@ class AccountDetailsDialog(QDialog):
             matches_date = date_range is None or (not invalid_range and date_range[0] <= record_date <= date_range[1])
             matches = matches_type and matches_date
             self.m_table.setRowHidden(row, not matches)
+
             if matches:
                 visible += 1
                 if date_item.data(Qt.UserRole) == selected_id:
@@ -559,12 +600,14 @@ class AccountDetailsDialog(QDialog):
             self.m_table.clearSelection()
         total = self.m_table.rowCount()
         self.m_results_label.setText(f"Showing {visible} of {total} transactions")
+
         if invalid_range:
             message = "Start date must not be after end date."
         elif total == 0:
             message = "No account transactions recorded yet."
         else:
             message = "No transactions match your current filters."
+
         self.m_empty_label.setText(message)
         self.m_empty_label.setVisible(invalid_range or total == 0 or visible == 0)
         self._update_action_state()
@@ -572,9 +615,12 @@ class AccountDetailsDialog(QDialog):
     def _get_selected_transaction(self):
         """Retrieve a selected record only when owned by the displayed account."""
         record_id = self.get_selected_transaction_id()
+
         if record_id is None:
             return None
+
         transaction = self.m_repository.get_account_transaction(record_id)
+
         if transaction is None or transaction.account_id != self.m_account_id:
             return None
         return transaction
@@ -584,6 +630,7 @@ class AccountDetailsDialog(QDialog):
         if not self._account_is_active():
             return
         dialog = AccountTransactionDialog(self.m_account_id, parent=self)
+
         if dialog.exec() != QDialog.Accepted:
             return
         try:
@@ -597,9 +644,12 @@ class AccountDetailsDialog(QDialog):
         """Edit only current-account supported transaction types."""
         if not self._account_is_active():
             return
+
         transaction = self._get_selected_transaction()
+
         if transaction is None or transaction.transaction_type not in AccountTransactionDialog.SUPPORTED_TYPES:
             return
+
         dialog = AccountTransactionDialog(
             self.m_account_id,
             transaction=transaction,
@@ -620,10 +670,14 @@ class AccountDetailsDialog(QDialog):
         """Delete a selected record after explicit confirmation."""
         if not self._account_is_active():
             return
+
         transaction = self._get_selected_transaction()
+
         if transaction is None or transaction.transaction_type not in AccountTransactionDialog.SUPPORTED_TYPES:
             return
+
         dialog = DeleteAccountTransactionDialog(transaction, parent=self)
+
         if dialog.exec() != QDialog.Accepted:
             return
         try:
@@ -638,14 +692,18 @@ class AccountDetailsDialog(QDialog):
     def _selected_transfer(self) -> Optional[AccountTransfer]:
         """Resolve a selected transfer from its persisted parent and paired legs."""
         transaction = self._get_selected_transaction()
+
         if transaction is None or transaction.transfer_id is None:
             return None
+
         row = self.m_repository.m_connection.execute(
             "SELECT * FROM account_transfers WHERE transfer_id = ?",
             (transaction.transfer_id,),
         ).fetchone()
+
         if row is None:
             return None
+
         from datetime import datetime
 
         return AccountTransfer(
@@ -664,6 +722,7 @@ class AccountDetailsDialog(QDialog):
 
         existing = OpeningCashRepository(self.m_repository.m_connection).get(self.m_account_id)
         dialog = OpeningCashDialog(self.m_account_id, opening=existing, parent=self)
+
         if dialog.exec() != QDialog.Accepted:
             return
 
@@ -679,10 +738,14 @@ class AccountDetailsDialog(QDialog):
         """Open a form and atomically create both legs of an internal transfer."""
         if not self._account_is_active():
             return
+
         dialog = AccountTransferDialog(self.m_repository, self.m_account_id, parent=self)
+
         if dialog.exec() != QDialog.Accepted:
             return
+
         transfer = dialog.get_transfer()
+
         try:
             self.m_service.create_account_transfer(
                 transfer.source_account_id,
@@ -699,6 +762,7 @@ class AccountDetailsDialog(QDialog):
     def _edit_selected_entry(self, *_args) -> None:
         """Route a double-click to the matching editor."""
         transaction = self._get_selected_transaction()
+
         if transaction is not None and transaction.transfer_id is not None:
             self._edit_transfer()
         else:
@@ -708,10 +772,14 @@ class AccountDetailsDialog(QDialog):
         """Update the parent transfer and both legs through the journal service."""
         if not self._account_is_active():
             return
+
         transfer = self._selected_transfer()
+
         if transfer is None:
             return
+
         dialog = AccountTransferDialog(self.m_repository, self.m_account_id, transfer=transfer, parent=self)
+
         if dialog.exec() != QDialog.Accepted:
             return
         try:
@@ -727,9 +795,12 @@ class AccountDetailsDialog(QDialog):
         """Delete a complete transfer only after explicit confirmation."""
         if not self._account_is_active():
             return
+
         transfer = self._selected_transfer()
+
         if transfer is None:
             return
+
         source = self.m_repository.get_trading_account(transfer.source_account_id)
         destination = self.m_repository.get_trading_account(transfer.destination_account_id)
         response = QMessageBox.question(
@@ -744,6 +815,7 @@ class AccountDetailsDialog(QDialog):
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
+
         if response != QMessageBox.Yes:
             return
         try:

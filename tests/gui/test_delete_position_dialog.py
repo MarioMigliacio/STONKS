@@ -1,3 +1,8 @@
+# =============================================================================
+# File: test_delete_position_dialog.py
+# Purpose: Pytest file for test_delete_position_dialog.py.
+# =============================================================================
+
 from PySide6.QtWidgets import QDialog
 
 from stonks.gui.pages.delete_position_dialog import DeletePositionDialog

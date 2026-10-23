@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_opening_cash_service.py
-# Purpose: Check opening cash changes cannot invalidate paired transfers.
+# Purpose: Pytest file for test_opening_cash_service.py.
 # =============================================================================
 
 from datetime import datetime, timedelta, timezone

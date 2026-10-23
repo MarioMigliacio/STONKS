@@ -1,4 +1,7 @@
-"""Chronological cash-validation tests for the D3.5C preparation checkpoint."""
+# =============================================================================
+# File: test_cash_history_validation.py
+# Purpose: Pytest file for test_cash_history_validation.py.
+# =============================================================================
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal

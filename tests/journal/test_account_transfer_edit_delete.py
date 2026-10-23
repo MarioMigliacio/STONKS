@@ -1,4 +1,7 @@
-"""D3.2 tests for editing and deleting linked STONKS account transfers."""
+# =============================================================================
+# File: test_account_transfer_edit_delete.py
+# Purpose: Pytest file for test_account_transfer_edit_delete.py.
+# =============================================================================
 
 from dataclasses import replace
 from datetime import datetime, timezone

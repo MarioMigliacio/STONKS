@@ -31,7 +31,6 @@ def create_connection(
             Configured SQLite connection.
     """
     path = database_path if database_path is not None else DATABASE_FILE
-
     path.parent.mkdir(parents=True, exist_ok=True)
 
     connection = sqlite3.connect(str(path))

@@ -29,12 +29,16 @@ class OpeningCashDialog(QDialog):
     Attributes:
         m_account_id:
             Immutable identifier of the tracked trading account.
+
         m_opening:
             Optional existing snapshot for editing.
+
         m_amount:
             Decimal cash amount entry.
+
         m_effective_at:
             Local timestamp editor for the snapshot effective instant.
+
         m_save_button:
             Button that validates and accepts the submitted snapshot.
     """

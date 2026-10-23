@@ -50,7 +50,6 @@ class AccountTransaction:
     transaction_type: AccountTransactionType
     occurred_at: datetime
     amount: Decimal
-
     transaction_id: Optional[int] = None
     account_id: Optional[int] = None
     notes: str = ""

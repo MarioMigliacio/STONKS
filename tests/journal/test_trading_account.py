@@ -1,6 +1,6 @@
 # =============================================================================
-# File: test_trade_account.py
-# Purpose: Pytest file for test_trade_account.py.
+# File: test_trading_account.py
+# Purpose: Pytest file for test_trading_account.py.
 # =============================================================================
 
 from stonks.journal.models.account_type import AccountType

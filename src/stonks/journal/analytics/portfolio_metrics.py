@@ -18,22 +18,31 @@ class PortfolioMetrics:
     Attributes:
         account_count:
             Number of trading accounts included in the portfolio.
+
         total_deposits:
             Combined deposits recorded across accounts.
+
         total_withdrawals:
             Combined withdrawals recorded across accounts.
+
         net_contributions:
             Combined deposits minus withdrawals.
+
         cash_balance:
             Combined cash balance across accounts.
+
         realized_trading_pnl:
             Combined realized trading profit or loss.
+
         account_fees:
             Combined account-level fees.
+
         net_realized_pnl:
             Combined realized trading P&L minus account fees.
+
         open_position_cost_basis:
             Combined remaining cost basis of open positions.
+
         equity_at_cost_basis:
             Combined cash and open position cost basis.
     """

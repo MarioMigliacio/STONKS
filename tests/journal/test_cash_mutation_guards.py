@@ -1,6 +1,6 @@
 # =============================================================================
 # File: test_cash_mutation_guards.py
-# Purpose: Prevent ordinary ledger mutations from invalidating cash transfers.
+# Purpose: Pytest file for test_cash_mutation_guards.py.
 # =============================================================================
 
 from dataclasses import replace

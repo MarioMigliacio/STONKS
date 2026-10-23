@@ -16,14 +16,19 @@ class AccountTransfer:
     Attributes:
         source_account_id:
             Account from which funds are withdrawn.
+
         destination_account_id:
             Account receiving the funds.
+
         amount:
             Positive Decimal amount transferred.
+
         occurred_at:
             Timezone-aware date and time of the transfer.
+
         notes:
             Optional description of the movement.
+
         transfer_id:
             Database-generated identifier shared by its two ledger legs.
     """

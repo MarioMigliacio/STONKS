@@ -40,8 +40,10 @@ def calculate_account_metrics(
     Args:
         transactions:
             Account transactions to analyze.
+
         executions:
             Trade executions supplying cash movements.
+
         positions:
             Previously calculated position metrics.
 

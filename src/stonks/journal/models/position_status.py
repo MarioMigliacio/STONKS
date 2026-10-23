@@ -1,6 +1,6 @@
 # =============================================================================
 # File: position_status.py
-# Purpose: Represents lifecycle status of a position position.
+# Purpose: Defines the lifecycle status of a trading position.
 # =============================================================================
 
 from enum import Enum
