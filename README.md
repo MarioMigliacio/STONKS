@@ -195,13 +195,15 @@ Float enrichment is controlled by `ENABLE_FLOAT_DATA` in the application setting
 
 ## Usage
 
-### Desktop Trading Journal
+### Desktop Application
 
-After activating the environment:
+Launch STONKS using:
 
 ```powershell
-python -m stonks.gui.app
+.\scripts\run.ps1
 ```
+
+Or, after activating the environment: `python -m stonks`
 
 The GUI initializes its journal database and repository/service dependencies, applies the dark stylesheet, and opens the desktop shell.
 
@@ -216,11 +218,7 @@ Archived accounts remain viewable but are not editable. The dashboard, scanner, 
 
 ### Scanner
 
-```powershell
-.\scripts\run.ps1
-```
-
-This launches `python -m stonks`, which remains the scanner entry point; it does **not** launch the desktop GUI.
+To launch the default scanner - use `python -m stonks.scanner_cli` from the 'src' directory. Note, this will consume API requests if configured with `ALLOW_API_CALLS`.
 
 ### Historical Cache CLI
 
@@ -247,6 +245,20 @@ This launches `python -m stonks`, which remains the scanner entry point; it does
 .\scripts\lint.ps1
 ```
 
+Run focused tests:
+
+```powershell
+.\scripts\test.ps1 -Target gui
+.\scripts\test.ps1 -Target journal
+.\scripts\test.ps1 -Path tests/test_entry_points.py
+
+additional options include:
+
+.\scripts\test.ps1 -Mode Quick
+.\scripts\test.ps1 -FailFast
+.\scripts\test.ps1 -Profile
+```
+
 Apply formatting fixes when needed:
 
 ```powershell
@@ -269,19 +281,6 @@ The journal database is stored by default at `data/journal/stonks_journal.db`, a
 SQLite backup/restore and CSV export support are implemented in the backend. A complete desktop workflow for account transactions and data lifecycle management remains part of release integration.
 
 Account and portfolio cash calculations use a saved dated opening cash snapshot when present. Events before that snapshot do not change reconstructed cash; without a snapshot, cash starts from an unverified zero assumption. Contributions and realized P&L retain their all-record history. Equity at cost basis is not live market equity. **Equity at cost basis is not live market equity**; unrealized price changes are not included. See the [Journal Subsystem](docs/journal.md) for financial definitions and limitations.
-
----
-
-## Testing & Code Quality
-
-STONKS uses **Pytest**, **pytest-qt**, and **Ruff**. The tests cover scanner and market intelligence functionality alongside journal persistence, account ownership, transaction validation, analytics, backup/restore, CSV export, and GUI interactions.
-
-Local quality checks:
-
-```powershell
-.\scripts\lint.ps1
-.\scripts\test.ps1
-```
 
 ---
 
