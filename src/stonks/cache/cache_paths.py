@@ -9,7 +9,10 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-CACHE_DIRECTORY = Path("data/cache")
+# Resolve the repository root from this file's location.
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+CACHE_DIRECTORY = PROJECT_ROOT / "data" / "cache"
 QUOTE_CACHE_DIRECTORY = CACHE_DIRECTORY / "quotes"
 HISTORICAL_CACHE_DIRECTORY = CACHE_DIRECTORY / "historical"
 FLOAT_CACHE_DIRECTORY = CACHE_DIRECTORY / "float"

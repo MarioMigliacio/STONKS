@@ -1,30 +1,24 @@
 # =============================================================================
 # File: __main__.py
-# Purpose: Entry point for running STONKS as a Python module.
+# Purpose: Launch the STONKS desktop application.
 # =============================================================================
 
 from stonks.log_manager import configure_logging
-from stonks.scanner.filters import scan_stocks
 
 
-def main() -> None:
-    """Run the STONKS scanner."""
+def main() -> int:
+    """
+    Launch the STONKS desktop application.
 
+    Returns:
+        int: Application exit status.
+    """
     configure_logging()
 
-    print("=== STONKS Scanner ===")
+    from stonks.gui.app import main as launch_desktop
 
-    results = scan_stocks()
-
-    print("\n=== RESULTS ===")
-
-    if not results:
-        print("No matching stocks found.")
-        return
-
-    for candidate in results:
-        print(candidate)
+    return launch_desktop()
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -8,7 +8,10 @@ from pathlib import Path
 
 from stonks.config import settings
 
-LOG_DIRECTORY = Path("logs")
+# Resolve the repository root from this file's location.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+LOG_DIRECTORY = PROJECT_ROOT / "logs"
 LOG_FILE = LOG_DIRECTORY / "stonks.log"
 
 
