@@ -18,9 +18,11 @@ from stonks.gui.navigation.navigation_sidebar import NavigationSidebar
 from stonks.gui.pages.accounts_page import AccountsPage
 from stonks.gui.pages.placeholder_page import PlaceholderPage
 from stonks.gui.pages.positions_page import PositionsPage
+from stonks.gui.pages.scanner_page import ScannerPage
 from stonks.gui.workers.scanner_thread_controller import ScannerThreadController
 from stonks.journal.journal_context import JournalContext
-from stonks.gui.pages.scanner_page import ScannerPage
+from stonks.scanner.existing_scanner_strategy import ExistingScannerStrategy
+from stonks.scanner.scanner_match_mode import ScannerMatchMode
 
 
 class MainWindow(QMainWindow):
@@ -56,6 +58,9 @@ class MainWindow(QMainWindow):
 
         m_close_pending:
             Whether a window close is waiting for scanner shutdown.
+
+        m_scanner_page:
+            Scanner workspace page presenting scan configuration.
     """
 
     def __init__(
@@ -116,6 +121,7 @@ class MainWindow(QMainWindow):
                         ("existing_scanner", "Standard Market Scanner"),
                     ]
                 )
+                self.m_scanner_page = page
 
             elif page_name == "accounts" and self.m_journal_context is not None:
                 page = AccountsPage(
@@ -132,6 +138,7 @@ class MainWindow(QMainWindow):
                 )
 
                 self.m_positions_page = page
+                self.m_scanner_page: Optional[ScannerPage] = None
 
             else:
                 page = PlaceholderPage(display_name)
@@ -148,6 +155,10 @@ class MainWindow(QMainWindow):
 
         # Assign the completed layout to the window.
         self.setCentralWidget(central_widget)
+
+        self.m_scanner_page.run_requested.connect(self._on_scanner_run_requested)
+        self.m_scanner_page.cancel_requested.connect(self.m_scanner_controller.request_cancel)
+        self.m_scanner_controller.running_changed.connect(self.m_scanner_page.set_running)
 
     def _navigate_to(self, page_name: str) -> None:
         """
@@ -171,6 +182,38 @@ class MainWindow(QMainWindow):
             self.m_positions_page.refresh_accounts()
 
         self.m_pages.setCurrentIndex(page_index)
+
+    @Slot(object, object)
+    def _on_scanner_run_requested(
+        self,
+        strategy_ids: list[str],
+        match_mode: ScannerMatchMode,
+    ) -> None:
+        """
+        Start selected scanner strategies without blocking the GUI.
+
+        Args:
+            strategy_ids:
+                Selected scanner strategy identifiers.
+
+            match_mode:
+                ANY or ALL matching rule.
+        """
+        strategy_factories = {
+            "existing_scanner": lambda event: ExistingScannerStrategy(cancel_event=event),
+        }
+        try:
+            factories = [strategy_factories[identifier] for identifier in strategy_ids]
+            started = self.m_scanner_controller.start_scan(
+                strategy_factories=factories,
+                match_mode=match_mode,
+            )
+        except (KeyError, ValueError) as exc:
+            self.m_scanner_page.set_status(f"Unable to start scan: {exc}")
+            return
+
+        if not started:
+            self.m_scanner_page.set_status("A scan is already running.")
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """
