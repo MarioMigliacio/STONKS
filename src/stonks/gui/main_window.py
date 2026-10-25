@@ -5,6 +5,8 @@
 
 from typing import Optional
 
+from PySide6.QtCore import Slot
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
@@ -16,6 +18,7 @@ from stonks.gui.navigation.navigation_sidebar import NavigationSidebar
 from stonks.gui.pages.accounts_page import AccountsPage
 from stonks.gui.pages.placeholder_page import PlaceholderPage
 from stonks.gui.pages.positions_page import PositionsPage
+from stonks.gui.workers.scanner_thread_controller import ScannerThreadController
 from stonks.journal.journal_context import JournalContext
 
 
@@ -46,6 +49,12 @@ class MainWindow(QMainWindow):
 
         m_positions_page:
             Optional reference to the trading journal interface.
+
+        m_scanner_controller:
+            Controller that owns the active scanner thread, if any.
+
+        m_close_pending:
+            Whether a window close is waiting for scanner shutdown.
     """
 
     def __init__(
@@ -66,6 +75,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("STONKS - Trading Intelligence")
         self.setMinimumSize(900, 600)
         self.resize(900, 600)
+
+        self.m_close_pending = False
+        self.m_scanner_controller = ScannerThreadController(self)
+        self.m_scanner_controller.idle.connect(self._on_scanner_idle)
 
         self._setup_ui()
 
@@ -150,3 +163,28 @@ class MainWindow(QMainWindow):
             self.m_positions_page.refresh_accounts()
 
         self.m_pages.setCurrentIndex(page_index)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """
+        Defer closing while a scanner thread is still active.
+
+        Args:
+            event: Qt window close event to accept or ignore.
+        """
+        if self.m_scanner_controller.is_running():
+            event.ignore()
+            self.m_close_pending = True
+            self.m_scanner_controller.request_cancel()
+            return
+
+        self.m_close_pending = False
+        super().closeEvent(event)
+
+    @Slot()
+    def _on_scanner_idle(self) -> None:
+        """Retry deferred window closure after the scanner thread exits."""
+        if not self.m_close_pending:
+            return
+
+        self.m_close_pending = False
+        self.close()
