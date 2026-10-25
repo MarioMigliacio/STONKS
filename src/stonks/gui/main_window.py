@@ -33,6 +33,8 @@ class MainWindow(QMainWindow):
     application pages, including the trading journal and
     account management interfaces.
 
+    Also coordinates scanner execution outcomes and workspace status.
+
     Attributes:
         m_journal_context:
             Optional journal application context providing shared
@@ -159,6 +161,9 @@ class MainWindow(QMainWindow):
         self.m_scanner_page.run_requested.connect(self._on_scanner_run_requested)
         self.m_scanner_page.cancel_requested.connect(self.m_scanner_controller.request_cancel)
         self.m_scanner_controller.running_changed.connect(self.m_scanner_page.set_running)
+        self.m_scanner_controller.completed.connect(self._on_scanner_completed)
+        self.m_scanner_controller.failed.connect(self._on_scanner_failed)
+        self.m_scanner_controller.cancelled.connect(self._on_scanner_cancelled)
 
     def _navigate_to(self, page_name: str) -> None:
         """
@@ -239,3 +244,38 @@ class MainWindow(QMainWindow):
 
         self.m_close_pending = False
         self.close()
+
+    @Slot(list)
+    def _on_scanner_completed(self, candidates: list) -> None:
+        """
+        Display successfully completed scan results.
+
+        Args:
+            candidates:
+                ScannerCandidate objects returned by the coordinator.
+        """
+        self.m_scanner_page.set_results(candidates)
+        count = len(candidates)
+        if count == 0:
+            message = "Scan complete: no matches."
+        elif count == 1:
+            message = "Scan complete: 1 match."
+        else:
+            message = f"Scan complete: {count} matches."
+        self.m_scanner_page.set_status(message)
+
+    @Slot(str)
+    def _on_scanner_failed(self, message: str) -> None:
+        """
+        Display a scanner failure without discarding previous results.
+
+        Args:
+            message:
+                Human-readable failure reported by the worker.
+        """
+        self.m_scanner_page.set_status(f"Scan failed: {message}")
+
+    @Slot()
+    def _on_scanner_cancelled(self) -> None:
+        """Show cancellation without discarding prior successful results."""
+        self.m_scanner_page.set_status("Scan cancelled.")

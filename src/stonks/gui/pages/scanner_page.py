@@ -172,7 +172,8 @@ class ScannerPage(QWidget):
         self.m_match_mode.setEnabled(not running)
         self.m_cancel_button.setEnabled(running)
         self._update_run_enabled()
-        self.m_status_label.setText("Scanning…" if running else "Ready")
+        if running:
+            self.m_status_label.setText("Scanning…")
 
     def set_status(self, message: str) -> None:
         """
