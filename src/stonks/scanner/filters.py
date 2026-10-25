@@ -6,6 +6,7 @@
 import logging
 import time
 from datetime import date
+from threading import Event
 from typing import Optional
 
 from stonks.api.market_data import get_quote
@@ -33,6 +34,7 @@ from stonks.scanner.relative_volume import (
     calculate_average_volume,
     calculate_relative_volume,
 )
+from stonks.scanner.scanner_cancelled import ScannerCancelled
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +69,24 @@ def parse_latest(data: dict) -> Optional[QuoteData]:
     )
 
 
-def scan_stocks() -> list[ScannerCandidate]:
-    """Scan the watchlist and return stocks matching configured filters."""
+def scan_stocks(cancel_event: Optional[Event] = None) -> list[ScannerCandidate]:
+    """
+    Scan the watchlist with optional cooperative cancellation.
+
+    Args:
+        cancel_event: Optional event requesting scanner cancellation.
+
+    Returns:
+        Candidates matching the configured filters.
+
+    Raises:
+        ScannerCancelled: If cancellation is requested between operations.
+    """
+
+    def check_cancelled() -> None:
+        """Raise if the scan has been cancelled."""
+        if cancel_event is not None and cancel_event.is_set():
+            raise ScannerCancelled("Scanner execution cancelled.")
 
     results = []
 
@@ -78,6 +96,7 @@ def scan_stocks() -> list[ScannerCandidate]:
     )
 
     for ticker in WATCHLIST:
+        check_cancelled()
         logger.info(
             "Scanning %s",
             ticker,
@@ -88,7 +107,12 @@ def scan_stocks() -> list[ScannerCandidate]:
         # [TODO: remove at a later time]
         # Please be gentle to the API throttling.
         # 25 total per DAY on free account.
-        time.sleep(2)
+        if cancel_event is None:
+            time.sleep(2)
+        elif cancel_event.wait(2):
+            raise ScannerCancelled("Scanner execution cancelled.")
+
+        check_cancelled()
 
         quote_data = parse_latest(data)
 
@@ -99,6 +123,7 @@ def scan_stocks() -> list[ScannerCandidate]:
             )
             continue
 
+        check_cancelled()
         historical_data = get_historical_data(quote_data.symbol)
 
         if not historical_data:
@@ -150,6 +175,7 @@ def scan_stocks() -> list[ScannerCandidate]:
             MIN_VOLUME,
         )
 
+        check_cancelled()
         float_data = get_float_data(quote_data.symbol)
 
         float_turnover = None
@@ -167,6 +193,7 @@ def scan_stocks() -> list[ScannerCandidate]:
 
         trading_date = date.fromisoformat(quote_data.latest_trading_day)
 
+        check_cancelled()
         intraday_candles = get_intraday_data(
             symbol=quote_data.symbol,
             timeframe=Timeframe.ONE_MINUTE,
@@ -193,6 +220,7 @@ def scan_stocks() -> list[ScannerCandidate]:
             )
         )
 
+    check_cancelled()
     logger.info(
         "Scanner completed with %d matching symbol(s)",
         len(results),
