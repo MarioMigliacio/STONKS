@@ -20,6 +20,7 @@ from stonks.gui.pages.placeholder_page import PlaceholderPage
 from stonks.gui.pages.positions_page import PositionsPage
 from stonks.gui.workers.scanner_thread_controller import ScannerThreadController
 from stonks.journal.journal_context import JournalContext
+from stonks.gui.pages.scanner_page import ScannerPage
 
 
 class MainWindow(QMainWindow):
@@ -109,7 +110,14 @@ class MainWindow(QMainWindow):
 
         # Create functional pages where available; otherwise use placeholders.
         for page_name, display_name in page_definitions.items():
-            if page_name == "accounts" and self.m_journal_context is not None:
+            if page_name == "scanner":
+                page = ScannerPage(
+                    strategies=[
+                        ("existing_scanner", "Standard Market Scanner"),
+                    ]
+                )
+
+            elif page_name == "accounts" and self.m_journal_context is not None:
                 page = AccountsPage(
                     repository=self.m_journal_context.m_repository,
                     service=self.m_journal_context.m_service,
