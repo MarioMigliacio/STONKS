@@ -82,7 +82,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("STONKS - Trading Intelligence")
         self.setMinimumSize(900, 600)
-        self.resize(900, 600)
+        self.resize(1200, 800)
 
         self.m_close_pending = False
         self.m_scanner_controller = ScannerThreadController(self)
