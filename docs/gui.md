@@ -14,15 +14,16 @@ After setting up and activating the Windows development environment:
 python -m stonks.gui.app
 ```
 
-`python -m stonks` launches the scanner, **not** the GUI
+`python -m stonks` launches the desktop GUI; the scanner CLI is `python -m stonks.scanner_cli`.
 
 ## Navigation
 
-| Page                                    | behavior                                                                                           |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **Trading Accounts**                    | Create/edit accounts; choose default; archive/reactivate; guarded deletion                         |
-| **Trading Journal**                     | Account-scoped positions, ticker search, status filters, execution history, and position analytics |
-| **Dashboard / Market Scanner / C.I.A.** | Desktop placeholders; the separate market-intelligence commands continue to exist                  |
+| Page                   | behavior                                                                                           |
+| ---------------------- | -------------------------------------------------------------------------------------------------- |
+| **Trading Accounts**   | Create/edit accounts; choose default; archive/reactivate; guarded deletion                         |
+| **Trading Journal**    | Account-scoped positions, ticker search, status filters, execution history, and position analytics |
+| **Dashboard / C.I.A.** | Desktop placeholders; the separate market-intelligence commands continue to exist                  |
+| **Market Scanner**     | Standard Market Scanner, ANY/ALL selection, Run/Cancel, and results                                |
 
 ## Trading Accounts and Account Details
 
