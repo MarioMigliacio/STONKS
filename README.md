@@ -33,7 +33,7 @@ The project combines market scanning, public-float analysis, catalyst intelligen
 - Read-only historical access to archived trading accounts
 - Shared `JournalContext`, repository, and service layers; financial calculations remain separate from the GUI
 
-The **Trading Journal** and **Trading Accounts** pages are functional. Dashboard, Market Scanner, and C.I.A. sidebar destinations are currently placeholders in the desktop application; their existing command-line subsystems remain available separately.
+The Trading Journal, Trading Accounts, and Market Scanner desktop pages are functional. Dashboard and C.I.A. remain placeholders.
 
 Account Details provides opening cash snapshots, deposits, withdrawals, fees, adjustments, dated transaction history, and linked internal transfers. Transfers update both account ledgers atomically and are excluded from external contribution totals. The GUI also displays opening-aware account performance metrics.
 
@@ -60,6 +60,8 @@ The legacy journal CLI has been retired in favor of the desktop interface.
 - Relative Volume (RVOL) and historical volume analysis
 - Public-float data enrichment, turnover, and float-size classification
 - Scanner candidate model and configurable volume filtering
+
+The desktop Scanner Workspace supports strategy selection, ANY/ALL matching, background execution, cooperative cancellation, status feedback, and a results table. see [Scanner Workspace](docs/scanner_workspace.md).
 
 ### Float Data
 
@@ -128,7 +130,8 @@ STONKS/
 │       │   ├── navigation/
 │       │   ├── pages/
 │       │   ├── styles/
-│       │   └── widgets/
+│       │   ├── widgets/
+│       │   └── workers/
 │       ├── journal/
 │       │   ├── analytics/
 │       │   ├── export/
@@ -214,11 +217,11 @@ The GUI initializes its journal database and repository/service dependencies, ap
 5. Double-click a trade execution in **Position Details** to edit it, or use its Actions menu.
 6. Review realized performance, search by ticker, and filter positions by Draft, Open, or Closed status.
 
-Archived accounts remain viewable but are not editable. The dashboard, scanner, and C.I.A. destinations in the desktop sidebar are placeholders for future integration.
+Archived accounts remain viewable but are not editable. Dashboard and C.I.A. remain placeholders; the Scanner page is functional.
 
 ### Scanner
 
-To launch the default scanner - use `python -m stonks.scanner_cli` from the 'src' directory. Note, this will consume API requests if configured with `ALLOW_API_CALLS`.
+Open Scanner in the desktop sidebar, select Standard Market Scanner, and click Run Scan. Cancel requests cooperative cancellation. API-enabled runs consume provider requests. The existing CLI is still available using `python -m stonks.scanner_cli` after activating the environment.
 
 ### Historical Cache CLI
 
@@ -292,6 +295,7 @@ Account and portfolio cash calculations use a saved dated opening cash snapshot 
 - [C.I.A. News Subsystem](docs/cia.md)
 - [Float Data](docs/float_data.md)
 - [Price Action](docs/price_action.md)
+- [Scanner Workspace](docs/scanner_workspace.md)
 
 ---
 
