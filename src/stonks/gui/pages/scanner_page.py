@@ -363,15 +363,15 @@ class ScannerPage(QWidget):
         normalized = message.lower()
 
         if "cancel" in normalized:
-            state, badge = "Cancelled", "●  CANCELLED"
+            state, badge = "Cancelled", "CANCELLED"
         elif "fail" in normalized or "unable" in normalized or "error" in normalized:
-            state, badge = "Failed", "●  SCAN ERROR"
+            state, badge = "Failed", "SCAN ERROR"
         elif "scanning" in normalized:
-            state, badge = "Scanning", "●  SCANNING"
+            state, badge = "Scanning", "SCANNING"
         elif "complete" in normalized:
-            state, badge = "Complete", "●  SCAN COMPLETE"
+            state, badge = "Complete", "SCAN COMPLETE"
         else:
-            state, badge = "Ready", "●  SYSTEM READY"
+            state, badge = "Ready", "SYSTEM READY"
 
         self.m_state_value.setText(state)
         self.m_system_badge.setText(badge)
