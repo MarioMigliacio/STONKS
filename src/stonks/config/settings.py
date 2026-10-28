@@ -12,6 +12,7 @@ load_dotenv()
 
 API_KEY = os.getenv("STONKS_API_KEY")
 MASSIVE_API_KEY = os.getenv("STONKS_MASSIVE_API_KEY")
+MARKETAUX_API_KEY = os.getenv("STONKS_MARKETAUX_API_KEY")
 
 # Initial hardcoded watchlist used by the scanner.
 WATCHLIST = ["AAPL", "SPCX"]
