@@ -129,9 +129,23 @@ def get_news_sentiment(symbol: str, limit: int = 10):
         )
         return None
 
+    data = response.json()
+
     logger.debug(
-        "News request completed for %s",
+        "News response for %s: keys=%s, feed_count=%d",
         symbol,
+        list(data.keys()),
+        len(data.get("feed", [])),
     )
 
-    return response.json()
+    if "feed" not in data:
+        logger.warning(
+            "News API returned no feed for %s: %s",
+            symbol,
+            data.get("Information")
+            or data.get("Note")
+            or data.get("Error Message")
+            or "Unexpected response format",
+        )
+
+    return data
