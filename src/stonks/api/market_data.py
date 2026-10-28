@@ -142,10 +142,7 @@ def get_news_sentiment(symbol: str, limit: int = 10):
         logger.warning(
             "News API returned no feed for %s: %s",
             symbol,
-            data.get("Information")
-            or data.get("Note")
-            or data.get("Error Message")
-            or "Unexpected response format",
+            data.get("Information") or data.get("Note") or data.get("Error Message") or "Unexpected response format",
         )
 
     return data
