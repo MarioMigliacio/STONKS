@@ -1,62 +1,71 @@
 # STONKS Desktop GUI
 
-[← Back to Main README](../README.md) · [Journal Subsystem](journal.md)
+[← Back to Main README](../README.md) · [Journal Subsystem](journal.md) · [C.I.A.](cia.md)
 
-The PySide6 interface provides an account-aware Trading Journal with a reusable main window, sidebar, dark theme, and dialog-based editing. Financial rules and database writes stay in the Journal service layer.
-
-## Launch
-
-After setting up and activating the Windows development environment:
-
-```powershell
-.\scripts\init.ps1
-.\scripts\activate.ps1
-python -m stonks.gui.app
-```
-
-`python -m stonks` launches the desktop GUI; the scanner CLI is `python -m stonks.scanner_cli`.
+STONKS uses PySide6 for a desktop trading journal, market scanner, and catalyst-intelligence workspace. Its main window provides persistent sidebar navigation, a dark theme, and separate pages for each workflow. Financial calculations and database writes remain in the journal service layer.
 
 ## Navigation
 
-| Page                   | behavior                                                                                           |
-| ---------------------- | -------------------------------------------------------------------------------------------------- |
-| **Trading Accounts**   | Create/edit accounts; choose default; archive/reactivate; guarded deletion                         |
-| **Trading Journal**    | Account-scoped positions, ticker search, status filters, execution history, and position analytics |
-| **Dashboard / C.I.A.** | Desktop placeholders; the separate market-intelligence commands continue to exist                  |
-| **Market Scanner**     | Standard Market Scanner, ANY/ALL selection, Run/Cancel, and results                                |
+| Page             | Current functionality                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------ |
+| Trading Accounts | Account creation/editing, default selection, archive/reactivate, guarded deletion, and account details |
+| Trading Journal  | Account-scoped positions, executions, filters, and performance metrics                                 |
+| Market Scanner   | Standard Market Scanner, strategy selection, ANY/ALL matching, Run/Cancel, and results                 |
+| C.I.A.           | Ticker analysis, Mission Brief, supporting articles, and article dossiers                              |
+| Dashboard        | Placeholder                                                                                            |
 
-## Trading Accounts and Account Details
+### Trading Accounts and Account Details
 
 1. Open **Trading Accounts** and create an account. Supported types include Cash, Roth IRA, Traditional IRA, Margin, and Other.
-2. Choose the default account or manage an existing account with **Actions**.
-3. **Double-click an account** to open **Account Details**.
-4. Set a dated **Opening Cash** snapshot when you have a known balance. A snapshot is not a deposit and should represent cash at the selected boundary.
-5. Use **New Transaction** for deposits, withdrawals, fees, or cash adjustments. The transaction table supports account-level history, filtering, and edit/delete actions.
-6. Use **Transfer Funds** to move recorded cash between two tracked accounts. Transfers have linked incoming/outgoing legs and do not count as external contributions. Edit or delete a transfer using the transfer-specific actions.
+2. Choose a default account or manage an existing account with **Actions**.
+3. Double-click an account to open **Account Details**.
+4. Record a dated **Opening Cash** snapshot when a known cash balance is available. A snapshot is not a deposit.
+5. Use **New Transaction** for deposits, withdrawals, fees, and adjustments; use **Transfer Funds** for linked transfers between tracked accounts.
 
-Account Details displays ledger cash, net contributions, net realized P&L, and equity at cost basis. These are accounting values, **not live broker account balances or market valuations**. Transfer and cash-policy validation errors are surfaced without changing persisted records.
+Account Details shows ledger cash, net contributions, realized P&L, and equity at cost basis. These are accounting values, **not live broker balances or market valuations**. Archived accounts remain viewable but are not editable until reactivated.
 
-Archived accounts stay visible for historical review. Editing operations are unavailable until an eligible account is reactivated.
+### Trading Journal and Position Details
 
-## Trading Journal and Position Details
+1. Open **Trading Journal** and select an account.
+2. Add a position, with optional strategy and catalyst context.
+3. Search by ticker or filter Draft, Open, and Closed positions.
+4. Double-click a position to inspect its executions and performance.
+5. Add BUY/SELL executions, or edit and delete existing executions using the available actions.
 
-1. Select **Trading Journal**, then pick the relevant account.
-2. Use **New Position** to add a ticker and optional strategy/catalyst context.
-3. Filter by ticker and Draft/Open/Closed status, or use **Actions** to edit a position.
-4. **Double-click a position** to view its strategy, execution history, and performance metrics.
-5. Use **Add Execution** for BUY and SELL fills, with share quantity, price, fees, date/time, and notes.
-6. Select an execution and use **Actions** to edit/delete it, or **double-click an execution** to open its edit dialog. Deletion requires confirmation.
+Position analytics include remaining shares, historical average buy price, cost basis, realized P&L, realized return, and lifecycle status. Partial entries and exits are supported.
 
-Position analytics include remaining shares, historical average buy price, remaining cost basis, realized P&L, realized return, and lifecycle status. Partial entries and exits are supported. Position deletion is restricted once executions exist.
+### Market Scanner
 
-## Architecture
+The Scanner page runs the Standard Market Scanner in a background worker. It supports strategy selection, ANY/ALL matching, results display, status feedback, and cooperative cancellation. See [Scanner Workspace](scanner_workspace.md).
+
+### C.I.A. Workspace
+
+1. Open **Catalyst Intelligence Analysis** from the sidebar.
+2. Enter a ticker and choose **Analyze Ticker**, or press Enter in the ticker field.
+3. Review the **Mission Brief**: catalyst status, strength, freshness, sentiment, confidence, current and historical intelligence, and supporting-article counts.
+4. In **Supporting Intelligence**, double-click an article or activate its selected row with Enter.
+5. Read the **Article Dossier** and optionally choose **Open Original Article** to open its valid HTTP(S) publisher link.
+6. Return to the briefing using **Back to Mission Brief**, Backspace, or Escape.
+
+Returning from a dossier retains the briefing and article selection. A new successful analysis replaces the briefing and returns to the Mission Brief. If a request fails, the previous successful briefing remains available and request controls are restored.
+
+CIA analysis runs in a `QThread` so the GUI remains responsive. Requests cannot overlap. A running provider request is not cancellable; application closure is deferred until the worker exits. See [C.I.A.](cia.md) for the analysis pipeline and provider limitations.
+
+## GUI architecture
 
 ```mermaid
 flowchart TD
-    A[stonks.gui.app] --> B[(JournalContext SQLite connection + repository + service)]
-    B --> C[(MainWindow / NavigationSidebar / QStackedWidget)]
-    C --> D[(AccountsPage → AccountDetailsDialog → cash/transfer dialogs)]
-    D --> E[(PositionsPage → PositionDetailsDialog → execution dialogs)]
+    A[Desktop entry point] --> B[MainWindow and NavigationSidebar]
+    B --> C[Trading Accounts]
+    B --> D[Trading Journal]
+    B --> E[Market Scanner]
+    B --> F[C.I.A. Workspace]
+    C --> G[Journal services and repository]
+    D --> G
+    E --> H[Scanner thread controller]
+    F --> I[CIA thread controller]
+    I --> J[CIA analysis service]
+    F --> K[Mission Brief and dossier]
 ```
 
-`gui/styles/theme.py` defines `STONKS_DARK_THEME`; `gui/icons.py` supplies reusable SVG icons. GUI dialogs should not create alternate business rules or independent financial calculations.
+`gui/styles/theme.py` defines the shared dark stylesheet, and `gui/icons.py` provides reusable SVG icons. The GUI coordinates interaction and presentation while the journal and CIA services own their respective domain logic.

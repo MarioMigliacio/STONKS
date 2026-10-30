@@ -33,7 +33,7 @@ The project combines market scanning, public-float analysis, catalyst intelligen
 - Read-only historical access to archived trading accounts
 - Shared `JournalContext`, repository, and service layers; financial calculations remain separate from the GUI
 
-The Trading Journal, Trading Accounts, and Market Scanner desktop pages are functional. Dashboard and C.I.A. remain placeholders.
+The Trading Journal, Trading Accounts, Market Scanner, and C.I.A. desktop pages are functional. Dashboard remains a placeholder.
 
 Account Details provides opening cash snapshots, deposits, withdrawals, fees, adjustments, dated transaction history, and linked internal transfers. Transfers update both account ledgers atomically and are excluded from external contribution totals. The GUI also displays opening-aware account performance metrics.
 
@@ -85,11 +85,12 @@ See [Price Action](docs/price_action.md).
 
 ### C.I.A. — Catalyst Intelligence Analysis
 
-- Financial news retrieval and duplicate filtering
-- Catalyst classification and freshness detection
-- Catalyst strength, confidence, and sentiment analysis
-- Active and historical catalyst separation
-- Mission brief reporting
+- Ticker-specific Marketaux news retrieval through a provider-independent service
+- Normalized article evidence and duplicate filtering
+- Catalyst classification, freshness, strength, confidence, and sentiment
+- Mission Brief with active and historical intelligence
+- Supporting Intelligence article table and navigable Article Dossier
+- Background analysis, failure-state preservation, and original publisher links
 
 See [C.I.A. News Subsystem](docs/cia.md).
 
@@ -122,6 +123,7 @@ STONKS/
 ├── src/
 │   └── stonks/
 │       ├── api/
+│       │   └── providers/
 │       ├── cache/
 │       ├── cia/
 │       ├── config/
@@ -188,9 +190,10 @@ For market API functionality, configure the `.env` file created from `.env.examp
 ```text
 STONKS_API_KEY=your_api_key
 STONKS_MASSIVE_API_KEY=your_api_key
+STONKS_MARKETAUX_API_KEY=your_marketaux_api_key
 ```
 
-`STONKS_API_KEY` is used for Alpha Vantage market/news features. `STONKS_MASSIVE_API_KEY` is used for Massive-backed float and aggregate candle features. Massive-backed features can be disabled or omitted when not needed.
+The desktop CIA workspace uses Marketaux, Massive supports float/aggregate candle features, and `STONKS_API_KEY` supports Alpha Vantage market features.
 
 Float enrichment is controlled by `ENABLE_FLOAT_DATA` in the application settings; it defaults to `False`.
 
@@ -217,11 +220,15 @@ The GUI initializes its journal database and repository/service dependencies, ap
 5. Double-click a trade execution in **Position Details** to edit it, or use its Actions menu.
 6. Review realized performance, search by ticker, and filter positions by Draft, Open, or Closed status.
 
-Archived accounts remain viewable but are not editable. Dashboard and C.I.A. remain placeholders; the Scanner page is functional.
+Archived accounts remain viewable but are not editable. Dashboard remains a placeholder; Scanner and C.I.A. are functional desktop workspaces.
 
 ### Scanner
 
 Open Scanner in the desktop sidebar, select Standard Market Scanner, and click Run Scan. Cancel requests cooperative cancellation. API-enabled runs consume provider requests. The existing CLI is still available using `python -m stonks.scanner_cli` after activating the environment.
+
+### C.I.A. Workspace
+
+Open C.I.A. from the desktop sidebar, enter a ticker, and select Analyze Ticker. Review the Mission Brief and Supporting Intelligence, then open an article dossier for details or the publisher URL. A Marketaux API key is required for live news retrieval. See [C.I.A.](docs/cia.md) and [Desktop GUI Guide](docs/gui.md).
 
 ### Historical Cache CLI
 
