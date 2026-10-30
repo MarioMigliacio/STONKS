@@ -1,67 +1,60 @@
 # C.I.A. — Catalyst Intelligence Analysis
 
-[← Back to Main README](../README.md)
+[← Back to Main README](../README.md) · [Desktop GUI](gui.md)
 
-The STONKS C.I.A. subsystem analyzes ticker-specific financial news to help answer:
+C.I.A. examines ticker-specific financial news to identify potential catalysts, their recency, and the evidence behind a briefing. It is an intelligence aid, not a trading signal or guarantee of price movement.
 
-> **Why is this stock moving, and is the catalyst still relevant for day trading?**
+## Current capabilities
 
----
+- Retrieve ticker-specific news through the `NewsProvider` interface, currently backed by Marketaux in the desktop application.
+- Normalize provider records into `NewsArticle` models and remove duplicate articles.
+- Classify recognized catalysts, distinguish current from historical context, and evaluate freshness.
+- Calculate aggregate sentiment, catalyst strength, and confidence.
+- Return a `CiaAnalysisResult` containing both a `CatalystReport` and the deduplicated supporting articles.
+- Present the report in the desktop Mission Brief, with an article table and navigable dossier.
 
-## Features
-
-- Retrieves ticker-specific financial news
-- Normalizes provider data into `NewsArticle`
-- Removes duplicate articles
-- Classifies recognized catalyst categories
-- Separates active catalysts from historical context
-- Measures catalyst freshness
-- Detects breaking news
-- Calculates average sentiment
-- Classifies overall sentiment
-- Assigns catalyst strength and confidence
-- Produces a structured `CatalystReport`
-- Generates a human-readable Mission Brief
-
----
-
-## C.I.A. Pipeline
+## Analysis and presentation flow
 
 ```mermaid
 flowchart TD
-    A[Financial News API] --> B[News Parser]
-    B --> C[NewsArticle]
-    C --> D[Duplicate Filter]
-    D --> E[Catalyst Classification]
-    E --> F[Freshness Analysis]
-    F --> G[Sentiment / Strength / Confidence]
-    G --> H[CatalystReport]
-    H --> I[Mission Brief]
+    A[Analyze ticker] --> B[CiaThreadController]
+    B --> C[CiaWorker]
+    C --> D[CiaAnalysisService]
+    D --> E[NewsProvider]
+    E --> F[MarketauxNewsProvider]
+    F --> G[Normalized NewsArticle records]
+    G --> H[Duplicate filtering]
+    H --> I[Catalyst analysis]
+    I --> J[CiaAnalysisResult]
+    J --> K[Mission Brief]
+    J --> L[Supporting Intelligence]
+    L --> M[Article Dossier]
+    M --> N[Original publisher URL]
 ```
 
-C.I.A. separates news retrieval and analysis from presentation. The analysis pipeline produces a `CatalystReport`, while the Mission Brief converts that report into human-readable output.
+The service and analysis logic do not depend on PySide6. The GUI starts analysis on a background `QThread` and receives the result through Qt signals.
 
----
+## News provider
 
-## Catalyst Freshness
+`MarketauxNewsProvider` requests English-language, ticker-specific news and maps the matching ticker entity's sentiment into normalized articles. The current implementation caps each request at **three articles**, even if the analysis service requests a higher limit.
 
-C.I.A. prioritizes recent information for day-trading analysis.
+Configure `STONKS_MARKETAUX_API_KEY` in the local `.env` file to use the desktop CIA workspace. Missing credentials, provider access limits, rate limits, malformed responses, and network errors are surfaced as failures rather than silently converted into an empty result. A successful request with no articles produces an empty briefing.
 
-```text
-0–60 minutes  → Breaking 🔥
-1–4 hours     → Fresh
-4–24 hours    → Recent
-24+ hours     → Stale
-Unavailable   → Unknown
-```
+The dossier displays provider-supplied metadata and summary; it does **not** retrieve or reproduce the full publisher article.
 
-Breaking, Fresh, and Recent recognized catalysts are considered active intelligence.
+## Freshness
 
-Older recognized catalysts remain available as historical context rather than being discarded.
+| Age of newest recognized catalyst   | Classification |
+| ----------------------------------- | -------------- |
+| Up to 60 minutes                    | Breaking       |
+| More than 60 minutes, up to 4 hours | Fresh          |
+| More than 4 hours, up to 24 hours   | Recent         |
+| More than 24 hours                  | Stale          |
+| No usable catalyst timestamp        | Unknown        |
 
----
+Recognized Breaking, Fresh, and Recent catalysts contribute to current intelligence; older recognized catalysts remain available as historical context. Thresholds are defined in `stonks/config/settings.py`.
 
-## Catalyst Categories
+## Recognized catalyst categories
 
 C.I.A. currently recognizes:
 
@@ -81,84 +74,16 @@ C.I.A. currently recognizes:
 - Analyst Report
 - Momentum / Hype
 
-Articles that do not match a recognized category remain `Unknown`.
+Articles without a recognized category are shown as **Unclassified** in the GUI.
 
----
+## Report and evidence
 
-## Catalyst Report
+| Model               | Responsibility                                                                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NewsArticle`       | Headline, source, publication time, summary, URL, and sentiment                                                                                    |
+| `CatalystReport`    | Ticker, catalyst strength, current/historical categories, sentiment, confidence, freshness, counts, breaking-news indicator, and narrative summary |
+| `CiaAnalysisResult` | The report together with deduplicated articles used to support it                                                                                  |
 
-C.I.A. aggregates its analysis into a `CatalystReport`.
+The Mission Brief shows the ticker, mission status, strength, freshness, sentiment, confidence, article counts, current intelligence, historical context, and summary. Supporting Intelligence lists the articles used in the analysis. Selecting an article opens its dossier with source details and a button to open a valid HTTP(S) publisher URL in the system browser.
 
-The report contains:
-
-```text
-ticker
-catalyst_strength
-categories
-historical_categories
-average_sentiment
-confidence
-freshness
-newest_catalyst_title
-newest_catalyst_url
-newest_catalyst_published_at
-```
-
-`categories` contains recognized active catalyst intelligence.
-
-`historical_categories` preserves recognized catalysts that are no longer considered current enough for active day-trading intelligence.
-
-The report acts as the boundary between catalyst analysis and presentation.
-
----
-
-## Mission Brief
-
-The Mission Brief converts a `CatalystReport` into a readable C.I.A. summary.
-
-Example:
-
-```text
-TARGET:              DFNS
-MISSION STATUS:      NO ACTIVE CATALYST
-
-CATALYST STRENGTH:   Weak
-FRESHNESS:           Stale
-SENTIMENT:           Neutral (+0.08)
-CONFIDENCE:          85%
-
-CURRENT INTELLIGENCE
-
-None
-
-HISTORICAL CONTEXT
-
-- Short Interest
-- Reverse Stock Split
-- Acquisition
-- Contract / Purchase Order
-```
-
-When breaking catalyst intelligence is identified, the Mission Brief highlights it:
-
-```text
-🔥 BREAKING CATALYST DETECTED 🔥
-```
-
----
-
-## Analysis Roles
-
-The major C.I.A. components have intentionally separate responsibilities:
-
-| Component           | Responsibility                                          |
-| ------------------- | ------------------------------------------------------- |
-| News Parser         | Converts provider responses into `NewsArticle` models   |
-| Duplicate Filter    | Removes duplicate news records                          |
-| Catalyst Classifier | Identifies recognized catalyst categories               |
-| Catalyst Freshness  | Determines how recent the newest recognized catalyst is |
-| Catalyst Strength   | Evaluates catalyst significance                         |
-| C.I.A. Engine       | Aggregates analysis into `CatalystReport`               |
-| Mission Brief       | Presents the completed report to the user               |
-
-This separation keeps news retrieval, catalyst analysis, report generation, and presentation independently maintainable.
+A later provider failure leaves the last successful briefing visible. The active request cannot be interrupted mid-provider call; closing the application waits until its worker finishes.
