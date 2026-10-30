@@ -6,6 +6,7 @@
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -14,12 +15,15 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QScrollArea,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from stonks.cia.cia_analysis_result import CiaAnalysisResult
+from stonks.gui.widgets.cia_article_dossier import CiaArticleDossier
 from stonks.gui.widgets.cia_intelligence_sources import CiaIntelligenceSources
+from stonks.models.news_article import NewsArticle
 
 
 class CiaPage(QWidget):
@@ -43,6 +47,15 @@ class CiaPage(QWidget):
 
         m_sources:
             Supporting intelligence widget.
+
+        m_view_stack:
+            Stacked workspace containing the Mission Brief and article dossier.
+
+        m_brief_scroll:
+            Scrollable container preserving the Mission Brief's position.
+
+        m_dossier:
+            Article dossier displaying the selected intelligence source.
 
         m_running:
             Whether a request is in progress.
@@ -87,6 +100,9 @@ class CiaPage(QWidget):
         self.m_status_label.setObjectName("ciaStatus")
         self.m_status_label.setWordWrap(True)
         layout.addWidget(self.m_status_label)
+
+        self.m_view_stack = QStackedWidget()
+        self.m_view_stack.setObjectName("ciaViewStack")
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -138,7 +154,16 @@ class CiaPage(QWidget):
         brief.addStretch()
 
         scroll.setWidget(self.m_brief_container)
-        layout.addWidget(scroll, 1)
+        self.m_brief_scroll = scroll
+        self.m_view_stack.addWidget(self.m_brief_scroll)
+
+        self.m_dossier = CiaArticleDossier(self)
+        self.m_view_stack.addWidget(self.m_dossier)
+        self.m_dossier.back_requested.connect(self._show_briefing)
+        self.m_sources.article_activated.connect(self._show_dossier)
+
+        layout.addWidget(self.m_view_stack, 1)
+        self.m_view_stack.setCurrentWidget(self.m_brief_scroll)
         self.m_brief_container.hide()
 
     @staticmethod
@@ -205,6 +230,26 @@ class CiaPage(QWidget):
         self.m_summary.setText(report.summary)
         self.m_sources.set_articles(result.articles)
         self.m_brief_container.show()
+        self.m_view_stack.setCurrentWidget(self.m_brief_scroll)
         self.set_status(
             f"Briefing complete for {report.ticker}. {report.unique_article_count} unique article(s) analyzed."
         )
+
+    def _show_dossier(self, article: NewsArticle) -> None:
+        """Open the selected normalized article without requesting news again."""
+        self.m_dossier.set_article(article)
+        self.m_view_stack.setCurrentWidget(self.m_dossier)
+        self.m_dossier.m_back_button.setFocus()
+
+    def _show_briefing(self) -> None:
+        """Restore the existing briefing and selected source row."""
+        self.m_view_stack.setCurrentWidget(self.m_brief_scroll)
+        self.m_sources.m_table.setFocus()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """Allow Backspace or Escape to return from the dossier."""
+        if self.m_view_stack.currentWidget() is self.m_dossier and event.key() in (Qt.Key_Backspace, Qt.Key_Escape):
+            self._show_briefing()
+            event.accept()
+            return
+        super().keyPressEvent(event)
