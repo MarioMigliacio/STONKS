@@ -5,7 +5,7 @@
 
 from typing import Optional
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from stonks.cia.cia_analysis_result import CiaAnalysisResult
+from stonks.gui.widgets.cia_intelligence_sources import CiaIntelligenceSources
 
 
 class CiaPage(QWidget):
@@ -39,6 +40,9 @@ class CiaPage(QWidget):
 
         m_last_result:
             Most recent successful result.
+
+        m_sources:
+            Supporting intelligence widget.
 
         m_running:
             Whether a request is in progress.
@@ -129,7 +133,10 @@ class CiaPage(QWidget):
         self.m_current = self._section(brief, "CURRENT INTELLIGENCE")
         self.m_historical = self._section(brief, "HISTORICAL CONTEXT")
         self.m_summary = self._section(brief, "INTELLIGENCE SUMMARY")
+        self.m_sources = CiaIntelligenceSources(self.m_brief_container)
+        brief.addWidget(self.m_sources)
         brief.addStretch()
+
         scroll.setWidget(self.m_brief_container)
         layout.addWidget(scroll, 1)
         self.m_brief_container.hide()
@@ -143,6 +150,7 @@ class CiaPage(QWidget):
         content = QLabel("—")
         content.setObjectName("ciaSectionBody")
         content.setWordWrap(True)
+        content.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(content)
         return content
 
@@ -195,6 +203,7 @@ class CiaPage(QWidget):
         self.m_current.setText("\n".join(category.value for category in report.categories) or "None")
         self.m_historical.setText("\n".join(category.value for category in report.historical_categories) or "None")
         self.m_summary.setText(report.summary)
+        self.m_sources.set_articles(result.articles)
         self.m_brief_container.show()
         self.set_status(
             f"Briefing complete for {report.ticker}. {report.unique_article_count} unique article(s) analyzed."

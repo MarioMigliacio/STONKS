@@ -232,7 +232,7 @@ class MainWindow(QMainWindow):
         strategy_factories = {
             "existing_scanner": lambda event: ExistingScannerStrategy(cancel_event=event),
         }
-        
+
         try:
             factories = [strategy_factories[identifier] for identifier in strategy_ids]
             started = self.m_scanner_controller.start_scan(
@@ -285,7 +285,7 @@ class MainWindow(QMainWindow):
         """
         self.m_scanner_page.set_results(candidates)
         count = len(candidates)
-        
+
         if count == 0:
             message = "Scan complete: no matches."
         elif count == 1:
