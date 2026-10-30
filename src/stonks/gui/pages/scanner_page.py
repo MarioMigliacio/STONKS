@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from stonks.gui.icons import get_icon
-from stonks.gui.styles.theme import SCANNER_NEGATIVE_COLOR, SCANNER_POSITIVE_COLOR
+from stonks.gui.styles.scanner_theme import SCANNER_NEGATIVE_COLOR, SCANNER_POSITIVE_COLOR
 from stonks.models.scanner_candidate import ScannerCandidate
 from stonks.scanner.scanner_match_mode import ScannerMatchMode
 

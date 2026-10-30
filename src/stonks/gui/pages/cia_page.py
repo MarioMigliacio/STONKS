@@ -5,7 +5,7 @@
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QFrame,
@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from stonks.cia.cia_analysis_result import CiaAnalysisResult
+from stonks.gui.icons import get_icon
 from stonks.gui.widgets.cia_article_dossier import CiaArticleDossier
 from stonks.gui.widgets.cia_intelligence_sources import CiaIntelligenceSources
 from stonks.models.news_article import NewsArticle
@@ -57,6 +58,9 @@ class CiaPage(QWidget):
         m_dossier:
             Article dossier displaying the selected intelligence source.
 
+        m_system_badge:
+            Styled CIA execution-state indicator in the workspace header.
+
         m_running:
             Whether a request is in progress.
     """
@@ -73,28 +77,77 @@ class CiaPage(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 20, 22, 20)
         layout.setSpacing(12)
+
+        header = QHBoxLayout()
+        title_stack = QVBoxLayout()
+        title_stack.setSpacing(3)
         eyebrow = QLabel("STONKS / CATALYST INTELLIGENCE ANALYSIS")
         eyebrow.setObjectName("ciaEyebrow")
-        layout.addWidget(eyebrow)
+        title_stack.addWidget(eyebrow)
+
+        title_row = QHBoxLayout()
+        title_row.setSpacing(10)
+        title_icon = QLabel()
+        title_icon.setObjectName("ciaTitleIcon")
+        title_icon.setPixmap(get_icon("radar").pixmap(QSize(24, 24)))
+        title_icon.setFixedSize(24, 24)
+        title_row.addWidget(title_icon)
         title = QLabel("Mission Brief")
         title.setObjectName("ciaTitle")
-        layout.addWidget(title)
+        title_row.addWidget(title)
+        title_row.addStretch()
+        title_stack.addLayout(title_row)
+
         subtitle = QLabel("Investigate catalysts. Validate the intelligence.")
         subtitle.setObjectName("ciaSubtitle")
-        layout.addWidget(subtitle)
+        title_stack.addWidget(subtitle)
+        header.addLayout(title_stack, 1)
+
+        self.m_system_badge = QLabel("SYSTEM READY")
+        self.m_system_badge.setObjectName("ciaKicker")
+        self.m_system_badge.setProperty("state", "ready")
+        self.m_system_badge.setAlignment(Qt.AlignCenter)
+        header.addWidget(self.m_system_badge, 0, Qt.AlignVCenter)
+        layout.addLayout(header)
+
+        search_panel = QFrame()
+        search_panel.setObjectName("ciaSearchPanel")
+        search_layout = QVBoxLayout(search_panel)
+        search_layout.setContentsMargins(16, 14, 16, 14)
+        search_layout.setSpacing(10)
+        search_header = QHBoxLayout()
+        search_header.setSpacing(8)
+
+        search_icon = QLabel()
+        search_icon.setPixmap(get_icon("file-search").pixmap(QSize(18, 18)))
+        search_icon.setFixedSize(18, 18)
+
+        search_caption = QLabel("Intelligence Target")
+        search_caption.setObjectName("ciaSearchCaption")
+
+        search_header.addWidget(search_icon)
+        search_header.addWidget(search_caption)
+        search_header.addStretch()
+
+        search_layout.addLayout(search_header)
 
         controls = QHBoxLayout()
+        controls.setSpacing(10)
         self.m_ticker_input = QLineEdit()
         self.m_ticker_input.setObjectName("ciaTickerInput")
         self.m_ticker_input.setPlaceholderText("Ticker symbol (e.g. AMD)")
         self.m_ticker_input.setMaxLength(16)
         self.m_ticker_input.returnPressed.connect(self._request_analysis)
         controls.addWidget(self.m_ticker_input, 1)
+
         self.m_analyze_button = QPushButton("Analyze Ticker")
         self.m_analyze_button.setObjectName("ciaAnalyzeButton")
+        self.m_analyze_button.setIcon(get_icon("search-check"))
+        self.m_analyze_button.setIconSize(QSize(17, 17))
         self.m_analyze_button.clicked.connect(self._request_analysis)
         controls.addWidget(self.m_analyze_button)
-        layout.addLayout(controls)
+        search_layout.addLayout(controls)
+        layout.addWidget(search_panel)
 
         self.m_status_label = QLabel("Enter a ticker to request a briefing.")
         self.m_status_label.setObjectName("ciaStatus")
@@ -200,14 +253,26 @@ class CiaPage(QWidget):
 
         if running:
             self.set_status("Retrieving news and analyzing catalysts…")
+            self._set_badge("ANALYZING", "running")
 
     def set_status(self, message: str) -> None:
         """Update status without discarding the previous report."""
         self.m_status_label.setText(message)
+        normalized = message.lower()
+
+        if "fail" in normalized or "unable" in normalized or "error" in normalized:
+            self._set_badge("ANALYSIS ERROR", "failed")
+        elif "complete" in normalized:
+            self._set_badge("BRIEF READY", "complete")
+        elif "retrieving" in normalized or "analyzing" in normalized:
+            self._set_badge("ANALYZING", "running")
+        elif not self.m_running:
+            self._set_badge("SYSTEM READY", "ready")
 
     def set_result(self, result: CiaAnalysisResult) -> None:
         """Display the successful report and retain supporting articles."""
         self.m_last_result = result
+        self._set_badge("BRIEF READY", "complete")
         report = result.report
         self.m_target.setText(f"TARGET: {report.ticker}")
 
@@ -253,3 +318,10 @@ class CiaPage(QWidget):
             event.accept()
             return
         super().keyPressEvent(event)
+
+    def _set_badge(self, text: str, state: str) -> None:
+        """Update the CIA header badge and refresh its scoped style."""
+        self.m_system_badge.setText(text)
+        self.m_system_badge.setProperty("state", state)
+        self.m_system_badge.style().unpolish(self.m_system_badge)
+        self.m_system_badge.style().polish(self.m_system_badge)

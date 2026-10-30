@@ -6,7 +6,7 @@
 from datetime import timezone
 from typing import Optional
 
-from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtCore import QSize, Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QFrame,
@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from stonks.cia.catalyst_category import CatalystCategory
 from stonks.cia.catalyst_classifier import classify_article
+from stonks.gui.icons import get_icon
 from stonks.models.news_article import NewsArticle
 
 
@@ -67,8 +68,10 @@ class CiaArticleDossier(QWidget):
         layout.setSpacing(12)
         navigation = QHBoxLayout()
 
-        self.m_back_button = QPushButton("← Back to Mission Brief")
+        self.m_back_button = QPushButton("Back to Mission Brief")
         self.m_back_button.setObjectName("ciaDossierBack")
+        self.m_back_button.setIcon(get_icon("arrow-left"))
+        self.m_back_button.setIconSize(QSize(16, 16))
         self.m_back_button.clicked.connect(self.back_requested.emit)
         navigation.addWidget(self.m_back_button)
         navigation.addStretch()
