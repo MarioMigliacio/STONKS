@@ -261,9 +261,11 @@ Run focused tests:
 .\scripts\test.ps1 -Target gui
 .\scripts\test.ps1 -Target journal
 .\scripts\test.ps1 -Path tests/test_entry_points.py
+```
 
 additional options include:
 
+```powershell
 .\scripts\test.ps1 -Mode Quick
 .\scripts\test.ps1 -FailFast
 .\scripts\test.ps1 -Profile
@@ -290,7 +292,7 @@ The journal database is stored by default at `data/journal/stonks_journal.db`, a
 
 SQLite backup/restore and CSV export support are implemented in the backend. A complete desktop workflow for account transactions and data lifecycle management remains part of release integration.
 
-Account and portfolio cash calculations use a saved dated opening cash snapshot when present. Events before that snapshot do not change reconstructed cash; without a snapshot, cash starts from an unverified zero assumption. Contributions and realized P&L retain their all-record history. Equity at cost basis is not live market equity. **Equity at cost basis is not live market equity**; unrealized price changes are not included. See the [Journal Subsystem](docs/journal.md) for financial definitions and limitations.
+Account and portfolio cash calculations use a saved dated opening cash snapshot when present. Events before that snapshot do not change reconstructed cash; without a snapshot, cash starts from an unverified zero assumption. Contributions and realized P&L retain their all-record history. Equity at cost basis is not live market equity; unrealized price changes are not included. See the [Journal Subsystem](docs/journal.md) for financial definitions and limitations.
 
 ---
 
