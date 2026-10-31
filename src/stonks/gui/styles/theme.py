@@ -3,6 +3,7 @@
 # Purpose: Defines the centralized visual theme for the STONKS GUI.
 # =============================================================================
 
+from stonks.gui.styles.cia_mission_theme import CIA_MISSION_THEME
 from stonks.gui.styles.cia_theme import CIA_WORKSPACE_THEME
 from stonks.gui.styles.scanner_theme import SCANNER_WORKSPACE_THEME
 
@@ -518,3 +519,4 @@ QPushButton#accountClearFiltersLink:focus {
 # Extend the application's existing theme without changing its established rules.
 STONKS_DARK_THEME += SCANNER_WORKSPACE_THEME
 STONKS_DARK_THEME += CIA_WORKSPACE_THEME
+STONKS_DARK_THEME += CIA_MISSION_THEME
