@@ -101,7 +101,7 @@ class CiaIntelligenceSources(QFrame):
     def set_articles(self, articles: list[NewsArticle]) -> None:
         """Replace rows with the available deduplicated article evidence."""
         self.m_articles = list(articles)
-        self.m_heading.setText(f"Supporting Intelligence / {len(self.m_articles)}")
+        self.m_heading.setText(f"Supporting Intelligence - {len(self.m_articles)}")
         self.m_table.setRowCount(len(self.m_articles))
 
         for row, article in enumerate(self.m_articles):
