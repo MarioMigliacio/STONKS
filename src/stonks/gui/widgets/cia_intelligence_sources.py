@@ -131,20 +131,15 @@ class CiaIntelligenceSources(QFrame):
                 self.m_table.setItem(row, column, item)
 
             self.m_table.resizeRowToContents(row)
-            
+
         visible_rows = min(len(self.m_articles), 3)
 
-        rows_height = sum(
-            self.m_table.rowHeight(row)
-            for row in range(visible_rows)
-        )
+        rows_height = sum(self.m_table.rowHeight(row) for row in range(visible_rows))
 
         header_height = self.m_table.horizontalHeader().height()
         frame_height = self.m_table.frameWidth() * 2
 
-        self.m_table.setMinimumHeight(
-            max(170, rows_height + header_height + frame_height + 8)
-        )
+        self.m_table.setMinimumHeight(max(170, rows_height + header_height + frame_height + 8))
 
         self.m_table.clearSelection()
         self.m_empty.setVisible(not self.m_articles)
