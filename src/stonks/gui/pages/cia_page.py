@@ -5,7 +5,7 @@
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QFrame,
@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from stonks.cia.cia_analysis_result import CiaAnalysisResult
+from stonks.gui.icons import get_icon
 from stonks.gui.widgets.cia_article_dossier import CiaArticleDossier
 from stonks.gui.widgets.cia_intelligence_sources import CiaIntelligenceSources
 from stonks.models.news_article import NewsArticle
@@ -40,7 +41,7 @@ class CiaPage(QWidget):
             Execution feedback label.
 
         m_metrics:
-            Named report metric labels.
+            A dictionary mapping metric names to their corresponding QLabel widgets.
 
         m_last_result:
             Most recent successful result.
@@ -56,6 +57,27 @@ class CiaPage(QWidget):
 
         m_dossier:
             Article dossier displaying the selected intelligence source.
+
+        m_system_badge:
+            Styled CIA execution-state indicator in the workspace header.
+
+        m_brief_container:
+            Widget containing the scrollable Mission Brief content.
+
+        m_target:
+            Label displaying the analyzed ticker symbol.
+
+        m_mission_status:
+            Label displaying the detected catalyst status.
+
+        m_current:
+            Label displaying current catalyst classifications.
+
+        m_historical:
+            Label displaying historical catalyst classifications.
+
+        m_summary:
+            Label displaying the intelligence summary.
 
         m_running:
             Whether a request is in progress.
@@ -73,28 +95,77 @@ class CiaPage(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 20, 22, 20)
         layout.setSpacing(12)
+
+        header = QHBoxLayout()
+        title_stack = QVBoxLayout()
+        title_stack.setSpacing(3)
         eyebrow = QLabel("STONKS / CATALYST INTELLIGENCE ANALYSIS")
         eyebrow.setObjectName("ciaEyebrow")
-        layout.addWidget(eyebrow)
+        title_stack.addWidget(eyebrow)
+
+        title_row = QHBoxLayout()
+        title_row.setSpacing(10)
+        title_icon = QLabel()
+        title_icon.setObjectName("ciaTitleIcon")
+        title_icon.setPixmap(get_icon("radar").pixmap(QSize(24, 24)))
+        title_icon.setFixedSize(24, 24)
+        title_row.addWidget(title_icon)
         title = QLabel("Mission Brief")
         title.setObjectName("ciaTitle")
-        layout.addWidget(title)
+        title_row.addWidget(title)
+        title_row.addStretch()
+        title_stack.addLayout(title_row)
+
         subtitle = QLabel("Investigate catalysts. Validate the intelligence.")
         subtitle.setObjectName("ciaSubtitle")
-        layout.addWidget(subtitle)
+        title_stack.addWidget(subtitle)
+        header.addLayout(title_stack, 1)
+
+        self.m_system_badge = QLabel("SYSTEM READY")
+        self.m_system_badge.setObjectName("ciaKicker")
+        self.m_system_badge.setProperty("state", "ready")
+        self.m_system_badge.setAlignment(Qt.AlignCenter)
+        header.addWidget(self.m_system_badge, 0, Qt.AlignVCenter)
+        layout.addLayout(header)
+
+        search_panel = QFrame()
+        search_panel.setObjectName("ciaSearchPanel")
+        search_layout = QVBoxLayout(search_panel)
+        search_layout.setContentsMargins(16, 14, 16, 14)
+        search_layout.setSpacing(10)
+        search_header = QHBoxLayout()
+        search_header.setSpacing(8)
+
+        search_icon = QLabel()
+        search_icon.setPixmap(get_icon("file-search").pixmap(QSize(18, 18)))
+        search_icon.setFixedSize(18, 18)
+
+        search_caption = QLabel("Intelligence Target")
+        search_caption.setObjectName("ciaSearchCaption")
+
+        search_header.addWidget(search_icon)
+        search_header.addWidget(search_caption)
+        search_header.addStretch()
+
+        search_layout.addLayout(search_header)
 
         controls = QHBoxLayout()
+        controls.setSpacing(10)
         self.m_ticker_input = QLineEdit()
         self.m_ticker_input.setObjectName("ciaTickerInput")
         self.m_ticker_input.setPlaceholderText("Ticker symbol (e.g. AMD)")
         self.m_ticker_input.setMaxLength(16)
         self.m_ticker_input.returnPressed.connect(self._request_analysis)
         controls.addWidget(self.m_ticker_input, 1)
+
         self.m_analyze_button = QPushButton("Analyze Ticker")
         self.m_analyze_button.setObjectName("ciaAnalyzeButton")
+        self.m_analyze_button.setIcon(get_icon("search-check"))
+        self.m_analyze_button.setIconSize(QSize(17, 17))
         self.m_analyze_button.clicked.connect(self._request_analysis)
         controls.addWidget(self.m_analyze_button)
-        layout.addLayout(controls)
+        search_layout.addLayout(controls)
+        layout.addWidget(search_panel)
 
         self.m_status_label = QLabel("Enter a ticker to request a briefing.")
         self.m_status_label.setObjectName("ciaStatus")
@@ -112,15 +183,39 @@ class CiaPage(QWidget):
         self.m_brief_container.setObjectName("ciaBriefContainer")
         brief = QVBoxLayout(self.m_brief_container)
         brief.setSpacing(16)
+
+        mission_banner = QFrame()
+        mission_banner.setObjectName("ciaMissionBanner")
+        mission_row = QHBoxLayout(mission_banner)
+        mission_row.setContentsMargins(16, 12, 16, 12)
+        mission_row.setSpacing(12)
+
         self.m_target = QLabel("TARGET: —")
         self.m_target.setObjectName("ciaTarget")
-        brief.addWidget(self.m_target)
+        mission_row.addWidget(self.m_target, 1)
+
         self.m_mission_status = QLabel("AWAITING INTELLIGENCE")
         self.m_mission_status.setObjectName("ciaMissionStatus")
-        brief.addWidget(self.m_mission_status)
+        self.m_mission_status.setProperty("catalyst", "none")
+        mission_row.addWidget(self.m_mission_status)
+        brief.addWidget(mission_banner)
 
         metrics = QGridLayout()
+        metrics.setSpacing(12)
+
+        for column in range(3):
+            metrics.setColumnStretch(column, 1)
+
         self.m_metrics = {}
+
+        metric_icons = {
+            "strength": "gauge",
+            "freshness": "clock-3",
+            "sentiment": "activity",
+            "confidence": "shield-alert",
+            "articles": "newspaper",
+            "duplicates": "layers",
+        }
 
         for index, (key, caption) in enumerate(
             (
@@ -135,12 +230,23 @@ class CiaPage(QWidget):
             panel = QFrame()
             panel.setObjectName("ciaMetricPanel")
             panel_layout = QVBoxLayout(panel)
+            panel_layout.setContentsMargins(15, 12, 15, 12)
+            panel_layout.setSpacing(8)
             label = QLabel(caption)
             label.setObjectName("ciaMetricCaption")
             value = QLabel("—")
             value.setObjectName("ciaMetricValue")
+            value.setProperty("signal", "neutral")
             value.setWordWrap(True)
-            panel_layout.addWidget(label)
+
+            caption_row = QHBoxLayout()
+            caption_row.setSpacing(8)
+            metric_icon = QLabel()
+            metric_icon.setPixmap(get_icon(metric_icons[key]).pixmap(QSize(16, 16)))
+            metric_icon.setFixedSize(16, 16)
+            caption_row.addWidget(metric_icon)
+            caption_row.addWidget(label, 1)
+            panel_layout.addLayout(caption_row)
             panel_layout.addWidget(value)
             metrics.addWidget(panel, index // 3, index % 3)
             self.m_metrics[key] = value
@@ -164,19 +270,41 @@ class CiaPage(QWidget):
 
         layout.addWidget(self.m_view_stack, 1)
         self.m_view_stack.setCurrentWidget(self.m_brief_scroll)
-        self.m_brief_container.hide()
+        self.m_brief_scroll.hide()
 
     @staticmethod
     def _section(layout: QVBoxLayout, title: str) -> QLabel:
-        """Append a titled section and return its content label."""
-        heading = QLabel(title)
+        """Append a styled intelligence section and return its content label."""
+        panel = QFrame()
+        panel.setObjectName("ciaIntelligenceSection")
+        section_layout = QVBoxLayout(panel)
+        section_layout.setContentsMargins(16, 14, 16, 14)
+        section_layout.setSpacing(9)
+
+        section_icons = {
+            "CURRENT INTELLIGENCE": "shield-alert",
+            "HISTORICAL CONTEXT": "rotate-ccw-clock",
+            "INTELLIGENCE SUMMARY": "file-text",
+        }
+        heading_row = QHBoxLayout()
+        heading_row.setSpacing(8)
+        section_icon = QLabel()
+        section_icon.setPixmap(get_icon(section_icons[title]).pixmap(QSize(17, 17)))
+        section_icon.setFixedSize(17, 17)
+        heading_row.addWidget(section_icon)
+
+        heading = QLabel(title.title())
         heading.setObjectName("ciaSectionTitle")
-        layout.addWidget(heading)
+        heading_row.addWidget(heading)
+        heading_row.addStretch()
+        section_layout.addLayout(heading_row)
+
         content = QLabel("—")
         content.setObjectName("ciaSectionBody")
         content.setWordWrap(True)
         content.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        layout.addWidget(content)
+        section_layout.addWidget(content)
+        layout.addWidget(panel)
         return content
 
     def _request_analysis(self) -> None:
@@ -200,28 +328,59 @@ class CiaPage(QWidget):
 
         if running:
             self.set_status("Retrieving news and analyzing catalysts…")
+            self._set_badge("ANALYZING", "running")
 
     def set_status(self, message: str) -> None:
         """Update status without discarding the previous report."""
         self.m_status_label.setText(message)
+        normalized = message.lower()
+
+        if "fail" in normalized or "unable" in normalized or "error" in normalized:
+            self._set_badge("ANALYSIS ERROR", "failed")
+        elif "complete" in normalized:
+            self._set_badge("BRIEF READY", "complete")
+        elif "retrieving" in normalized or "analyzing" in normalized:
+            self._set_badge("ANALYZING", "running")
+        elif not self.m_running:
+            self._set_badge("SYSTEM READY", "ready")
 
     def set_result(self, result: CiaAnalysisResult) -> None:
         """Display the successful report and retain supporting articles."""
         self.m_last_result = result
+        self._set_badge("BRIEF READY", "complete")
         report = result.report
         self.m_target.setText(f"TARGET: {report.ticker}")
 
         if report.has_breaking_news:
-            status = "BREAKING CATALYST DETECTED"
+            status, catalyst_state = "BREAKING CATALYST DETECTED", "breaking"
         elif report.categories:
-            status = "ACTIVE CATALYST DETECTED"
+            status, catalyst_state = "ACTIVE CATALYST DETECTED", "active"
         else:
-            status = "NO ACTIVE CATALYST"
+            status, catalyst_state = "NO ACTIVE CATALYST", "none"
 
         self.m_mission_status.setText(status)
+        self.m_mission_status.setProperty("catalyst", catalyst_state)
+        self.m_mission_status.style().unpolish(self.m_mission_status)
+        self.m_mission_status.style().polish(self.m_mission_status)
+
         self.m_metrics["strength"].setText(report.catalyst_strength.value)
         self.m_metrics["freshness"].setText(report.freshness.value)
         self.m_metrics["sentiment"].setText(f"{report.overall_sentiment} ({report.average_sentiment:+.2f})")
+
+        sentiment_value = self.m_metrics["sentiment"]
+        sentiment_label = report.overall_sentiment.lower()
+
+        if "bullish" in sentiment_label:
+            signal = "positive"
+        elif "bearish" in sentiment_label:
+            signal = "negative"
+        else:
+            signal = "neutral"
+
+        sentiment_value.setProperty("signal", signal)
+        sentiment_value.style().unpolish(sentiment_value)
+        sentiment_value.style().polish(sentiment_value)
+
         self.m_metrics["confidence"].setText(f"{report.confidence:.0%}")
         self.m_metrics["articles"].setText(f"{report.unique_article_count} / {report.original_article_count}")
         self.m_metrics["duplicates"].setText(str(report.duplicate_articles_removed))
@@ -229,7 +388,7 @@ class CiaPage(QWidget):
         self.m_historical.setText("\n".join(category.value for category in report.historical_categories) or "None")
         self.m_summary.setText(report.summary)
         self.m_sources.set_articles(result.articles)
-        self.m_brief_container.show()
+        self.m_brief_scroll.show()
         self.m_view_stack.setCurrentWidget(self.m_brief_scroll)
         self.set_status(
             f"Briefing complete for {report.ticker}. {report.unique_article_count} unique article(s) analyzed."
@@ -253,3 +412,10 @@ class CiaPage(QWidget):
             event.accept()
             return
         super().keyPressEvent(event)
+
+    def _set_badge(self, text: str, state: str) -> None:
+        """Update the CIA header badge and refresh its scoped style."""
+        self.m_system_badge.setText(text)
+        self.m_system_badge.setProperty("state", state)
+        self.m_system_badge.style().unpolish(self.m_system_badge)
+        self.m_system_badge.style().polish(self.m_system_badge)

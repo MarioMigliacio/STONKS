@@ -5,9 +5,11 @@
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QFrame,
+    QHBoxLayout,
     QHeaderView,
     QLabel,
     QTableWidget,
@@ -18,10 +20,11 @@ from PySide6.QtWidgets import (
 
 from stonks.cia.catalyst_category import CatalystCategory
 from stonks.cia.catalyst_classifier import classify_article
+from stonks.gui.icons import get_icon
 from stonks.models.news_article import NewsArticle
 
 
-class CiaIntelligenceSources(QWidget):
+class CiaIntelligenceSources(QFrame):
     """Display article-level evidence without fetching external content.
 
     Attributes:
@@ -46,15 +49,29 @@ class CiaIntelligenceSources(QWidget):
         self.setObjectName("ciaSourcesPanel")
         self.m_articles: list[NewsArticle] = []
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
 
-        self.m_heading = QLabel("INTELLIGENCE SOURCES / 0")
-        self.m_heading.setObjectName("ciaSectionTitle")
-        layout.addWidget(self.m_heading)
+        heading_row = QHBoxLayout()
+        heading_row.setSpacing(9)
+        heading_icon = QLabel()
+        heading_icon.setPixmap(get_icon("newspaper").pixmap(QSize(18, 18)))
+        heading_icon.setFixedSize(18, 18)
+        heading_row.addWidget(heading_icon)
+
+        self.m_heading = QLabel("Supporting Intelligence / 0")
+        self.m_heading.setObjectName("ciaSourcesHeading")
+        heading_row.addWidget(self.m_heading)
+        heading_row.addStretch()
+        layout.addLayout(heading_row)
+
+        hint = QLabel("Double-click an article or press Enter to open its dossier.")
+        hint.setObjectName("ciaSourcesHint")
+        layout.addWidget(hint)
 
         self.m_empty = QLabel("No supporting articles available for this briefing.")
-        self.m_empty.setObjectName("ciaSectionBody")
+        self.m_empty.setObjectName("ciaSourcesEmpty")
+        self.m_empty.setWordWrap(True)
         layout.addWidget(self.m_empty)
 
         self.m_table = QTableWidget(0, 4)
@@ -65,6 +82,11 @@ class CiaIntelligenceSources(QWidget):
         self.m_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.m_table.setAlternatingRowColors(True)
         self.m_table.setWordWrap(True)
+        self.m_table.setShowGrid(False)
+        self.m_table.setFocusPolicy(Qt.StrongFocus)
+        self.m_table.setSortingEnabled(False)
+        self.m_table.horizontalHeader().setHighlightSections(False)
+        self.m_table.verticalHeader().setDefaultSectionSize(62)
         self.m_table.verticalHeader().hide()
         self.m_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.m_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -79,7 +101,7 @@ class CiaIntelligenceSources(QWidget):
     def set_articles(self, articles: list[NewsArticle]) -> None:
         """Replace rows with the available deduplicated article evidence."""
         self.m_articles = list(articles)
-        self.m_heading.setText(f"INTELLIGENCE SOURCES / {len(self.m_articles)}")
+        self.m_heading.setText(f"Supporting Intelligence - {len(self.m_articles)}")
         self.m_table.setRowCount(len(self.m_articles))
 
         for row, article in enumerate(self.m_articles):
@@ -109,6 +131,15 @@ class CiaIntelligenceSources(QWidget):
                 self.m_table.setItem(row, column, item)
 
             self.m_table.resizeRowToContents(row)
+
+        visible_rows = min(len(self.m_articles), 3)
+
+        rows_height = sum(self.m_table.rowHeight(row) for row in range(visible_rows))
+
+        header_height = self.m_table.horizontalHeader().height()
+        frame_height = self.m_table.frameWidth() * 2
+
+        self.m_table.setMinimumHeight(max(170, rows_height + header_height + frame_height + 8))
 
         self.m_table.clearSelection()
         self.m_empty.setVisible(not self.m_articles)
