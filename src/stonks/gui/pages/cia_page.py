@@ -41,7 +41,7 @@ class CiaPage(QWidget):
             Execution feedback label.
 
         m_metrics:
-            Named report metric labels.
+            A dictionary mapping metric names to their corresponding QLabel widgets.
 
         m_last_result:
             Most recent successful result.
@@ -60,6 +60,24 @@ class CiaPage(QWidget):
 
         m_system_badge:
             Styled CIA execution-state indicator in the workspace header.
+
+        m_brief_container:
+            Widget containing the scrollable Mission Brief content.
+
+        m_target:
+            Label displaying the analyzed ticker symbol.
+
+        m_mission_status:
+            Label displaying the detected catalyst status.
+
+        m_current:
+            Label displaying current catalyst classifications.
+
+        m_historical:
+            Label displaying historical catalyst classifications.
+
+        m_summary:
+            Label displaying the intelligence summary.
 
         m_running:
             Whether a request is in progress.
