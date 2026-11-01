@@ -20,15 +20,21 @@ def select_candle_window(
     All timestamps must be timezone-aware.
 
     Args:
-        candles: Source candles to filter.
-        start_time: Inclusive window start.
-        end_time: Exclusive window end.
+        candles:
+            Source candles to filter.
+
+        start_time:
+            Inclusive window start.
+
+        end_time:
+            Exclusive window end.
 
     Returns:
         Selected candles ordered chronologically.
 
     Raises:
-        ValueError: If timestamps are invalid or timezone-naive.
+        ValueError:
+            If timestamps are invalid or timezone-naive.
     """
     if start_time.tzinfo is None or start_time.utcoffset() is None:
         raise ValueError("Window start must be timezone-aware.")
