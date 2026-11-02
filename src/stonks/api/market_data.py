@@ -70,34 +70,56 @@ def get_quote(symbol: str):
     return response.json()
 
 
-def get_daily_time_series(symbol: str):
-    """Fetch daily historical data for a stock symbol."""
-
+def get_daily_time_series(
+    symbol: str,
+    raise_on_error: bool = False,
+):
+    """Fetch daily historical data with optional strict error handling."""
     symbol = symbol.upper()
 
-    logger.debug(
-        "Requesting daily time series for %s",
-        symbol,
-    )
+    logger.debug("Requesting daily time series for %s", symbol)
 
-    params = {"function": "TIME_SERIES_DAILY", "symbol": symbol, "apikey": require_api_key()}
+    try:
+        params = {
+            "function": "TIME_SERIES_DAILY",
+            "symbol": symbol,
+            "apikey": require_api_key(),
+        }
 
-    response = requests.get(BASE_URL, params=params, timeout=15)
-
-    if response.status_code != 200:
-        logger.error(
-            "Daily time series request failed for %s with status %d",
-            symbol,
-            response.status_code,
+        response = requests.get(
+            BASE_URL,
+            params=params,
+            timeout=15,
         )
+
+        if response.status_code != 200:
+            raise RuntimeError(f"Alpha Vantage daily request failed with HTTP {response.status_code}.")
+
+        data = response.json()
+
+        if not isinstance(data, dict):
+            raise ValueError("Invalid daily provider response.")
+
+        for error_key in ("Information", "Note", "Error Message"):
+            if error_key in data:
+                raise RuntimeError(f"Alpha Vantage daily request rejected: {error_key}.")
+
+        if not isinstance(data.get("Time Series (Daily)"), dict):
+            raise ValueError("Daily time-series payload is missing.")
+
+        return data
+
+    except (requests.RequestException, ValueError, RuntimeError) as exc:
+        logger.error(
+            "Daily time-series retrieval failed for %s: %s",
+            symbol,
+            exc,
+        )
+
+        if raise_on_error:
+            raise RuntimeError(f"Alpha Vantage daily retrieval failed for {symbol}.") from exc
+
         return None
-
-    logger.debug(
-        "Daily time series request completed for %s",
-        symbol,
-    )
-
-    return response.json()
 
 
 def get_news_sentiment(symbol: str, limit: int = 10):

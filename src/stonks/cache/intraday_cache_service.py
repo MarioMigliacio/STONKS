@@ -274,7 +274,7 @@ def retrieve_intraday_data(
             if not ALLOW_API_CALLS:
                 return ResearchDataRetrieval(
                     candles=[],
-                    status=ResearchRetrievalStatus.PROVIDER_ERROR,
+                    status=ResearchRetrievalStatus.CACHE_ERROR,
                     message="Local intraday cache is invalid or unreadable.",
                 )
 

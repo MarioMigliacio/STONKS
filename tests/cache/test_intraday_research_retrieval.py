@@ -181,6 +181,6 @@ def test_corrupt_cache_without_api(mock_provider, mock_read) -> None:
 
     result = retrieve()
 
-    assert result.status == ResearchRetrievalStatus.PROVIDER_ERROR
+    assert result.status == ResearchRetrievalStatus.CACHE_ERROR
     assert "cache" in result.message.lower()
     mock_provider.assert_not_called()

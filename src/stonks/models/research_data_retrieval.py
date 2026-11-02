@@ -18,6 +18,7 @@ class ResearchRetrievalStatus(Enum):
     NO_DATA = "no_data"
     API_DISABLED = "api_disabled"
     PROVIDER_ERROR = "provider_error"
+    CACHE_ERROR = "cache_error"
 
 
 @dataclass(frozen=True)
