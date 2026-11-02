@@ -122,19 +122,36 @@ def get_aggregate_bars(
     timeframe: Timeframe,
     start_date: date,
     end_date: date,
+    raise_on_error: bool = False,
 ) -> list[CandleData]:
-    """Retrieve historical OHLCV aggregate bars for a stock."""
+    """
+    Retrieve historical OHLCV aggregate bars for a stock.
 
+    Args:
+        symbol:
+            Stock ticker.
+
+        timeframe:
+            Requested provider candle interval.
+
+        start_date:
+            Inclusive start date.
+
+        end_date:
+            Inclusive end date.
+
+        raise_on_error:
+            Raise on provider failures instead of returning an empty list.
+
+    Returns:
+        Normalized OHLCV candles, or an empty list when no data exists.
+
+    Raises:
+        RuntimeError:
+            If strict retrieval encounters a provider failure.
+    """
     symbol = symbol.upper()
     multiplier, timespan = _get_aggregate_interval(timeframe)
-
-    logger.debug(
-        "Requesting %s aggregate bars for %s from %s to %s",
-        timeframe.value,
-        symbol,
-        start_date,
-        end_date,
-    )
 
     headers = {
         "Authorization": f"Bearer {require_api_key()}",
@@ -148,50 +165,67 @@ def get_aggregate_bars(
 
     endpoint = f"/v2/aggs/ticker/{symbol}/range/{multiplier}/{timespan}/{start_date.isoformat()}/{end_date.isoformat()}"
 
-    response = requests.get(
-        f"{BASE_URL}{endpoint}",
-        headers=headers,
-        params=params,
-        timeout=15,
-    )
+    try:
+        response = requests.get(
+            f"{BASE_URL}{endpoint}",
+            headers=headers,
+            params=params,
+            timeout=15,
+        )
 
-    if response.status_code != 200:
+        if response.status_code != 200:
+            raise RuntimeError(f"Massive aggregate request failed with HTTP {response.status_code}.")
+
+        data = response.json()
+
+        if not isinstance(data, dict):
+            raise ValueError("Unexpected Massive response format.")
+
+        if data.get("status") == "ERROR" or data.get("error"):
+            raise RuntimeError("Massive reported an aggregate request error.")
+
+        results = data.get("results", [])
+
+        if results is None:
+            results = []
+
+        if not isinstance(results, list):
+            raise ValueError("Invalid Massive aggregate results.")
+
+        if not results:
+            return []
+
+        candles = [
+            CandleData(
+                timestamp=datetime.fromtimestamp(
+                    result["t"] / 1000,
+                    tz=timezone.utc,
+                ),
+                open_price=float(result["o"]),
+                high_price=float(result["h"]),
+                low_price=float(result["l"]),
+                close_price=float(result["c"]),
+                volume=int(result["v"]),
+            )
+            for result in results
+        ]
+
+        logger.debug(
+            "Retrieved %d aggregate bars for %s",
+            len(candles),
+            symbol,
+        )
+
+        return candles
+
+    except (requests.RequestException, ValueError, KeyError, TypeError, RuntimeError) as exc:
         logger.error(
-            "Aggregate bars request failed for %s with status %d",
+            "Aggregate retrieval failed for %s: %s",
             symbol,
-            response.status_code,
+            exc,
         )
+
+        if raise_on_error:
+            raise RuntimeError(f"Massive aggregate retrieval failed for {symbol}.") from exc
+
         return []
-
-    data = response.json()
-    results = data.get("results", [])
-
-    if not results:
-        logger.warning(
-            "No aggregate bars returned for %s",
-            symbol,
-        )
-        return []
-
-    candles = [
-        CandleData(
-            timestamp=datetime.fromtimestamp(
-                result["t"] / 1000,
-                tz=timezone.utc,
-            ),
-            open_price=float(result["o"]),
-            high_price=float(result["h"]),
-            low_price=float(result["l"]),
-            close_price=float(result["c"]),
-            volume=int(result["v"]),
-        )
-        for result in results
-    ]
-
-    logger.debug(
-        "Retrieved %d aggregate bars for %s",
-        len(candles),
-        symbol,
-    )
-
-    return candles
