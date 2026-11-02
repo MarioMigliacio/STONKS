@@ -143,6 +143,7 @@ STONKS/
 │       │   └── validation/
 │       ├── models/
 │       ├── news/
+│       ├── price_action/
 │       └── scanner/
 ├── tests/
 │   ├── api/
@@ -150,6 +151,8 @@ STONKS/
 │   ├── cia/
 │   ├── gui/
 │   ├── journal/
+│   ├── models/
+│   ├── price_action/
 │   └── scanner/
 ├── venv/
 ├── .env
@@ -301,6 +304,7 @@ Account and portfolio cash calculations use a saved dated opening cash snapshot 
 - [Desktop GUI Guide](docs/gui.md)
 - [Journal Subsystem](docs/journal.md)
 - [Historical Cache](docs/cache.md)
+- [Historical Research](docs/historical_research.md)
 - [C.I.A. News Subsystem](docs/cia.md)
 - [Float Data](docs/float_data.md)
 - [Price Action](docs/price_action.md)
