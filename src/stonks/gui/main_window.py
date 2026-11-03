@@ -21,6 +21,7 @@ from stonks.gui.pages.accounts_page import AccountsPage
 from stonks.gui.pages.cia_page import CiaPage
 from stonks.gui.pages.placeholder_page import PlaceholderPage
 from stonks.gui.pages.positions_page import PositionsPage
+from stonks.gui.pages.research_page import ResearchPage
 from stonks.gui.pages.scanner_page import ScannerPage
 from stonks.gui.workers.cia_thread_controller import CiaThreadController
 from stonks.gui.workers.scanner_thread_controller import ScannerThreadController
@@ -73,6 +74,9 @@ class MainWindow(QMainWindow):
 
         m_cia_page:
             CIA workspace page presenting catalyst intelligence information.
+
+        m_research_page:
+            Research page for historical data analysis.
     """
 
     def __init__(
@@ -123,6 +127,7 @@ class MainWindow(QMainWindow):
         self.m_positions_page: Optional[PositionsPage] = None
         self.m_scanner_page: Optional[ScannerPage] = None
         self.m_cia_page: Optional[CiaPage] = None
+        self.m_research_page: Optional[ResearchPage] = None
 
         # Define our initial application pages.
         page_definitions = {
@@ -131,6 +136,7 @@ class MainWindow(QMainWindow):
             "accounts": "Trading Accounts",
             "scanner": "Market Scanner",
             "cia": "Catalyst Intelligence Analysis",
+            "research": "Historical Research",
         }
 
         # Create functional pages where available; otherwise use placeholders.
@@ -162,6 +168,10 @@ class MainWindow(QMainWindow):
                 )
 
                 self.m_positions_page = page
+
+            elif page_name == "research":
+                page = ResearchPage()
+                self.m_research_page = page
 
             else:
                 page = PlaceholderPage(display_name)
