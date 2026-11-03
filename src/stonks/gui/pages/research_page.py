@@ -5,7 +5,7 @@
 
 from typing import Optional
 
-from PySide6.QtCore import QDate, Qt, Signal
+from PySide6.QtCore import QDate, QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDateEdit,
@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from stonks.gui.icons import get_icon
+from stonks.gui.styles.research_theme import RESEARCH_WORKSPACE_THEME
 from stonks.models.historical_research_request import HistoricalResearchRequest
 from stonks.models.historical_research_result import (
     HistoricalResearchResult,
@@ -91,6 +93,7 @@ class ResearchPage(QWidget):
         """Construct the research workspace and configuration controls."""
         super().__init__(parent)
         self.setObjectName("researchWorkspace")
+        self.setStyleSheet(RESEARCH_WORKSPACE_THEME)
         self.m_running = False
         self.m_presentation_state = "ready"
 
@@ -106,9 +109,18 @@ class ResearchPage(QWidget):
         eyebrow.setObjectName("researchEyebrow")
         title_stack.addWidget(eyebrow)
 
+        title_row = QHBoxLayout()
+        title_row.setSpacing(10)
+        title_icon = QLabel()
+        title_icon.setObjectName("researchTitleIcon")
+        title_icon.setPixmap(get_icon("scan-search").pixmap(QSize(24, 24)))
+        title_icon.setFixedSize(24, 24)
+        title_row.addWidget(title_icon)
         title = QLabel("Historical Research")
         title.setObjectName("researchTitle")
-        title_stack.addWidget(title)
+        title_row.addWidget(title)
+        title_row.addStretch()
+        title_stack.addLayout(title_row)
 
         subtitle = QLabel("Explore historical price action. Understand the movement.")
         subtitle.setObjectName("researchSubtitle")
@@ -117,6 +129,7 @@ class ResearchPage(QWidget):
 
         self.m_status_label = QLabel("SYSTEM READY")
         self.m_status_label.setObjectName("researchStatus")
+        self.m_status_label.setProperty("state", "ready")
         self.m_status_label.setAlignment(Qt.AlignCenter)
         header.addWidget(self.m_status_label)
         layout.addLayout(header)
@@ -126,7 +139,9 @@ class ResearchPage(QWidget):
         configuration_layout = QVBoxLayout(configuration)
         configuration_layout.setContentsMargins(16, 14, 16, 14)
         configuration_layout.setSpacing(12)
-        configuration_layout.addWidget(QLabel("Research Configuration"))
+        section_title = QLabel("Research Configuration")
+        section_title.setObjectName("researchSectionTitle")
+        configuration_layout.addWidget(section_title)
 
         controls = QGridLayout()
         controls.setHorizontalSpacing(12)
@@ -181,8 +196,10 @@ class ResearchPage(QWidget):
             ("Monthly", ResearchInterval.MONTHLY),
             ("Quarterly", ResearchInterval.QUARTERLY),
         )
+
         for label, interval in interval_options:
             self.m_interval_combo.addItem(label, interval)
+
         controls.addWidget(self.m_interval_combo, 3, 1)
         configuration_layout.addLayout(controls)
 
@@ -190,10 +207,12 @@ class ResearchPage(QWidget):
         actions.addStretch()
         self.m_refresh_button = QPushButton("Refresh")
         self.m_refresh_button.setObjectName("researchRefreshButton")
+        self.m_refresh_button.setIcon(get_icon("scan-search"))
         actions.addWidget(self.m_refresh_button)
         self.m_refresh_button.clicked.connect(lambda: self._request_research(force_refresh=True))
         self.m_analyze_button = QPushButton("Analyze")
         self.m_analyze_button.setObjectName("researchAnalyzeButton")
+        self.m_analyze_button.setIcon(get_icon("play"))
         actions.addWidget(self.m_analyze_button)
         self.m_analyze_button.clicked.connect(lambda: self._request_research(force_refresh=False))
         configuration_layout.addLayout(actions)
@@ -281,6 +300,7 @@ class ResearchPage(QWidget):
     def set_running(self, running: bool) -> None:
         """Disable request controls while an external worker is active."""
         self.m_running = running
+
         for widget in (
             self.m_ticker_input,
             self.m_start_date,
@@ -305,6 +325,17 @@ class ResearchPage(QWidget):
         self.set_status(status)
         self.m_chart_message.setText(chart)
         self.m_metrics_message.setText(metrics)
+        badge_state = {
+            "ready": "ready",
+            "loading": "running",
+            "available": "complete",
+            "partial": "partial",
+            "empty": "empty",
+            "error": "failed",
+        }[state]
+        self.m_status_label.setProperty("state", badge_state)
+        self.m_status_label.style().unpolish(self.m_status_label)
+        self.m_status_label.style().polish(self.m_status_label)
 
     def show_ready(self) -> None:
         """Present the initial workspace before research has been requested."""
@@ -331,9 +362,11 @@ class ResearchPage(QWidget):
         if result.status == ResearchDataStatus.UNAVAILABLE:
             self.show_empty(result.message or "No historical data found.")
             return
+
         if result.status == ResearchDataStatus.ERROR:
             self.show_error(result.message or "Historical research failed.")
             return
+
         if result.status not in (
             ResearchDataStatus.AVAILABLE,
             ResearchDataStatus.PARTIAL,
@@ -352,8 +385,10 @@ class ResearchPage(QWidget):
             f"Source: {source} | "
             f"Incomplete periods: {result.incomplete_display_periods}"
         )
+
         if result.message:
             metrics += f" | {result.message}"
+
         self._show_presentation(state, status, chart, metrics)
 
     def show_empty(self, message: str = "No historical data found.") -> None:

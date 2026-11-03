@@ -7,6 +7,7 @@ from stonks.gui.styles.cia_dossier_theme import CIA_DOSSIER_THEME
 from stonks.gui.styles.cia_mission_theme import CIA_MISSION_THEME
 from stonks.gui.styles.cia_sources_theme import CIA_SOURCES_THEME
 from stonks.gui.styles.cia_theme import CIA_WORKSPACE_THEME
+from stonks.gui.styles.research_theme import RESEARCH_WORKSPACE_THEME
 from stonks.gui.styles.scanner_theme import SCANNER_WORKSPACE_THEME
 
 STONKS_DARK_THEME = """
@@ -524,3 +525,4 @@ STONKS_DARK_THEME += CIA_WORKSPACE_THEME
 STONKS_DARK_THEME += CIA_MISSION_THEME
 STONKS_DARK_THEME += CIA_SOURCES_THEME
 STONKS_DARK_THEME += CIA_DOSSIER_THEME
+STONKS_DARK_THEME += RESEARCH_WORKSPACE_THEME
