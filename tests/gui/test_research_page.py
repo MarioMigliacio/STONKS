@@ -10,6 +10,11 @@ from PySide6.QtWidgets import QApplication
 
 from stonks.gui.pages.research_page import ResearchPage
 from stonks.models.historical_research_request import HistoricalResearchRequest
+from stonks.models.historical_research_result import (
+    HistoricalResearchResult,
+    ResearchDataSource,
+    ResearchDataStatus,
+)
 from stonks.models.market_session import MarketSession
 from stonks.models.research_interval import ResearchInterval
 
@@ -128,3 +133,96 @@ def test_running_blocks_requests_and_restores_controls(page):
     assert not page.m_end_date.isEnabled()
     page.m_analyze_button.click()
     assert spy.count() == 1
+
+
+def test_initial_presentation_is_ready(page):
+    assert page.m_presentation_state == "ready"
+    assert page.m_status_label.text() == "SYSTEM READY"
+    assert page.m_analyze_button.isEnabled()
+
+
+def test_loading_disables_actions_and_updates_regions(page):
+    page.show_loading()
+    assert page.m_presentation_state == "loading"
+    assert page.m_running
+    assert not page.m_analyze_button.isEnabled()
+    assert not page.m_refresh_button.isEnabled()
+    assert "Preparing" in page.m_chart_message.text()
+
+
+def test_valid_request_enters_pending_state(page):
+    page.m_ticker_input.setText("AMD")
+    spy = QSignalSpy(page.research_requested)
+    page.m_analyze_button.click()
+    assert spy.count() == 1
+    assert page.m_presentation_state == "loading"
+    assert not page.m_analyze_button.isEnabled()
+
+
+def test_empty_and_error_states_restore_controls(page):
+    page.show_loading()
+    page.show_empty("No candles in selected range.")
+    assert page.m_presentation_state == "empty"
+    assert "No candles" in page.m_chart_message.text()
+    assert page.m_analyze_button.isEnabled()
+    page.show_loading()
+    page.show_error("Provider unavailable.")
+    assert page.m_presentation_state == "error"
+    assert "Provider unavailable" in page.m_chart_message.text()
+    assert page.m_refresh_button.isEnabled()
+
+
+def test_ready_clears_previous_error(page):
+    page.show_error("Temporary failure")
+    page.show_ready()
+    assert page.m_presentation_state == "ready"
+    assert "Temporary failure" not in page.m_chart_message.text()
+
+
+def _research_result(status, message=None):
+    request = HistoricalResearchRequest(
+        symbol="AMD",
+        start_date=QDate(2026, 10, 30).toPython(),
+        end_date=QDate(2026, 10, 30).toPython(),
+        interval=ResearchInterval.ONE_MINUTE,
+    )
+    return HistoricalResearchResult(
+        request=request,
+        source_candles=[],
+        display_candles=[],
+        window_metrics=None,
+        data_source=ResearchDataSource.CACHE,
+        status=status,
+        message=message,
+    )
+
+
+@pytest.mark.parametrize(
+    ("status", "expected_state"),
+    [
+        (ResearchDataStatus.AVAILABLE, "available"),
+        (ResearchDataStatus.PARTIAL, "partial"),
+    ],
+)
+def test_result_presentation_states(page, status, expected_state):
+    page.show_loading()
+    page.show_result(_research_result(status))
+    assert page.m_presentation_state == expected_state
+    assert "charting" in page.m_chart_message.text()
+    assert "Source: cache" in page.m_metrics_message.text()
+    assert page.m_analyze_button.isEnabled()
+
+
+@pytest.mark.parametrize(
+    ("status", "expected_state"),
+    [
+        (ResearchDataStatus.UNAVAILABLE, "empty"),
+        (ResearchDataStatus.ERROR, "error"),
+    ],
+)
+def test_unavailable_and_error_results_route_to_correct_state(page, status, expected_state):
+    page.show_loading()
+    page.show_result(_research_result(status, "Backend message"))
+    assert page.m_presentation_state == expected_state
+    assert "Backend message" in page.m_chart_message.text()
+    assert page.m_analyze_button.isEnabled()

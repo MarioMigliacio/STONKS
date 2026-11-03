@@ -20,6 +20,10 @@ from PySide6.QtWidgets import (
 )
 
 from stonks.models.historical_research_request import HistoricalResearchRequest
+from stonks.models.historical_research_result import (
+    HistoricalResearchResult,
+    ResearchDataStatus,
+)
 from stonks.models.market_session import MarketSession
 from stonks.models.research_interval import ResearchInterval
 
@@ -67,6 +71,15 @@ class ResearchPage(QWidget):
         m_running:
             Whether a research request is currently being processed.
 
+        m_presentation_state:
+            Current visual state of the research workspace.
+
+        m_chart_message:
+            Placeholder text for the chart region.
+
+        m_metrics_message:
+            Placeholder text for the metrics region.
+
     Signals:
         research_requested:
             Emitted with a validated HistoricalResearchRequest.
@@ -79,6 +92,7 @@ class ResearchPage(QWidget):
         super().__init__(parent)
         self.setObjectName("researchWorkspace")
         self.m_running = False
+        self.m_presentation_state = "ready"
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 20, 22, 20)
@@ -192,16 +206,22 @@ class ResearchPage(QWidget):
         self.m_chart_panel = QFrame()
         self.m_chart_panel.setObjectName("researchChartPanel")
         chart_layout = QVBoxLayout(self.m_chart_panel)
-        chart_placeholder = QLabel("Historical price visualization will appear here.")
-        chart_placeholder.setAlignment(Qt.AlignCenter)
-        chart_layout.addWidget(chart_placeholder)
+        self.m_chart_message = QLabel()
+        self.m_chart_message.setObjectName("researchChartMessage")
+        self.m_chart_message.setAlignment(Qt.AlignCenter)
+        self.m_chart_message.setWordWrap(True)
+        chart_layout.addWidget(self.m_chart_message)
         layout.addWidget(self.m_chart_panel, 1)
 
         self.m_metrics_panel = QFrame()
         self.m_metrics_panel.setObjectName("researchMetricsPanel")
         metrics_layout = QVBoxLayout(self.m_metrics_panel)
-        metrics_layout.addWidget(QLabel("Price Action  |  Volume  |  Source Data"))
+        self.m_metrics_message = QLabel()
+        self.m_metrics_message.setObjectName("researchMetricsMessage")
+        self.m_metrics_message.setWordWrap(True)
+        metrics_layout.addWidget(self.m_metrics_message)
         layout.addWidget(self.m_metrics_panel)
+        self.show_ready()
 
     def _is_intraday_interval(self) -> bool:
         """Return whether the selected interval uses minute candles."""
@@ -255,6 +275,7 @@ class ResearchPage(QWidget):
             self.set_status(f"Invalid research request: {error}")
             return
 
+        self.show_loading()
         self.research_requested.emit(request)
 
     def set_running(self, running: bool) -> None:
@@ -273,9 +294,74 @@ class ResearchPage(QWidget):
 
         if not running:
             self._update_interval_controls()
-        else:
-            self.set_status("Research request in progress…")
 
     def set_status(self, message: str) -> None:
         """Display validation or execution feedback without altering results."""
         self.m_status_label.setText(message)
+
+    def _show_presentation(self, state: str, status: str, chart: str, metrics: str) -> None:
+        """Update all presentation regions as one consistent state."""
+        self.m_presentation_state = state
+        self.set_status(status)
+        self.m_chart_message.setText(chart)
+        self.m_metrics_message.setText(metrics)
+
+    def show_ready(self) -> None:
+        """Present the initial workspace before research has been requested."""
+        self.set_running(False)
+        self._show_presentation(
+            "ready",
+            "SYSTEM READY",
+            "Historical price visualization will appear here.",
+            "Price Action  |  Volume  |  Source Data",
+        )
+
+    def show_loading(self) -> None:
+        """Indicate that a request is pending external execution."""
+        self.set_running(True)
+        self._show_presentation(
+            "loading",
+            "RESEARCH PENDING",
+            "Preparing historical research…",
+            "Awaiting research results.",
+        )
+
+    def show_result(self, result: HistoricalResearchResult) -> None:
+        """Present a research result without rendering a chart or detailed metrics."""
+        if result.status == ResearchDataStatus.UNAVAILABLE:
+            self.show_empty(result.message or "No historical data found.")
+            return
+        if result.status == ResearchDataStatus.ERROR:
+            self.show_error(result.message or "Historical research failed.")
+            return
+        if result.status not in (
+            ResearchDataStatus.AVAILABLE,
+            ResearchDataStatus.PARTIAL,
+        ):
+            raise ValueError("Unsupported research result status.")
+
+        self.set_running(False)
+        state = "partial" if result.status == ResearchDataStatus.PARTIAL else "available"
+        status = "PARTIAL DATA" if state == "partial" else "DATA AVAILABLE"
+        source = result.data_source.value if result.data_source is not None else "unknown"
+        chart = (
+            f"{len(result.display_candles)} display candles ready for charting. Candlestick rendering arrives in #146."
+        )
+        metrics = (
+            f"{len(result.source_candles)} source candles | "
+            f"Source: {source} | "
+            f"Incomplete periods: {result.incomplete_display_periods}"
+        )
+        if result.message:
+            metrics += f" | {result.message}"
+        self._show_presentation(state, status, chart, metrics)
+
+    def show_empty(self, message: str = "No historical data found.") -> None:
+        """Show an empty result without retaining stale chart information."""
+        self.set_running(False)
+        self._show_presentation("empty", "NO DATA", message, "No metrics available.")
+
+    def show_error(self, message: str) -> None:
+        """Show a research failure and allow another request."""
+        self.set_running(False)
+        self._show_presentation("error", "RESEARCH ERROR", message, "No metrics available.")
