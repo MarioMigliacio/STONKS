@@ -5,7 +5,7 @@
 
 from typing import Optional
 
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QDate, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDateEdit,
@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from stonks.models.historical_research_request import HistoricalResearchRequest
 from stonks.models.market_session import MarketSession
 from stonks.models.research_interval import ResearchInterval
 
@@ -62,12 +63,22 @@ class ResearchPage(QWidget):
 
         m_metrics_panel:
             Container reserved for price-action metrics.
+
+        m_running:
+            Whether a research request is currently being processed.
+
+    Signals:
+        research_requested:
+            Emitted with a validated HistoricalResearchRequest.
     """
+
+    research_requested = Signal(object)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """Construct the research workspace and configuration controls."""
         super().__init__(parent)
         self.setObjectName("researchWorkspace")
+        self.m_running = False
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 20, 22, 20)
@@ -166,9 +177,11 @@ class ResearchPage(QWidget):
         self.m_refresh_button = QPushButton("Refresh")
         self.m_refresh_button.setObjectName("researchRefreshButton")
         actions.addWidget(self.m_refresh_button)
+        self.m_refresh_button.clicked.connect(lambda: self._request_research(force_refresh=True))
         self.m_analyze_button = QPushButton("Analyze")
         self.m_analyze_button.setObjectName("researchAnalyzeButton")
         actions.addWidget(self.m_analyze_button)
+        self.m_analyze_button.clicked.connect(lambda: self._request_research(force_refresh=False))
         configuration_layout.addLayout(actions)
 
         self.m_interval_combo.currentIndexChanged.connect(self._update_interval_controls)
@@ -218,3 +231,51 @@ class ResearchPage(QWidget):
         """Keep intraday research restricted to one trading date."""
         if self._is_intraday_interval():
             self.m_end_date.setDate(self.m_start_date.date())
+
+    def _request_research(self, force_refresh: bool) -> None:
+        """Validate controls and emit a research request without running it."""
+        if self.m_running:
+            return
+
+        interval = self.m_interval_combo.currentData()
+        start_date = self.m_start_date.date().toPython()
+        end_date = start_date if self._is_intraday_interval() else self.m_end_date.date().toPython()
+        session = self.m_session_combo.currentData() if self._is_intraday_interval() else None
+
+        try:
+            request = HistoricalResearchRequest(
+                symbol=self.m_ticker_input.text(),
+                start_date=start_date,
+                end_date=end_date,
+                interval=interval,
+                session=session,
+                force_refresh=force_refresh,
+            )
+        except ValueError as error:
+            self.set_status(f"Invalid research request: {error}")
+            return
+
+        self.research_requested.emit(request)
+
+    def set_running(self, running: bool) -> None:
+        """Disable request controls while an external worker is active."""
+        self.m_running = running
+        for widget in (
+            self.m_ticker_input,
+            self.m_start_date,
+            self.m_end_date,
+            self.m_session_combo,
+            self.m_interval_combo,
+            self.m_analyze_button,
+            self.m_refresh_button,
+        ):
+            widget.setEnabled(not running)
+
+        if not running:
+            self._update_interval_controls()
+        else:
+            self.set_status("Research request in progress…")
+
+    def set_status(self, message: str) -> None:
+        """Display validation or execution feedback without altering results."""
+        self.m_status_label.setText(message)
