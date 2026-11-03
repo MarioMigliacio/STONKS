@@ -55,6 +55,7 @@ class NavigationSidebar(QFrame):
             "accounts": "Accounts",
             "scanner": "Scanner",
             "cia": "C.I.A.",
+            "research": "Historical Research",
         }
 
         for page_name, display_name in page_definitions.items():

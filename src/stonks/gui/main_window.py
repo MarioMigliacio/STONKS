@@ -131,6 +131,7 @@ class MainWindow(QMainWindow):
             "accounts": "Trading Accounts",
             "scanner": "Market Scanner",
             "cia": "Catalyst Intelligence Analysis",
+            "research": "Historical Research",
         }
 
         # Create functional pages where available; otherwise use placeholders.

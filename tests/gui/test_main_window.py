@@ -41,7 +41,7 @@ def test_main_window_initializes(main_window):
     assert main_window.m_sidebar is not None
     assert main_window.m_pages is not None
 
-    assert main_window.m_pages.count() == 5
+    assert main_window.m_pages.count() == 6
 
 
 def test_dashboard_selected_by_default(main_window):
