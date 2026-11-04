@@ -83,6 +83,24 @@ Metrics include:
 - Total volume
 - Source candle count
 
+## Candlestick Chart
+
+The Historical Research page embeds a reusable `CandlestickChart` powered by
+PyQtGraph. It renders normalized `CandleData` OHLCV records supplied through
+`HistoricalResearchResult.display_candles`; the widget does not retrieve market
+prices, read caches, or aggregate intervals.
+
+- Bullish, bearish, and neutral candles have distinct colors.
+- The horizontal axis labels consecutive candle positions using their actual
+  timestamps; non-trading gaps do not create artificial spacing.
+- Mouse navigation supports zooming and panning. Moving over a candle displays
+  its timestamp, open, high, low, close, and volume with crosshair guides.
+- Replacing the prepared dataset updates the time axis and resets stale
+  inspection state. Empty and single-candle datasets are supported.
+- Chart colors, guide pens, and the inspection overlay are configured by
+  `gui/styles/candlestick_theme.py`, separate from the global stylesheet.
+- Loading, unavailable, and error presentations clear stale plotted candles.
+
 ## Known Limitations
 
 - A successful retrieval does not guarantee complete coverage of the requested date range.

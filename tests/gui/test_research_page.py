@@ -208,7 +208,8 @@ def test_result_presentation_states(page, status, expected_state):
     page.show_loading()
     page.show_result(_research_result(status))
     assert page.m_presentation_state == expected_state
-    assert "charting" in page.m_chart_message.text()
+    assert page.m_chart_message.text() == ("No display candles returned for this research window.")
+    assert page.m_candlestick_chart.m_candles == []
     assert "Source: cache" in page.m_metrics_message.text()
     assert page.m_analyze_button.isEnabled()
 

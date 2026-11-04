@@ -51,6 +51,18 @@ Returning from a dossier retains the briefing and article selection. A new succe
 
 CIA analysis runs in a `QThread` so the GUI remains responsive. Requests cannot overlap. A running provider request is not cancellable; application closure is deferred until the worker exits. See [C.I.A.](cia.md) for the analysis pipeline and provider limitations.
 
+### Historical Research Workspace
+
+Historical Research provides ticker, date, market-session, and display-interval
+controls. A validated request is emitted to the application coordinator.
+When prepared results are supplied, the embedded PyQtGraph candlestick chart
+shows OHLC candles, time and price axes, zoom/pan, and cursor OHLCV inspection.
+The page preserves loading, available, partial, empty, and error presentation
+states. Source retrieval, aggregation, and analysis remain outside the GUI.
+
+See [Historical Research](historical_research.md) for data contracts and
+limitations.
+
 ## GUI architecture
 
 ```mermaid
