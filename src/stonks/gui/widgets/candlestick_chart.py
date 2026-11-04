@@ -8,6 +8,7 @@ from typing import List, Optional
 import pyqtgraph as pg
 from PySide6.QtWidgets import QWidget
 
+from stonks.gui.widgets.candle_time_axis import CandleTimeAxis
 from stonks.gui.widgets.candlestick_item import CandlestickItem
 from stonks.models.candle_data import CandleData
 
@@ -21,11 +22,15 @@ class CandlestickChart(pg.PlotWidget):
 
         m_candle_item:
             Current candle graphics item, or None when the chart is empty.
+
+        m_time_axis:
+            Bottom axis translating candle indices into market timestamps.
     """
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """Initialize an empty, themed chart surface without market data."""
-        super().__init__(parent=parent)
+        self.m_time_axis = CandleTimeAxis()
+        super().__init__(parent=parent, axisItems={"bottom": self.m_time_axis})
         self.setObjectName("candlestickChart")
         self.setBackground("#192532")
 
@@ -37,11 +42,12 @@ class CandlestickChart(pg.PlotWidget):
         self.m_candle_item: Optional[CandlestickItem] = None
 
     def set_candles(self, candles: List[CandleData]) -> None:
-        """Replace the rendered candles using already-prepared market data."""
+        """Replace rendered candles and update timestamp labels atomically."""
         if self.m_candle_item is not None:
             self.m_plot_item.removeItem(self.m_candle_item)
             self.m_candle_item = None
 
+        self.m_time_axis.set_timestamps([candle.timestamp for candle in candles])
         if not candles:
             return
 
@@ -50,5 +56,5 @@ class CandlestickChart(pg.PlotWidget):
         self.m_plot_item.autoRange()
 
     def clear_candles(self) -> None:
-        """Remove existing candle graphics without changing chart styling."""
+        """Remove existing candle graphics and stale time labels."""
         self.set_candles([])
