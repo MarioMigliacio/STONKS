@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from stonks.gui.icons import get_icon
 from stonks.gui.styles.research_theme import RESEARCH_WORKSPACE_THEME
+from stonks.gui.widgets.candlestick_chart import CandlestickChart
 from stonks.models.historical_research_request import HistoricalResearchRequest
 from stonks.models.historical_research_result import (
     HistoricalResearchResult,
@@ -77,7 +78,10 @@ class ResearchPage(QWidget):
             Current visual state of the research workspace.
 
         m_chart_message:
-            Placeholder text for the chart region.
+            Status text displayed when the chart has no usable candles.
+
+        m_candlestick_chart:
+            Reusable chart displaying prepared historical candles.
 
         m_metrics_message:
             Placeholder text for the metrics region.
@@ -230,6 +234,11 @@ class ResearchPage(QWidget):
         self.m_chart_message.setAlignment(Qt.AlignCenter)
         self.m_chart_message.setWordWrap(True)
         chart_layout.addWidget(self.m_chart_message)
+        self.m_candlestick_chart = CandlestickChart(self.m_chart_panel)
+        self.m_candlestick_chart.setObjectName("researchCandlestickChart")
+        self.m_candlestick_chart.setMinimumHeight(260)
+        self.m_candlestick_chart.hide()
+        chart_layout.addWidget(self.m_candlestick_chart, 1)
         layout.addWidget(self.m_chart_panel, 1)
 
         self.m_metrics_panel = QFrame()
@@ -325,6 +334,12 @@ class ResearchPage(QWidget):
         self.set_status(status)
         self.m_chart_message.setText(chart)
         self.m_metrics_message.setText(metrics)
+        self.m_chart_message.setVisible(
+            state != "available" and state != "partial" or not self.m_candlestick_chart.m_candles
+        )
+        self.m_candlestick_chart.setVisible(
+            state in ("available", "partial") and bool(self.m_candlestick_chart.m_candles)
+        )
         badge_state = {
             "ready": "ready",
             "loading": "running",
@@ -340,6 +355,7 @@ class ResearchPage(QWidget):
     def show_ready(self) -> None:
         """Present the initial workspace before research has been requested."""
         self.set_running(False)
+        self.m_candlestick_chart.clear_candles()
         self._show_presentation(
             "ready",
             "SYSTEM READY",
@@ -350,6 +366,7 @@ class ResearchPage(QWidget):
     def show_loading(self) -> None:
         """Indicate that a request is pending external execution."""
         self.set_running(True)
+        self.m_candlestick_chart.clear_candles()
         self._show_presentation(
             "loading",
             "RESEARCH PENDING",
@@ -358,7 +375,7 @@ class ResearchPage(QWidget):
         )
 
     def show_result(self, result: HistoricalResearchResult) -> None:
-        """Present a research result without rendering a chart or detailed metrics."""
+        """Present prepared research candles and their result metadata."""
         if result.status == ResearchDataStatus.UNAVAILABLE:
             self.show_empty(result.message or "No historical data found.")
             return
@@ -377,9 +394,8 @@ class ResearchPage(QWidget):
         state = "partial" if result.status == ResearchDataStatus.PARTIAL else "available"
         status = "PARTIAL DATA" if state == "partial" else "DATA AVAILABLE"
         source = result.data_source.value if result.data_source is not None else "unknown"
-        chart = (
-            f"{len(result.display_candles)} display candles ready for charting. Candlestick rendering arrives in #146."
-        )
+        self.m_candlestick_chart.set_candles(result.display_candles)
+        chart = "No display candles returned for this research window." if not result.display_candles else ""
         metrics = (
             f"{len(result.source_candles)} source candles | "
             f"Source: {source} | "
@@ -394,9 +410,11 @@ class ResearchPage(QWidget):
     def show_empty(self, message: str = "No historical data found.") -> None:
         """Show an empty result without retaining stale chart information."""
         self.set_running(False)
+        self.m_candlestick_chart.clear_candles()
         self._show_presentation("empty", "NO DATA", message, "No metrics available.")
 
     def show_error(self, message: str) -> None:
         """Show a research failure and allow another request."""
         self.set_running(False)
+        self.m_candlestick_chart.clear_candles()
         self._show_presentation("error", "RESEARCH ERROR", message, "No metrics available.")
