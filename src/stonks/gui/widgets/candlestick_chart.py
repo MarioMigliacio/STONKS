@@ -9,6 +9,12 @@ import pyqtgraph as pg
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtWidgets import QLabel, QWidget
 
+from stonks.gui.styles.candlestick_theme import (
+    CANDLE_INSPECTION_THEME,
+    CHART_BACKGROUND,
+    CHART_CROSSHAIR,
+    CHART_GRID_ALPHA,
+)
 from stonks.gui.widgets.candle_time_axis import CandleTimeAxis
 from stonks.gui.widgets.candlestick_item import CandlestickItem
 from stonks.models.candle_data import CandleData
@@ -45,17 +51,17 @@ class CandlestickChart(pg.PlotWidget):
         self.m_time_axis = CandleTimeAxis()
         super().__init__(parent=parent, axisItems={"bottom": self.m_time_axis})
         self.setObjectName("candlestickChart")
-        self.setBackground("#192532")
+        self.setBackground(CHART_BACKGROUND)
 
         self.m_plot_item = self.getPlotItem()
         self.m_plot_item.setLabel("left", "Price")
         self.m_plot_item.setLabel("bottom", "Time")
-        self.m_plot_item.showGrid(x=True, y=True, alpha=0.15)
+        self.m_plot_item.showGrid(x=True, y=True, alpha=CHART_GRID_ALPHA)
         self.m_plot_item.setMouseEnabled(x=True, y=True)
         self.m_candle_item: Optional[CandlestickItem] = None
         self.m_candles: List[CandleData] = []
 
-        guide_pen = pg.mkPen("#a9b8c8", width=1, style=Qt.DashLine)
+        guide_pen = pg.mkPen(CHART_CROSSHAIR, width=1, style=Qt.DashLine)
         self.m_vertical_cursor = pg.InfiniteLine(angle=90, movable=False, pen=guide_pen)
         self.m_horizontal_cursor = pg.InfiniteLine(angle=0, movable=False, pen=guide_pen)
         self.m_plot_item.addItem(self.m_vertical_cursor, ignoreBounds=True)
@@ -65,10 +71,7 @@ class CandlestickChart(pg.PlotWidget):
 
         self.m_inspection_label = QLabel(self)
         self.m_inspection_label.setObjectName("candleInspectionLabel")
-        self.m_inspection_label.setStyleSheet(
-            "QLabel { background: #101923; color: #e2ebf2; "
-            "border: 1px solid #344658; border-radius: 4px; padding: 6px; }"
-        )
+        self.m_inspection_label.setStyleSheet(CANDLE_INSPECTION_THEME)
         self.m_inspection_label.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.m_inspection_label.hide()
         self.scene().sigMouseMoved.connect(self._on_mouse_moved)
@@ -76,13 +79,16 @@ class CandlestickChart(pg.PlotWidget):
     def set_candles(self, candles: List[CandleData]) -> None:
         """Replace candle data, time labels, and stale inspection state."""
         self.clear_inspection()
+
         if self.m_candle_item is not None:
             self.m_plot_item.removeItem(self.m_candle_item)
             self.m_candle_item = None
 
         self.m_candles = list(candles)
         self.m_time_axis.set_timestamps([candle.timestamp for candle in self.m_candles])
+
         if not self.m_candles:
+            self.m_plot_item.getViewBox().setRange(xRange=(-0.5, 0.5), yRange=(0.0, 1.0), padding=0.0)
             return
 
         self.m_candle_item = CandlestickItem(self.m_candles)
@@ -96,6 +102,7 @@ class CandlestickChart(pg.PlotWidget):
     def inspect_position(self, x: float, price: float) -> Optional[CandleData]:
         """Inspect the nearest candle only within its half-index footprint."""
         index = round(x)
+
         if abs(x - index) > 0.5 or not 0 <= index < len(self.m_candles):
             self.clear_inspection()
             return None
@@ -126,9 +133,11 @@ class CandlestickChart(pg.PlotWidget):
     def _on_mouse_moved(self, scene_position: QPointF) -> None:
         """Translate scene coordinates to the chart's index/price space."""
         view_box = self.m_plot_item.getViewBox()
+
         if not view_box.sceneBoundingRect().contains(scene_position):
             self.clear_inspection()
             return
+
         position = view_box.mapSceneToView(scene_position)
         self.inspect_position(position.x(), position.y())
 
@@ -137,8 +146,7 @@ class CandlestickChart(pg.PlotWidget):
         self.m_inspection_label.move(max(4, self.width() - self.m_inspection_label.width() - 8), 8)
 
     def resizeEvent(self, event) -> None:
-        """Reposition the inspection overlay after initialization."""
+        """Keep an existing inspection readout anchored after resizing."""
         super().resizeEvent(event)
-
         if hasattr(self, "m_inspection_label"):
             self._position_inspection_label()

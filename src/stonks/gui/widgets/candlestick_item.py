@@ -9,6 +9,11 @@ from PySide6.QtCore import QRectF
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QGraphicsObject, QWidget
 
+from stonks.gui.styles.candlestick_theme import (
+    CHART_BEARISH,
+    CHART_BULLISH,
+    CHART_NEUTRAL,
+)
 from stonks.models.candle_data import CandleData
 
 
@@ -23,9 +28,9 @@ class CandlestickItem(QGraphicsObject):
             Horizontal width of each candle body in index units.
     """
 
-    BULLISH_COLOR = QColor("#65d9b5")
-    BEARISH_COLOR = QColor("#f07178")
-    NEUTRAL_COLOR = QColor("#a9b8c8")
+    BULLISH_COLOR = QColor(CHART_BULLISH)
+    BEARISH_COLOR = QColor(CHART_BEARISH)
+    NEUTRAL_COLOR = QColor(CHART_NEUTRAL)
 
     def __init__(self, candles: List[CandleData], body_width: float = 0.7) -> None:
         """Create a candle graphics item without accessing external data."""
