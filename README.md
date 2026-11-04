@@ -83,6 +83,15 @@ See [Float Data](docs/float_data.md).
 
 See [Price Action](docs/price_action.md).
 
+### Historical Research Chart
+
+- PyQtGraph candlestick visualization embedded in the Historical Research page
+- Bullish/bearish OHLC candles, timestamp and price axes, zoom/pan, and OHLCV inspection
+- Prepared timeframe replacement, empty/single-candle handling, and chart-specific theme
+- Presentation-only chart component; background retrieval and cancellation are planned separately
+
+See [Historical Research](docs/historical_research.md) and [Desktop GUI Guide](docs/gui.md).
+
 ### C.I.A. — Catalyst Intelligence Analysis
 
 - Ticker-specific Marketaux news retrieval through a provider-independent service
