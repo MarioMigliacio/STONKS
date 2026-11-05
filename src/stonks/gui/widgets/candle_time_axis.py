@@ -5,8 +5,11 @@
 
 from datetime import datetime
 from typing import List
+from zoneinfo import ZoneInfo
 
 import pyqtgraph as pg
+
+MARKET_TIMEZONE = ZoneInfo("America/New_York")
 
 
 class CandleTimeAxis(pg.AxisItem):
@@ -28,23 +31,44 @@ class CandleTimeAxis(pg.AxisItem):
         self.picture = None
         self.update()
 
-    def tickStrings(self, values: List[float], scale: float, spacing: float) -> List[str]:
-        """Format visible candle indices without implying elapsed-time spacing."""
+    @staticmethod
+    def market_time(timestamp: datetime) -> datetime:
+        """Convert timezone-aware candle timestamps to New York market time."""
+        if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+            raise ValueError("Candle timestamps must be timezone-aware.")
+        return timestamp.astimezone(MARKET_TIMEZONE)
+
+    def tickStrings(
+        self,
+        values: List[float],
+        scale: float,
+        spacing: float,
+    ) -> List[str]:
+        """Format visible candle ticks using the local date range."""
+        market_timestamps = [self.market_time(ts) for ts in self.m_timestamps]
         del scale, spacing
+
+        indices = [
+            round(value)
+            for value in values
+            if abs(value - round(value)) <= 0.001 and 0 <= round(value) < len(market_timestamps)
+        ]
+
+        if not indices:
+            return [""] * len(values)
+
+        visible_dates = {market_timestamps[index].date() for index in indices}
+
+        time_format = "%H:%M" if len(visible_dates) == 1 else "%b %d"
+
         labels = []
         for value in values:
             index = round(value)
-            if abs(value - index) > 0.001 or not 0 <= index < len(self.m_timestamps):
+
+            if abs(value - index) > 0.001 or not 0 <= index < len(market_timestamps):
                 labels.append("")
                 continue
-            timestamp = self.m_timestamps[index]
-            labels.append(self._format_timestamp(timestamp))
-        return labels
 
-    def _format_timestamp(self, timestamp: datetime) -> str:
-        """Show dates for multi-day data and clock times within one day."""
-        if not self.m_timestamps:
-            return ""
-        if self.m_timestamps[0].date() == self.m_timestamps[-1].date():
-            return timestamp.strftime("%H:%M")
-        return timestamp.strftime("%b %d")
+            labels.append(market_timestamps[index].strftime(time_format))
+
+        return labels

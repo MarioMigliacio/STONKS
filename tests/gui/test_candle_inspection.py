@@ -28,7 +28,7 @@ def test_inspection_shows_timestamp_ohlcv_and_guides(qtbot):
 
     assert chart.inspect_position(1.1, 102.5) is chart.m_candles[1]
     text = chart.m_inspection_label.text()
-    assert "2026-11-02 09:31:00+00:00" in text
+    assert "2026-11-02 04:31 EST" in text
     assert "O: 101.00" in text
     assert "H: 104.00" in text
     assert "L: 100.00" in text

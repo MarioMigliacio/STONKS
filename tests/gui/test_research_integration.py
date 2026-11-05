@@ -42,6 +42,7 @@ def test_research_request_is_emitted_from_registered_page(qtbot):
     page.m_ticker_input.setText("AMD")
     spy = QSignalSpy(page.research_requested)
 
+    page.research_requested.disconnect(window._on_research_requested)
     qtbot.mouseClick(page.m_analyze_button, Qt.LeftButton)
 
     assert spy.count() == 1

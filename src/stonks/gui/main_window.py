@@ -24,6 +24,7 @@ from stonks.gui.pages.positions_page import PositionsPage
 from stonks.gui.pages.research_page import ResearchPage
 from stonks.gui.pages.scanner_page import ScannerPage
 from stonks.gui.workers.cia_thread_controller import CiaThreadController
+from stonks.gui.workers.research_thread_controller import ResearchThreadController
 from stonks.gui.workers.scanner_thread_controller import ScannerThreadController
 from stonks.journal.journal_context import JournalContext
 from stonks.scanner.existing_scanner_strategy import ExistingScannerStrategy
@@ -107,6 +108,9 @@ class MainWindow(QMainWindow):
             self,
         )
         self.m_cia_controller.idle.connect(self._on_background_idle)
+
+        self.m_research_controller = ResearchThreadController(parent=self)
+        self.m_research_controller.idle.connect(self._on_background_idle)
 
         self._setup_ui()
 
@@ -199,6 +203,11 @@ class MainWindow(QMainWindow):
         self.m_cia_controller.running_changed.connect(self.m_cia_page.set_running)
         self.m_cia_controller.completed.connect(self.m_cia_page.set_result)
         self.m_cia_controller.failed.connect(self._on_cia_failed)
+        self.m_research_page.research_requested.connect(self._on_research_requested)
+        self.m_research_controller.progress.connect(self.m_research_page.set_status)
+        self.m_research_controller.completed.connect(self.m_research_page.show_result)
+        self.m_research_controller.failed.connect(self._on_research_failed)
+        self.m_research_controller.cancelled.connect(self._on_research_cancelled)
 
     def _navigate_to(self, page_name: str) -> None:
         """
@@ -258,27 +267,36 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """
-        Defer closing while a scanner, or CIA threads are still active.
+        Defer closing while scanner, CIA, or research threads are active.
 
         Args:
             event: Qt window close event to accept or ignore.
         """
-        if self.m_scanner_controller.is_running() or self.m_cia_controller.is_running():
+        if self._has_active_background_work():
             event.ignore()
             self.m_close_pending = True
             self.m_scanner_controller.request_cancel()
+            self.m_research_controller.request_cancel()
             return
 
         self.m_close_pending = False
         super().closeEvent(event)
 
+    def _has_active_background_work(self) -> bool:
+        """Return whether any owned background controller remains active."""
+        return (
+            self.m_scanner_controller.is_running()
+            or self.m_cia_controller.is_running()
+            or self.m_research_controller.is_running()
+        )
+
     @Slot()
     def _on_background_idle(self) -> None:
-        """Close only after both background controllers have stopped."""
+        """Close only after all background controllers have stopped."""
         if not self.m_close_pending:
             return
 
-        if self.m_scanner_controller.is_running() or self.m_cia_controller.is_running():
+        if self._has_active_background_work():
             return
 
         self.m_close_pending = False
@@ -331,6 +349,28 @@ class MainWindow(QMainWindow):
 
         if not started:
             self.m_cia_page.set_status("An intelligence analysis is already running.")
+
+    @Slot(object)
+    def _on_research_requested(self, request: object) -> None:
+        """Dispatch a validated research request to the background worker."""
+        try:
+            started = self.m_research_controller.start_research(request)
+        except (TypeError, ValueError) as error:
+            self.m_research_page.show_error(f"Unable to start research: {error}")
+            return
+        if not started:
+            self.m_research_page.set_status("Historical research is already running.")
+
+    @Slot(str)
+    def _on_research_failed(self, message: str) -> None:
+        """Present an unexpected research execution failure."""
+        self.m_research_page.show_error(message)
+
+    @Slot()
+    def _on_research_cancelled(self) -> None:
+        """Release the Research workspace after cancellation is acknowledged."""
+        self.m_research_page.show_ready()
+        self.m_research_page.set_status("RESEARCH CANCELLED")
 
     @Slot(str)
     def _on_cia_failed(self, message: str) -> None:
