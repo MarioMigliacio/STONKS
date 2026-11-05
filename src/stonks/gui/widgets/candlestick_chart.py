@@ -113,7 +113,7 @@ class CandlestickChart(pg.PlotWidget):
         self.m_vertical_cursor.show()
         self.m_horizontal_cursor.show()
         self.m_inspection_label.setText(
-            f"{candle.timestamp.isoformat(sep=' ')}  |  "
+            f"{self.m_time_axis.market_time(candle.timestamp).strftime('%Y-%m-%d %H:%M %Z')}  |  "
             f"O: {candle.open_price:.2f}  H: {candle.high_price:.2f}  "
             f"L: {candle.low_price:.2f}  C: {candle.close_price:.2f}  "
             f"V: {candle.volume:,}"
