@@ -4,11 +4,14 @@
 # =============================================================================
 
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from stonks.gui.widgets.candlestick_chart import CandlestickChart
 from stonks.models.candle_data import CandleData
+
+MARKET_TZ = ZoneInfo("America/New_York")
 
 
 def _candle(timestamp, price=100.0):
@@ -30,7 +33,7 @@ def _chart(qtbot):
 
 def test_prepared_timeframe_replacement_resets_inspection_and_axis(qtbot):
     chart = _chart(qtbot)
-    start = datetime(2026, 11, 2, 9, 30)
+    start = datetime(2026, 11, 2, 9, 30, tzinfo=MARKET_TZ)
     minute_candles = [_candle(start + timedelta(minutes=i)) for i in range(30)]
     chart.set_candles(minute_candles)
     chart.inspect_position(29, 100)
@@ -54,7 +57,7 @@ def test_prepared_timeframe_replacement_resets_inspection_and_axis(qtbot):
 
 def test_empty_dataset_clears_viewport_and_stale_readout(qtbot):
     chart = _chart(qtbot)
-    chart.set_candles([_candle(datetime(2026, 11, 2, 9, 30), 200)])
+    chart.set_candles([_candle(datetime(2026, 11, 2, 9, 30, tzinfo=MARKET_TZ), 200)])
     chart.inspect_position(0, 200)
     chart.set_candles([])
 
@@ -70,7 +73,7 @@ def test_empty_dataset_clears_viewport_and_stale_readout(qtbot):
 
 def test_single_flat_candle_remains_renderable(qtbot):
     chart = _chart(qtbot)
-    timestamp = datetime(2026, 11, 2, 9, 30)
+    timestamp = datetime(2026, 11, 2, 9, 30, tzinfo=MARKET_TZ)
     flat = CandleData(timestamp, 100.0, 100.0, 100.0, 100.0, 0)
     chart.set_candles([flat])
 
@@ -81,8 +84,8 @@ def test_single_flat_candle_remains_renderable(qtbot):
 
 def test_irregular_trading_gaps_preserve_adjacent_positions(qtbot):
     chart = _chart(qtbot)
-    friday = _candle(datetime(2026, 10, 30, 16, 0))
-    monday = _candle(datetime(2026, 11, 2, 9, 30))
+    friday = _candle(datetime(2026, 10, 30, 16, 0, tzinfo=MARKET_TZ))
+    monday = _candle(datetime(2026, 11, 2, 9, 30, tzinfo=MARKET_TZ))
     chart.set_candles([friday, monday])
 
     assert chart.m_candle_item.candle_geometry(0)[0] == 0.0
@@ -93,8 +96,8 @@ def test_irregular_trading_gaps_preserve_adjacent_positions(qtbot):
 
 def test_replacing_dataset_does_not_mutate_input(qtbot):
     chart = _chart(qtbot)
-    candles = [_candle(datetime(2026, 11, 2, 9, 30))]
+    candles = [_candle(datetime(2026, 11, 2, 9, 30, tzinfo=MARKET_TZ))]
     original = [c.__dict__.copy() for c in candles]
     chart.set_candles(candles)
-    chart.set_candles([_candle(datetime(2026, 11, 3, 9, 30))])
+    chart.set_candles([_candle(datetime(2026, 11, 3, 9, 30, tzinfo=MARKET_TZ))])
     assert [c.__dict__ for c in candles] == original

@@ -210,6 +210,10 @@ class ResearchPage(QWidget):
         actions = QHBoxLayout()
         actions.addStretch()
         self.m_refresh_button = QPushButton("Refresh")
+        self.m_refresh_button.setToolTip(
+            "Bypasses cached data and requests fresh provider data. "
+            "May consume an API request when API calls are enabled."
+        )
         self.m_refresh_button.setObjectName("researchRefreshButton")
         self.m_refresh_button.setIcon(get_icon("scan-search"))
         actions.addWidget(self.m_refresh_button)
